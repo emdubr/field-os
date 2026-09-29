@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.5</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.6</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.5</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.6</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.8</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.6</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -110,13 +110,13 @@
 
             <section class="console-right-stack detail-right-stack">
               <article class="terminal-panel nav-console detailed-nav" data-open="nav">
-                <div class="terminal-title">♙ NAVIGATION <span>×</span></div>
+                <div class="terminal-title">♙ NAVIGATION <span>POSITION SOURCE BELOW</span></div>
                 <div class="nav-toprow"><div class="nav-readout">N 44.4759°<br>W 73.2121°<br>ELEV 3,420 ft<br>ACC ±4 m</div><div class="nav-fix">FIX<br><b>3D</b><br>HDOP 0.9</div></div>
                 <div class="compass-dial detailed-compass"><b>N</b><em>E</em><i class="compass-needle"></i><strong id="heading">245°</strong><small>SW</small></div>
                 <div class="nav-stats"><span>SPEED <b id="speed">2.4 mph</b></span><span>BEARING <b>245°</b></span><span>DIST NEXT <b>2.4 mi</b></span><span>ETA <b>1h 02m</b></span><span>VERT SPD <b>+380 ft/h</b></span><span>COURSE <b>238°</b></span></div>
               </article>
               <article class="terminal-panel sensors-console detailed-sensors" data-open="sensors">
-                <div class="terminal-title">♙ SENSORS / ENV <span>×</span></div>
+                <div class="terminal-title">♙ SENSORS / ENV <span>DEMO</span></div>
                 <div class="sensor-lines"><span>TEMP <b id="temp">31°F</b></span><span>BARO <b id="pressure">898 hPa</b></span><span>ALT <b>3,420 ft</b></span><span>HUM <b id="humidity">64%</b></span><span>WIND <b>6.1 mph NW</b></span><span>GNSS <b>3D FIX</b></span><span>MESH <b>07 NODES</b></span><span>RTC <b>SYNC ±0.2s</b></span></div>
                 <div class="mini-chart-title">PRESSURE (24H)</div><svg class="mini-chart" viewBox="0 0 260 72" preserveAspectRatio="none"><g><path d="M0 14H260M0 36H260M0 58H260M40 0V72M90 0V72M140 0V72M190 0V72M240 0V72"/></g><polyline points="0,24 18,19 35,26 52,23 70,34 88,31 105,38 123,42 140,37 158,45 176,51 194,46 212,55 230,49 260,54"/></svg>
                 <div class="chart-axis"><span>-24h</span><span>-12h</span><span>now</span></div>
@@ -144,7 +144,7 @@
             <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ SURVIVAL GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
             <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table"><b>NODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DIST&nbsp;&nbsp;RSSI&nbsp;&nbsp;HOP&nbsp;BAT</b><br>BASE-01&nbsp;&nbsp;&nbsp;1.2mi&nbsp;-72&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;88%<br>RIDGE-01&nbsp;&nbsp;3.6mi&nbsp;-85&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;71%<br>CAMP-01&nbsp;&nbsp;&nbsp;4.8mi&nbsp;-91&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;64%<br>RELAY-A&nbsp;&nbsp;&nbsp;5.1mi&nbsp;-96&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;92%</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
           </div>
-          <div class="console-command-strip"><button data-open="home">FIND</button><button data-open="log">COPY</button><button data-open="comms">PASTE</button><button data-open="map">ZOOM</button><button data-open="sensors">SCAN</button><button data-open="home">CLOSE ALL</button><button data-open="log">PRINT</button><button data-open="system">SAVE</button></div>
+          <div class="console-command-strip"><button data-open="route">PLAN ROUTE</button><button data-open="waypoints">WAYPOINTS</button><button data-open="track">RECORD TRACK</button><button data-open="trip">TRIP PLAN</button><button data-open="log">FIELD LOG</button><button data-open="system">SETTINGS</button></div>
         </div></div>
       </section>
 
@@ -276,7 +276,7 @@
           <div class="panel-title"><span>ROUTE WATCH</span><span class="tiny" id="routeWatchState">MONITORING</span></div>
           <div id="routeDeviationBanner" class="deviation-banner good-banner">ON ROUTE</div>
           <dl class="readouts large-readouts"><div><dt>PROGRESS</dt><dd id="routeProgress">---</dd></div><div><dt>REMAINING</dt><dd id="routeRemaining">---</dd></div><div><dt>ETA</dt><dd id="routeEta">---</dd></div><div><dt>OFF ROUTE</dt><dd id="routeDeviation">---</dd></div></dl>
-          <label class="field-label">DEVIATION ALERT</label><select id="deviationThreshold" class="terminal-input"><option value="50">50 ft</option><option value="100" selected>100 ft</option><option value="250">250 ft</option><option value="500">500 ft</option></select>
+          <label class="field-label" for="deviationThreshold">DEVIATION ALERT</label><select id="deviationThreshold" class="terminal-input"><option value="50">50 ft</option><option value="100" selected>100 ft</option><option value="250">250 ft</option><option value="500">500 ft</option></select>
           <div class="button-row"><button class="action" data-open="trailreturn">INTERCEPT TRAIL</button><button class="action" data-open="route">EDIT ROUTE</button></div>
         </article>
         <article class="panel">
@@ -307,26 +307,26 @@
             <button class="action" type="button" data-route-plan-action="recenter">FIT ROUTE</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" class="route-planner-status loading">BUILD v3.5 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.6 // MAP STARTING</div>
           <div id="routePlannerMap" class="field-real-map route-planner-real-map" role="application" aria-label="Interactive trail route planner map"></div>
           <div class="route-planner-helpbar"><span id="routePlannerHelp">Tap the map to set a start point.</span><span>TRAIL DATA: OPENSTREETMAP</span></div>
           <div class="button-row route-planner-actions">
             <button id="undoRoutePoint" class="action" type="button" data-route-plan-action="undo">UNDO POINT</button>
             <button id="reverseRoute" class="action" type="button" data-route-plan-action="reverse">REVERSE</button>
-            <button id="clearRoute" class="action" type="button" data-route-plan-action="clear">CLEAR</button>
+            <button id="clearRoute" class="action" type="button" data-route-plan-action="clear">CLEAR / CANCEL</button>
             <label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label>
-            <button id="exportGpx" class="action" type="button">EXPORT GPX</button>
+            <button class="action" type="button" id="saveRouteVisible">SAVE ROUTE</button><button id="exportGpx" class="action" type="button">EXPORT GPX</button>
           </div>
           <p class="muted route-planner-note">In SNAP TO TRAILS mode, FIELD/OS downloads nearby OpenStreetMap walking/trail geometry when online and routes between your control points. Use DIRECT / OFF-TRAIL for intentional cross-country legs. Always verify trail status, access, terrain and closures before relying on a planned route.</p>
         </article>
         <div class="grid two-col">
           <article class="panel">
             <div class="panel-title"><span>ROUTE PARAMETERS</span><span class="tiny">LOCAL PLAN</span></div>
-            <label class="field-label">ROUTE NAME</label><input id="routeName" class="terminal-input" value="FIELD ROUTE 01" />
-            <label class="field-label">ELEVATION GAIN (FT)</label><input id="routeGain" class="terminal-input" type="number" min="0" step="50" value="1200" />
-            <label class="field-label">MAX GRADE (%)</label><input id="routeGrade" class="terminal-input" type="number" min="0" max="100" step="1" value="12" />
-            <label class="field-label">TERRAIN</label><select id="routeTerrain" class="terminal-input"><option value="maintained">Maintained trail</option><option value="rough">Rough / rocky trail</option><option value="offtrail">Off-trail</option><option value="scramble">Scrambling / technical</option></select>
-            <label class="field-label">NOTES / BAILOUTS</label><textarea id="routeNotes" class="terminal-area" placeholder="Water, junctions, bailout points, turnaround time..."></textarea>
+            <label class="field-label" for="routeName">ROUTE NAME</label><input id="routeName" class="terminal-input" value="FIELD ROUTE 01" />
+            <label class="field-label" for="routeGain">ELEVATION GAIN (FT)</label><input id="routeGain" class="terminal-input" type="number" min="0" step="50" value="0" />
+            <label class="field-label" for="routeGrade">MAX GRADE (%)</label><input id="routeGrade" class="terminal-input" type="number" min="0" max="100" step="1" value="0" />
+            <label class="field-label" for="routeTerrain">TERRAIN</label><select id="routeTerrain" class="terminal-input"><option value="maintained">Maintained trail</option><option value="rough">Rough / rocky trail</option><option value="offtrail">Off-trail</option><option value="scramble">Scrambling / technical</option></select>
+            <label class="field-label" for="routeNotes">NOTES / BAILOUTS</label><textarea id="routeNotes" class="terminal-area" placeholder="Water, junctions, bailout points, turnaround time..."></textarea>
           </article>
           <article class="panel">
             <div class="panel-title"><span>FIELD/OS DIFFICULTY</span><span class="tiny">EFFORT ESTIMATE</span></div>
@@ -339,8 +339,8 @@
         <article class="panel">
           <div class="panel-title"><span>OFFLINE ROUTE CORRIDOR</span><span class="tiny">PACK PLAN</span></div>
           <div class="grid two-col">
-            <div><label class="field-label">AREA AROUND ROUTE</label><select id="corridorRadius" class="terminal-input"><option value="0.5">0.5 mi each side</option><option value="1" selected>1 mi each side</option><option value="2">2 mi each side</option><option value="5">5 mi each side</option></select></div>
-            <div><label class="field-label">MAP DETAIL</label><select id="offlineDetail" class="terminal-input"><option value="low">Low / regional</option><option value="medium" selected>Medium / trail</option><option value="high">High / detailed</option></select></div>
+            <div><label class="field-label" for="corridorRadius">AREA AROUND ROUTE</label><select id="corridorRadius" class="terminal-input"><option value="0.5">0.5 mi each side</option><option value="1" selected>1 mi each side</option><option value="2">2 mi each side</option><option value="5">5 mi each side</option></select></div>
+            <div><label class="field-label" for="offlineDetail">MAP DETAIL</label><select id="offlineDetail" class="terminal-input"><option value="low">Low / regional</option><option value="medium" selected>Medium / trail</option><option value="high">High / detailed</option></select></div>
           </div>
           <dl class="readouts"><div><dt>CORRIDOR AREA</dt><dd id="corridorArea">---</dd></div><div><dt>EST. STORAGE</dt><dd id="offlineEstimate">---</dd></div><div><dt>LOCAL PACK</dt><dd id="offlineStatus">NOT SAVED</dd></div></dl>
           <div class="button-row"><button id="saveOfflinePack" class="action">SAVE ROUTE PACK</button><button id="exportRoutePack" class="action">EXPORT PACK</button></div>
@@ -365,9 +365,9 @@
         <div class="grid two-col">
           <article class="panel">
             <div class="panel-title"><span>ADD WAYPOINT</span><span class="tiny">LOCAL / OFFLINE</span></div>
-            <label class="field-label">NAME</label><input id="waypointName" class="terminal-input" placeholder="Camp, water, car, junction..." />
-            <label class="field-label">TYPE</label><select id="waypointType" class="terminal-input"><option value="BASE">Base / vehicle</option><option value="CAMP">Camp</option><option value="WATER">Water</option><option value="HAZARD">Hazard</option><option value="JUNCTION">Junction</option><option value="NOTE">General mark</option></select>
-            <label class="field-label">NOTES</label><textarea id="waypointNotes" class="terminal-area" placeholder="Description, access notes, water reliability..."></textarea>
+            <label class="field-label" for="waypointName">NAME</label><input id="waypointName" class="terminal-input" placeholder="Camp, water, car, junction..." />
+            <label class="field-label" for="waypointType">TYPE</label><select id="waypointType" class="terminal-input"><option value="BASE">Base / vehicle</option><option value="CAMP">Camp</option><option value="WATER">Water</option><option value="HAZARD">Hazard</option><option value="JUNCTION">Junction</option><option value="NOTE">General mark</option></select>
+            <label class="field-label" for="waypointNotes">NOTES</label><textarea id="waypointNotes" class="terminal-area" placeholder="Description, access notes, water reliability..."></textarea>
             <div class="button-row"><button id="saveWaypoint" class="action">SAVE CURRENT POSITION</button><button id="setBaseWaypoint" class="action">SAVE AS BASE</button></div>
           </article>
           <article class="panel">
@@ -422,9 +422,9 @@
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TRIP PLAN</h2><span></span></div>
         <article class="panel">
           <div class="panel-title"><span>ROUTE / CHECK-IN PLAN</span><span class="tiny">LOCAL STORAGE</span></div>
-          <label class="field-label">TRIP NAME</label><input id="tripName" class="terminal-input" value="Backcountry Day" />
-          <label class="field-label">BASE / TRAILHEAD</label><input id="tripBase" class="terminal-input" placeholder="Saved waypoint or description" />
-          <label class="field-label">EXPECTED RETURN</label><input id="tripReturn" class="terminal-input" type="datetime-local" />
+          <label class="field-label" for="tripName">TRIP NAME</label><input id="tripName" class="terminal-input" value="Backcountry Day" />
+          <label class="field-label" for="tripBase">BASE / TRAILHEAD</label><input id="tripBase" class="terminal-input" placeholder="Saved waypoint or description" />
+          <label class="field-label" for="tripReturn">EXPECTED RETURN</label><input id="tripReturn" class="terminal-input" type="datetime-local" />
           <label class="field-label">CHECK-IN INTERVAL</label>
           <select id="checkinInterval" class="terminal-input"><option value="60">Every 60 min</option><option value="120">Every 2 hr</option><option value="180">Every 3 hr</option><option value="0">Manual only</option></select>
           <div class="button-row"><button id="saveTrip" class="action">SAVE PLAN</button><button id="checkinNow" class="action">CHECK IN NOW</button></div>
@@ -531,3 +531,4 @@
   <script src="route-planner.js?v=3.5"></script>
 </body>
 </html>
+
