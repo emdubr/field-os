@@ -1,4 +1,4 @@
-/* FIELD/OS v1.4: shared desktop navigation, live field status, and detailed module workspaces. */
+/* FIELD/OS v1.5: home-style integrated terminal workspaces. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['survival','FIELD MANUAL'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -8,9 +8,9 @@
   const actions=items=>`<div class="ws-actions">${items.map(([view,label])=>`<button data-open="${view}">${esc(label)}</button>`).join('')}</div>`;
   const table=(heads,data)=>`<div class="ws-table-wrap"><table class="ws-table"><thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
-  const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>${esc(title)}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
+  const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)} &nbsp; ×</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>1.4</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>1.5</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -79,7 +79,7 @@
     events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
     batteries:()=>rows([['PHONE / COMPUTER',val('mobileBattery')],['TAP V2','UNAVAILABLE'],['SENSOR-2','UNAVAILABLE'],['HARDWARE RESERVE','NOT MEASURED'],['CHARGING',val('mobilePowerState')]])+note('The browser battery reading may be unavailable on some devices.'),
     display:()=>rows([['THEME',document.body.dataset.theme||'green'],['POWER MODE',storageGet(STORE_PREFIX+'power')||'normal'],['WAKE LOCK',fieldWakeLock?'ACTIVE':'OFF'],['SCREEN',`${innerWidth} × ${innerHeight}`],['VISIBILITY',document.visibilityState]])+actions([['system','DISPLAY THEME']]),
-    runtime:()=>rows([['RELEASE','FIELD/OS 1.4'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
+    runtime:()=>rows([['RELEASE','FIELD/OS 1.5'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
     plot,
     navtools:()=>actions([['map','TERRAIN MAP'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','SAVED WAYPOINTS'],['track','TRACK RECORDER'],['lost','LOST MODE']])+note('Use your route, saved base, and position source together when reviewing a return path.'),
     commtools:()=>actions([['trip','CHECK-IN PLAN'],['nav','COORDINATES'],['log','EVENT JOURNAL'],['system','DEVICE STATUS']])+note('Prepare a check-in locally and review the position source before copying it.'),
@@ -96,7 +96,11 @@
       if(child.matches('.grid.two-col')&&!child.id){[...child.children].forEach(c=>grid.append(c));child.remove();}
       else grid.append(child);
     });view.append(grid);
-    const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-release">FIELD / OS 1.4</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';head.after(band);
+    const consoleBar=document.createElement('div');
+    consoleBar.className='module-console-header';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v1.5</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
+    head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
     const hero=grid.querySelector(':scope > .panel');hero?.classList.add('module-hero');
   }
@@ -118,6 +122,12 @@
     setBand('.ws-band-pos',`POS ${src.includes('DEMO')?'DEMO':`±${Math.round(currentAccuracy)}M`} / ${fmtAge(fixAge)}`);
     setBand('.ws-band-route',`ROUTE ${routeState}`);
     setBand('.ws-band-clock',now.toLocaleTimeString());
+    const setConsole=(sel,value)=>{const el=active.querySelector(sel);if(el)el.textContent=value;};
+    setConsole('.ws-console-name',moduleLabel);
+    setConsole('.ws-console-pos',`GPS: ${src.includes('DEMO')?'DEMO':`±${Math.round(currentAccuracy)}M`} / ${fmtAge(fixAge)}`);
+    setConsole('.ws-console-track',`TRACK: ${trackState}`);
+    setConsole('.ws-console-clock',now.toLocaleTimeString());
+    const cb=active.querySelector('.ws-console-battery b'); if(cb) cb.textContent=val('mobileBattery');
     active.querySelectorAll('.module-slot').forEach(slot=>{const body=bodies[slot.dataset.panelType];if(!body)return;let content=slot.querySelector('.ws-card-body');if(!content){content=document.createElement('div');content.className='ws-card-body';slot.firstElementChild.append(content);}const html=body();if(content.innerHTML!==html)content.innerHTML=html;});
   }
   document.addEventListener('click',()=>queueMicrotask(refresh));document.addEventListener('input',()=>queueMicrotask(refresh));setInterval(refresh,2000);refresh();
