@@ -476,19 +476,30 @@
 }
 
 
-/* v2.6 live map toggles */
+/* v2.7 live map toggles — Safari-safe check indicators */
 .map-layer-toggle{
   display:flex!important;align-items:center;gap:5px!important;
   padding:4px 2px!important;cursor:pointer!important;white-space:normal!important;
   color:#89eaa8!important;border-bottom:1px dotted rgba(98,255,154,.16);
 }
 .map-layer-toggle input{
-  appearance:none;-webkit-appearance:none;width:12px;height:12px;min-width:12px;margin:0;
-  border:1px solid #62ff9a;background:#001008;display:grid;place-items:center;cursor:pointer;
+  position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;
 }
-.map-layer-toggle input:checked{background:#91ffb3;box-shadow:0 0 5px rgba(98,255,154,.25)}
-.map-layer-toggle input:checked:after{content:"✓";color:#001207;font:700 9px/1 monospace}
-.map-layer-toggle span{font-size:7px;line-height:1.15}
+.map-layer-toggle span{
+  position:relative;font-size:7px;line-height:1.15;padding-left:18px;min-height:14px;display:flex;align-items:center;
+}
+.map-layer-toggle span:before{
+  content:"☐";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:13px;height:13px;display:grid;place-items:center;
+  color:#62ff9a;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  text-shadow:0 0 4px rgba(98,255,154,.28);
+}
+.map-layer-toggle input:checked + span:before{
+  content:"☑";color:#baffce;text-shadow:0 0 6px rgba(98,255,154,.55);
+}
+.map-layer-toggle:has(input:checked){
+  color:#baffce!important;background:rgba(98,255,154,.045);
+}
 .map-location-toggle.active{background:#91ffb3!important;color:#001207!important;border-color:#91ffb3!important}
 .map-layer-state{display:flex;justify-content:space-between;gap:5px;padding:3px 1px;border-top:1px dotted rgba(98,255,154,.16);font-size:6.5px;color:#78d997}
 .map-layer-state b{margin:0!important;padding:0!important;border:0!important;color:#baffce!important;font-size:6.5px!important}
