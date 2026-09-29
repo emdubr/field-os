@@ -11,8 +11,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=2.2">
+  <link rel="stylesheet" href="workstation.css?v=2.3">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +57,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.2</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.3</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -85,25 +84,9 @@
               <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">SCHEMATIC</span></div>
               <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
               <div class="map-workarea">
-                <div id="homeRealMap" class="field-real-map home-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div><div id="homeMapFallback" class="generated-map detailed-generated-map">
-                  <svg class="topo-svg" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
-                    <g class="contours">
-                      <path d="M-20 90 C90 15 180 150 290 75 S500 20 840 105"/><path d="M-20 115 C85 45 180 175 300 100 S520 45 840 135"/><path d="M-20 145 C100 70 205 205 325 130 S545 75 840 165"/>
-                      <path d="M-30 285 C80 190 190 350 330 260 S555 190 850 300"/><path d="M-20 315 C100 220 205 380 350 290 S580 220 840 330"/><path d="M-10 350 C120 255 230 415 380 325 S610 255 850 365"/>
-                      <path d="M40 490 C90 400 180 425 235 350 S355 290 410 360 S520 450 590 365 S720 310 820 405"/>
-                      <ellipse cx="625" cy="105" rx="105" ry="62"/><ellipse cx="625" cy="105" rx="78" ry="44"/><ellipse cx="625" cy="105" rx="48" ry="27"/>
-                      <ellipse cx="205" cy="255" rx="120" ry="80"/><ellipse cx="205" cy="255" rx="90" ry="58"/><ellipse cx="205" cy="255" rx="55" ry="34"/>
-                    </g>
-                    <g class="hydro"><path d="M735 -10 C700 90 760 155 705 245 S690 390 635 530"/><path d="M100 0 C135 95 100 160 150 230 S170 390 215 530"/></g>
-                    <g class="route-svg-home"><path d="M115 430 L180 365 L245 340 L315 275 L390 250 L465 180 L545 145 L615 92"/></g>
-                    <g class="minor-trails"><path d="M55 390 L250 250 L400 195 L705 160"/><path d="M220 510 L300 390 L390 250 L520 285 L780 235"/><path d="M330 20 L390 120 L465 180 L520 285 L590 440"/></g>
-                  </svg>
-                  <div class="map-grid-labels"><i style="left:3%;top:5%">44°29'N</i><i style="right:3%;top:5%">073°12'W</i><i style="left:3%;bottom:7%">44°27'N</i><i style="right:3%;bottom:7%">073°09'W</i></div>
-                  <i class="route-dot d1"></i><i class="route-dot d2"></i><i class="route-dot d3"></i>
-                  <div class="map-base">⌂<small>BASE-01<br>6.8 mi / 245°</small></div><div class="map-you">▲<small>TAP-01<br>3,420 ft</small></div><div class="map-trail">⊙<small>TRAIL JCT<br>2.4 mi / 018°</small></div><div class="map-hazard">△<small>STEEP</small></div>
-                  <div class="map-node n1">●<small>RIDGE-01</small></div><div class="map-node n2">●<small>CAMP-01</small></div>
-                  <div class="map-scale">0&nbsp;&nbsp;1&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4 mi<br>├──┼──┼────┤</div>
-                  <div class="map-north">N<br>↑</div>
+                <div id="homeRealMap" class="field-real-map home-real-map" aria-label="Interactive hiking topographic map"></div><div id="homeMapFallback" class="field-map-fallback home-map-fallback" hidden>
+                  <b>LIVE MAP UNAVAILABLE</b>
+                  <span id="homeMapErrorText">No network or map engine error.</span>
                 </div>
                 <aside class="map-controls">
                   <button id="homeMapZoomIn" type="button" data-map-action="zoom-in" data-map-target="homeRealMap">+ ZOOM +</button><button id="homeMapZoomOut" type="button" data-map-action="zoom-out" data-map-target="homeRealMap">− ZOOM −</button><button id="homeMapCenter" type="button" data-map-action="center" data-map-target="homeRealMap">CENTER</button><button id="homeTopoMode" type="button" data-map-action="topo" data-map-target="homeRealMap">TOPO MAP</button><button id="homeTrailLayer" type="button" data-map-action="trails" data-map-target="homeRealMap">HIKING ROUTES</button>
@@ -158,17 +141,10 @@
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation" data-map-action="location">LIVE LOCATION</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
         <article class="panel full-map">
           <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">SCHEMATIC FALLBACK</span></div>
-          <div id="realMap" class="field-real-map main-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div>
-          <div id="mapFallback" class="map-demo large">
-            <div class="contour c1"></div><div class="contour c2"></div><div class="contour c3"></div>
-            <div class="trail t1"></div><div class="trail t2"></div>
-            <div class="breadcrumb b1"></div><div class="breadcrumb b2"></div><div class="breadcrumb b3"></div>
-            <div class="sweep"></div>
-            <div class="map-marker self">▲<span>AGENT-01</span></div>
-            <div class="map-marker friend f1">●<span>NODE-02</span></div>
-            <div class="map-marker friend f2">●<span>RELAY-A</span></div>
-            <div class="base-marker">◆<span>BASE</span></div>
-            <div class="map-coords">TRACK: ACTIVE<br>UNCERTAINTY: ±12 m</div>
+          <div id="realMap" class="field-real-map main-real-map" aria-label="Interactive hiking topographic map"></div>
+          <div id="mapFallback" class="field-map-fallback main-map-fallback" hidden>
+            <b>LIVE MAP UNAVAILABLE</b>
+            <span id="mapErrorText">No network or saved offline map is available.</span>
           </div>
         </article>
         <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
@@ -524,11 +500,8 @@
       <button class="tab-btn" id="moreTabs" type="button" aria-expanded="false"><span>▦</span><small>MORE</small></button>
     </nav>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.2"></script>
-  <script src="workstation.js?v=2.2"></script>
+  <script src="app.js?v=2.3"></script>
+  <script src="workstation.js?v=2.3"></script>
 </body>
 </html>
