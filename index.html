@@ -11,8 +11,8 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTUkskMZqSBRfM8aO/Pj7aqx2M=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=1.9">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTUkskMZqSBRfM8aO/Pj7aqx2M=" crossorigin="" />
+  <link rel="stylesheet" href="workstation.css?v=2.0">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v1.9</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.0</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -106,7 +106,7 @@
                   <div class="map-north">N<br>↑</div>
                 </div>
                 <aside class="map-controls">
-                  <button id="homeMapZoomIn" type="button">+ ZOOM +</button><button id="homeMapZoomOut" type="button">− ZOOM −</button><button id="homeMapCenter" type="button">CENTER</button>
+                  <button id="homeMapZoomIn" type="button">+ ZOOM +</button><button id="homeMapZoomOut" type="button">− ZOOM −</button><button id="homeMapCenter" type="button">CENTER</button><button id="homeTopoMode" type="button">TOPO MAP</button><button id="homeTrailLayer" type="button">HIKING ROUTES</button>
                   <b>LAYERS</b><label>☑ Trails</label><label>☑ Topo</label><label>☐ Satellite</label><label>☑ Terrain</label><label>☑ Slope</label><label>☑ Water</label><label>☑ Landmarks</label><label>☐ Grid</label>
                   <b>ROUTE</b><span>Jay Peak Loop</span><span>12.6 mi</span><span>6h 20m</span>
                 </aside>
@@ -172,6 +172,12 @@
           </div>
         </article>
         <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
+        <div class="map-source-bar">
+          <button id="mapTopoMode" class="map-source-btn active" type="button">TOPO + CONTOURS</button>
+          <button id="mapTrailLayer" class="map-source-btn active" type="button">HIKING ROUTES</button>
+          <button id="mapOsmMode" class="map-source-btn" type="button">STREET OSM</button>
+          <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
+        </div>
         <article class="panel offline-map-manager" id="offlineMapManager">
           <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
           <div class="offline-map-grid">
@@ -476,11 +482,11 @@
       <button class="tab-btn" id="moreTabs" type="button" aria-expanded="false"><span>▦</span><small>MORE</small></button>
     </nav>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
-  <script src="https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=1.9"></script>
-  <script src="workstation.js?v=1.9"></script>
+  <script src="app.js?v=2.0"></script>
+  <script src="workstation.js?v=2.0"></script>
 </body>
 </html>
