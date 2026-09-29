@@ -23,7 +23,11 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
  const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await tick();
  assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);assert.ok(parseFloat(d.getElementById('routeDistance').textContent)>0);assert.match(d.getElementById('routeGainOut').textContent,/N\/A/);assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-routePlan')).points.length,2);
- click('reverseRoute');await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints()[0].lat,44.48);click('undoRoutePoint');await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,1);assert.equal(d.getElementById('reverseRoute').disabled,true);click('clearRoute');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-routePlan')).points.length,0);
+ for(const id of ['homeRealMap','realMap']){assert.ok(d.querySelector('#'+id+' .planned-route-line'));assert.equal(d.querySelectorAll('#'+id+' .planned-route-marker').length,2)}
+ const beforeRoute=d.querySelector('#homeRealMap .planned-route-line').getAttribute('points');
+ click('reverseRoute');await tick();assert.notEqual(d.querySelector('#homeRealMap .planned-route-line').getAttribute('points'),beforeRoute);assert.equal(w.FIELD_ROUTE_STATE.getPoints()[0].lat,44.48);click('undoRoutePoint');await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,1);assert.equal(d.getElementById('reverseRoute').disabled,true);click('clearRoute');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-routePlan')).points.length,0);
+ assert.equal(d.querySelectorAll('.planned-route-line').length,0);
+ console.log('PASS route overlays on both maps, reverse and clear synchronization');
  console.log('PASS direct routing, distance, missing elevation, reverse, undo, clear persistence');
  const g=r.buildGraph([{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98},{lat:44.02,lon:-72.98}],tags:{highway:'path'}}]);
  const a=r.nearestNode(g,{lat:44.0001,lon:-72.995}),b=r.nearestNode(g,{lat:44.0001,lon:-72.99}),path=r.shortestPath(g,a.id,b.id);assert.ok(path.length===2);assert.ok(a.d<12&&b.d<12);assert.ok(r.meters(path[0],path[1])>390&&r.meters(path[0],path[1])<410);
