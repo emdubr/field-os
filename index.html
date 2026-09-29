@@ -11,7 +11,8 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="workstation.css?v=1.6">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTUkskMZqSBRfM8aO/Pj7aqx2M=" crossorigin="" />
+  <link rel="stylesheet" href="workstation.css?v=1.7">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -57,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v1.6</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v1.7</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -81,10 +82,10 @@
             </nav>
 
             <section class="terminal-panel map-console detailed-map-console" data-open="map">
-              <div class="terminal-title">♙ TOPOGRAPHIC MAP // VT-021 <span>×</span></div>
+              <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">SCHEMATIC</span></div>
               <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
               <div class="map-workarea">
-                <div class="generated-map detailed-generated-map">
+                <div id="homeRealMap" class="field-real-map home-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div><div id="homeMapFallback" class="generated-map detailed-generated-map">
                   <svg class="topo-svg" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
                     <g class="contours">
                       <path d="M-20 90 C90 15 180 150 290 75 S500 20 840 105"/><path d="M-20 115 C85 45 180 175 300 100 S520 45 840 135"/><path d="M-20 145 C100 70 205 205 325 130 S545 75 840 165"/>
@@ -105,7 +106,7 @@
                   <div class="map-north">N<br>↑</div>
                 </div>
                 <aside class="map-controls">
-                  <button data-open="map">+ ZOOM +</button><button data-open="map">− ZOOM −</button><button data-open="map">CENTER</button>
+                  <button id="homeMapZoomIn" type="button">+ ZOOM +</button><button id="homeMapZoomOut" type="button">− ZOOM −</button><button id="homeMapCenter" type="button">CENTER</button>
                   <b>LAYERS</b><label>☑ Trails</label><label>☑ Topo</label><label>☐ Satellite</label><label>☑ Terrain</label><label>☑ Slope</label><label>☑ Water</label><label>☑ Landmarks</label><label>☐ Grid</label>
                   <b>ROUTE</b><span>Jay Peak Loop</span><span>12.6 mi</span><span>6h 20m</span>
                 </aside>
@@ -156,8 +157,9 @@
       <section class="view" id="map" data-view="map">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><button class="ghost" id="centerBtn">CENTER</button></div>
         <article class="panel full-map">
-          <div class="panel-title"><span>SECTOR VT-021</span><span class="tiny">TRACKING ACTIVE</span></div>
-          <div class="map-demo large">
+          <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">SCHEMATIC FALLBACK</span></div>
+          <div id="realMap" class="field-real-map main-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div>
+          <div id="mapFallback" class="map-demo large">
             <div class="contour c1"></div><div class="contour c2"></div><div class="contour c3"></div>
             <div class="trail t1"></div><div class="trail t2"></div>
             <div class="breadcrumb b1"></div><div class="breadcrumb b2"></div><div class="breadcrumb b3"></div>
@@ -441,8 +443,9 @@
       <button class="tab-btn" id="moreTabs" type="button" aria-expanded="false"><span>▦</span><small>MORE</small></button>
     </nav>
   </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="survival-data.js"></script>
-  <script src="app.js"></script>
-  <script src="workstation.js?v=1.6"></script>
+  <script src="app.js?v=1.7"></script>
+  <script src="workstation.js?v=1.7"></script>
 </body>
 </html>
