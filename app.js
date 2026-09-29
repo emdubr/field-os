@@ -148,11 +148,60 @@ function solarPosition(date, lat, lon){
   const az=normalizeDeg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(dec)*Math.cos(phi))*deg+180);
   return {az,el:elev*deg};
 }
+function solarEventsForDate(date,lat,lon){
+  const threshold=-0.833;
+  const start=new Date(date);start.setHours(0,0,0,0);
+  const end=new Date(start);end.setDate(end.getDate()+1);
+  const step=2*60*1000;
+  let prevT=start,prevEl=solarPosition(prevT,lat,lon).el,sunrise=null,sunset=null;
+  const crossing=(aT,aEl,bT,bEl)=>{
+    const den=bEl-aEl||1e-9,frac=Math.max(0,Math.min(1,(threshold-aEl)/den));
+    return new Date(aT.getTime()+(bT.getTime()-aT.getTime())*frac);
+  };
+  for(let ms=start.getTime()+step;ms<=end.getTime();ms+=step){
+    const t=new Date(ms),el=solarPosition(t,lat,lon).el;
+    if(!sunrise&&prevEl<=threshold&&el>threshold)sunrise=crossing(prevT,prevEl,t,el);
+    if(!sunset&&prevEl>threshold&&el<=threshold)sunset=crossing(prevT,prevEl,t,el);
+    prevT=t;prevEl=el;
+  }
+  let daylightMs=0,state='NORMAL';
+  if(sunrise&&sunset)daylightMs=Math.max(0,sunset-sunrise);
+  else{
+    const noon=new Date(start.getTime()+(end-start)/2),above=solarPosition(noon,lat,lon).el>threshold;
+    daylightMs=above?(end-start):0;state=above?'POLAR DAY':'POLAR NIGHT';
+  }
+  return {sunrise,sunset,daylightMs,start,end,state};
+}
+function fmtClock(t){return t?t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'---'}
+function fmtDurationMs(ms){
+  if(!Number.isFinite(ms)||ms<0)return'---';
+  const min=Math.round(ms/60000),h=Math.floor(min/60),m=min%60;
+  return `${h}h ${String(m).padStart(2,'0')}m`;
+}
 function updateSolar(){
-  const p=solarPosition(new Date(),currentNavPosition.lat,currentNavPosition.lon);
-  const az=document.getElementById('sunAz'), el=document.getElementById('sunEl');
-  if(az) az.textContent=`${p.az.toFixed(1)}°`;
-  if(el) el.textContent=`${p.el.toFixed(1)}°`;
+  const now=new Date(),lat=currentNavPosition.lat,lon=currentNavPosition.lon,p=solarPosition(now,lat,lon),ev=solarEventsForDate(now,lat,lon);
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+  set('sunAz',`${p.az.toFixed(1)}°`);
+  set('sunEl',`${p.el.toFixed(1)}°`);
+  set('sunriseTime',ev.sunrise?fmtClock(ev.sunrise):(ev.state==='POLAR DAY'?'NO SUNRISE':'NONE'));
+  set('sunsetTime',ev.sunset?fmtClock(ev.sunset):(ev.state==='POLAR DAY'?'NO SUNSET':'NONE'));
+  set('daylightDuration',fmtDurationMs(ev.daylightMs));
+  let remaining='0h 00m';
+  if(ev.state==='POLAR DAY')remaining='24h 00m';
+  else if(ev.sunrise&&now<ev.sunrise)remaining=`STARTS ${fmtClock(ev.sunrise)}`;
+  else if(ev.sunset&&now<ev.sunset)remaining=fmtDurationMs(ev.sunset-now);
+  else remaining='DARK';
+  set('daylightRemaining',remaining);
+  set('solarLocation',`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+  set('solarPositionSource',hasTrustedMapPosition?.()?(currentNavPosition.source||'LIVE POSITION'):'DEMO POSITION');
+  const marker=document.getElementById('sunArcMarker');
+  if(marker){
+    const daylight=ev.sunrise&&ev.sunset?ev.sunset-ev.sunrise:0;
+    const frac=daylight?Math.max(0,Math.min(1,(now-ev.sunrise)/daylight)):(p.el>threshold?0.5:0);
+    marker.style.left=`${(frac*100).toFixed(1)}%`;
+    marker.classList.toggle('below-horizon',p.el<=threshold);
+  }
+  return ev;
 }
 updateSolar(); setInterval(updateSolar,60000);
 
@@ -317,7 +366,7 @@ document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoin
 document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -422,7 +471,7 @@ function updateTrackUI(){
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
 setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
@@ -463,9 +512,10 @@ requestAnimationFrame(fitReferenceConsole);
 // v1.2 handheld telemetry and resilience helpers
 function fmtAge(sec){sec=Math.max(0,Math.floor(sec));const h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor((sec%3600)/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');return h==='00'?`${m}:${s}`:`${h}:${m}:${s}`}
 function nextSunset(date,lat,lon){
-  let prev=solarPosition(date,lat,lon).el;
-  for(let min=1;min<=24*60;min+=2){const t=new Date(date.getTime()+min*60000),el=solarPosition(t,lat,lon).el;if(prev>-0.833&&el<=-0.833)return t;prev=el;}
-  return null;
+  const today=solarEventsForDate(date,lat,lon);
+  if(today.sunset&&today.sunset>date)return today.sunset;
+  const tomorrow=new Date(date);tomorrow.setDate(tomorrow.getDate()+1);
+  return solarEventsForDate(tomorrow,lat,lon).sunset;
 }
 function updateHandheldStatus(){
   const fix=document.getElementById('mobileFixState'),age=document.getElementById('mobileFixAge');
@@ -474,8 +524,12 @@ function updateHandheldStatus(){
   const bd=document.getElementById('rtbDistance')?.textContent||'---',bb=document.getElementById('rtbBearing')?.textContent||'---';
   const mtd=document.getElementById('mobileTrailDist'),mtb=document.getElementById('mobileTrailBrg'),mbd=document.getElementById('mobileBaseDist'),mbb=document.getElementById('mobileBaseBrg');
   if(mtd)mtd.textContent=td;if(mtb)mtb.textContent=tb;if(mbd)mbd.textContent=bd;if(mbb)mbb.textContent=bb;
-  const now=new Date(),set=nextSunset(now,currentNavPosition.lat,currentNavPosition.lon),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
-  if(set&&day){const sec=Math.max(0,(set-now)/1000);day.textContent=`${Math.floor(sec/3600)}h ${String(Math.floor((sec%3600)/60)).padStart(2,'0')}m`;if(sun)sun.textContent=`SUNSET ${set.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;}
+  const now=new Date(),solar=solarEventsForDate(now,currentNavPosition.lat,currentNavPosition.lon),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
+  if(day)day.textContent=fmtDurationMs(solar.daylightMs);
+  if(sun){
+    if(solar.sunrise&&solar.sunset)sun.textContent=`↑${fmtClock(solar.sunrise)} ↓${fmtClock(solar.sunset)}`;
+    else sun.textContent=solar.state==='POLAR DAY'?'SUN ALL DAY':'NO SUNRISE';
+  }
   const hc=document.getElementById('mobileCheckin');
   if(hc){
     const interval=Number(document.getElementById('checkinInterval')?.value||0);
@@ -502,7 +556,7 @@ document.getElementById('toggleWakeLock')?.addEventListener('click',()=>setField
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&fieldWakeLock)setFieldWakeLock(true)});
 
 
-// v2.0 — interactive hiking topo map + repaired live navigation
+// v2.1 — hiking topo map controls, sunlight telemetry, and compass polish
 let fieldLiveSpeed=null;
 let fieldLiveHeading=null;
 let fieldLocationPrompted=false;
@@ -798,6 +852,7 @@ function paintMapSourceButtons(){
   document.getElementById('mapOsmMode')?.classList.toggle('active',fieldMapMode==='osm');
   document.getElementById('mapTrailLayer')?.classList.toggle('active',fieldTrailLayerEnabled);
   const homeTrail=document.getElementById('homeTrailLayer');if(homeTrail)homeTrail.classList.toggle('active',fieldTrailLayerEnabled);
+  const homeTopo=document.getElementById('homeTopoMode');if(homeTopo)homeTopo.classList.toggle('active',topo);
 }
 async function toggleHikingRoutes(){
   fieldTrailLayerEnabled=!fieldTrailLayerEnabled;
@@ -850,15 +905,36 @@ document.getElementById('deletePmtiles')?.addEventListener('click',async()=>{
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('PACK DELETED',0);
 });
 document.getElementById('useOnlineOsm')?.addEventListener('click',()=>useTopoFieldMap());
-document.getElementById('mapTopoMode')?.addEventListener('click',()=>useTopoFieldMap());
-document.getElementById('homeTopoMode')?.addEventListener('click',()=>useTopoFieldMap());
-document.getElementById('mapOsmMode')?.addEventListener('click',()=>useOnlineFieldMap());
-document.getElementById('mapTrailLayer')?.addEventListener('click',()=>toggleHikingRoutes());
-document.getElementById('homeTrailLayer')?.addEventListener('click',()=>toggleHikingRoutes());
-document.getElementById('centerBtn')?.addEventListener('click',()=>updateFieldMaps(true));
-document.getElementById('homeMapCenter')?.addEventListener('click',()=>updateFieldMaps(true));
-document.getElementById('homeMapZoomIn')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomIn();});
-document.getElementById('homeMapZoomOut')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomOut();});
+async function runMapControl(action,target='realMap'){
+  const diag=document.getElementById('mapSourceDiag');
+  try{
+    if(action==='topo')return await useTopoFieldMap();
+    if(action==='osm')return await useOnlineFieldMap();
+    if(action==='trails')return await toggleHikingRoutes();
+    if(action==='location')return requestFieldLiveLocation();
+    await updateFieldMaps(action==='center');
+    const state=fieldMaps.get(target)||fieldMaps.get('realMap');
+    if(!state||state.el.hidden){if(diag)diag.textContent='MAP NOT READY';return;}
+    if(action==='zoom-in')state.map.zoomIn();
+    else if(action==='zoom-out')state.map.zoomOut();
+    else if(action==='center'){
+      const trusted=hasTrustedMapPosition(),p=trusted?currentNavPosition:(routePoints[0]||waypoints[0]||currentNavPosition);
+      state.map.setView([p.lat,p.lon],Math.max(13,state.map.getZoom()||14));
+      state.centered=true;
+    }
+    requestAnimationFrame(()=>state.map.invalidateSize(false));
+  }catch(err){
+    console.warn('FIELD/OS map control failed',action,err);
+    if(diag)diag.textContent=`CONTROL ERROR: ${String(err?.message||err).slice(0,48)}`;
+  }
+}
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-map-action]');
+  if(!btn)return;
+  e.preventDefault();
+  const action=btn.dataset.mapAction,target=btn.dataset.mapTarget||'realMap';
+  runMapControl(action,target);
+});
 function updateLiveNavigationUI(){
   const trusted=hasTrustedMapPosition();
   const heading=trusted?(Number.isFinite(fieldLiveHeading)?fieldLiveHeading:null):demo.heading;
@@ -876,6 +952,13 @@ function updateLiveNavigationUI(){
   set('navStripHeading',Number.isFinite(heading)?`${String(Math.round(heading)).padStart(3,'0')}° ${card}`:'—');
   set('navStripRoute',routePoints.length>=2?`${routeMiles().toFixed(1)} mi`:'NONE');
   set('navStripTrack',recordedTrack.length?`${recordedTrack.length} pts`:'IDLE');
+  set('navCourseQuality',trusted?(Number.isFinite(fieldLiveHeading)?'LIVE':'NO COURSE'):'DEMO');
+  set('navHeadingMode',Number.isFinite(fieldLiveHeading)?'GNSS':'—');
+  const needle=document.getElementById('navCompassNeedle');
+  if(needle){
+    needle.style.transform=Number.isFinite(heading)?`rotate(${heading}deg)`:'rotate(0deg)';
+    needle.classList.toggle('no-course',!Number.isFinite(heading));
+  }
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
@@ -897,7 +980,6 @@ function requestFieldLiveLocation({quiet=false}={}){
     {enableHighAccuracy:true,timeout:12000,maximumAge:3000}
   );
 }
-document.getElementById('requestLiveLocation')?.addEventListener('click',()=>requestFieldLiveLocation());
 window.addEventListener('online',()=>updateFieldMaps(false));
 window.addEventListener('offline',()=>updateFieldMaps(false));
 document.addEventListener('click',e=>{
