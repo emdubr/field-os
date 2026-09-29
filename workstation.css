@@ -924,3 +924,90 @@ body[data-theme="mono"] .native-terrain-tile{
 .route-map-load-error b{font-size:13px;letter-spacing:.06em}
 .route-map-load-error span{max-width:420px;color:var(--dim);font-size:9px;line-height:1.45}
 
+
+/* FIELD/OS 3.6 — readable field instruments, consistent surfaces and controls. */
+body[data-theme="green"]{--dim:#84b995;--line:#2d6244}
+body[data-theme="amber"]{--dim:#c19c62}
+body[data-theme="red"]{--dim:#d08d8d}
+body[data-theme="mono"]{--dim:#ababab}
+html{font-size:16px}body[data-theme]{background:var(--bg)!important;line-height:1.5}
+.crt-overlay{opacity:.16!important}.noise-overlay{opacity:.012!important}.grid-overlay{opacity:.035!important}
+body .module-grid,body #home .detail-main-grid,body #home .detail-mid-grid,body #home .detail-bottom-grid{gap:12px!important}
+body .module-grid .panel,body #home .terminal-panel{border:1px solid var(--line)!important;background:var(--panel)!important;box-shadow:none!important;padding:14px!important;min-width:0}
+body .module-grid .panel-title,body #home .terminal-title{margin:-14px -14px 12px!important;padding:10px 12px!important;min-height:40px!important;font-size:14px!important;letter-spacing:.025em!important;line-height:1.4!important;border-color:var(--line)!important;text-shadow:none!important;background:var(--panel3)!important;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;height:auto!important}
+body .module-grid .panel-title .tiny,body #home .terminal-title>span{font-size:12px!important}
+body .module-grid .ws-card:after{display:none}
+body .module-grid p,body .module-grid .muted,body #home .terminal-panel p{font-size:16px!important;line-height:1.6!important}
+body .ws-note{font-size:14px!important;line-height:1.6!important}
+body .ws-readouts,body .module-grid .readouts,body .module-grid .large-readouts,body .ws-table,body .ws-readouts dd{font-size:14px!important;line-height:1.5!important}
+body .ws-readouts dt,body .module-grid .readouts dt,body .module-grid .field-label{font-size:14px!important;color:var(--dim)!important}
+body .ws-readouts>div{padding:7px 0!important;gap:12px}
+body .ws-table th{font-size:12px!important}body .ws-table td,body .ws-table th{padding:9px 7px!important}
+body .ws-event{font-size:14px!important;grid-template-columns:70px 1fr!important;padding:9px 0!important}
+body .module-grid .terminal-input,body .module-grid .terminal-area{font-size:16px!important;padding:10px!important;border-color:var(--line)!important;border-radius:4px;min-width:0;width:100%;line-height:1.5}
+body .module-grid .action,body .module-grid .danger-lite,body .module-grid .ws-actions button,body .map-source-btn,body #home .mini-actions button,body #home .console-command-strip button,body #home .return-console>button,body .micro-btn{font-size:14px!important;min-height:42px!important;padding:9px 12px!important;line-height:1.4!important;border-radius:3px;white-space:normal!important}
+body button:focus-visible,body input:focus-visible,body select:focus-visible,body textarea:focus-visible{outline:2px solid var(--fg2)!important;outline-offset:3px}
+body button:disabled{opacity:.45;cursor:not-allowed}
+body .module-console-header{height:auto!important;min-height:62px;padding:14px!important;gap:10px;border-color:var(--line);flex-wrap:wrap}
+body .module-console-header strong{font-size:20px!important;white-space:normal;letter-spacing:.04em}
+body .module-console-header>span,body .module-console-header em{font-size:12px!important}
+body .module-band{font-size:12px!important;height:auto!important;min-height:34px;padding:6px 12px!important;margin-bottom:12px!important;border-color:var(--line)}
+body .route-planner-toolbar{display:flex;flex-wrap:wrap;gap:8px}
+body .route-planner-mode{flex:1 1 200px}
+body .route-planner-mode span,body .route-anchor-readout,body .route-planner-helpbar,body .route-planner-status{font-size:14px!important;line-height:1.5!important;letter-spacing:0!important}
+body .route-planner-status{padding:10px 12px;margin:10px 0;border-left:3px solid var(--fg2)!important;min-height:42px}
+body .route-planner-status.error{border-left-color:var(--danger)!important}
+body .route-planner-real-map{height:480px;min-height:320px;border-radius:4px;isolation:isolate}
+body .route-planner-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+body .route-planner-helpbar{gap:10px;flex-wrap:wrap;padding:10px 0}
+body .route-planner-real-map .planner-leaflet-label{font-size:12px!important;width:22px;height:22px;line-height:22px!important}
+body .route-map-load-error span{font-size:14px}
+body .route-elevation-readouts dd{font-size:20px!important;color:var(--fg2);font-variant-numeric:tabular-nums}
+body .route-elevation-readouts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body #home .route-info-split,body #home .track-rich{display:block!important}
+body #home .detail-console{font-size:14px!important;line-height:1.5!important;transform:none!important;position:relative!important;left:auto!important;top:auto!important;width:100%!important;min-height:0!important}
+body #home .console-viewport{height:auto!important;overflow:visible!important}
+body #home .map-coordbar,body #home .map-footer,body #home .sensor-lines,body #home .nav-coords,body #home .nav-stats,body #home .chart-axis,body #home .mini-chart-title{font-size:12px!important;line-height:1.5!important;height:auto!important;white-space:normal}
+body #home .map-controls button,body #home .map-layer-toggle span,body #home .map-layer-state,body #home .map-layer-state b{font-size:12px!important;line-height:1.4!important}
+body #home .map-controls{width:150px!important;min-width:150px;padding:8px!important}
+body #home .map-layer-toggle{min-height:32px}
+body #home .map-coordbar{padding:8px 0;overflow-wrap:anywhere}
+body #home .detailed-nav{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:12px!important;height:auto!important}
+body #home .detailed-nav .terminal-title{grid-column:1/-1!important;grid-row:auto!important}
+body #home .detailed-nav .nav-coords{grid-column:1!important;grid-row:2!important;width:auto!important}
+body #home .detailed-nav .mini-compass{grid-column:1!important;grid-row:3!important;width:150px!important;height:150px!important;max-width:100%;margin:auto!important}
+body #home .detailed-nav .nav-stats{grid-column:2!important;grid-row:2/4!important;width:auto!important;display:grid;gap:8px}
+body #home .sensor-lines{gap:8px!important}body #home .console-command-strip{display:flex;flex-wrap:wrap;gap:8px;height:auto!important;margin-top:12px;padding:10px!important}
+@media(min-width:1024px){
+  body .workstation-nav{width:224px;padding:10px;background:var(--panel);border-color:var(--line)}
+  body .workstation-nav button{font-size:14px;min-height:42px;padding:10px 8px;gap:10px;border-radius:3px;border-bottom:0}
+  body .workstation-nav button span{font-size:12px}
+  body .workstation-nav button.selected{background:var(--panel3);color:var(--fg2);box-shadow:inset 3px 0 var(--fg2)}
+  body .workstation-nav button.selected span{color:var(--fg2)}
+  body .ws-nav-label,body .workstation-nav footer,body .ws-brand span{font-size:12px}
+  body .shell{width:calc(100% - 240px)!important;margin-left:240px!important}
+  body #app .screen{padding:12px!important}
+  body #home .detail-main-grid{grid-template-columns:minmax(0,1.4fr) minmax(320px,1fr)!important;align-items:start}
+  body #home .detail-main-grid .detail-right-stack{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto!important;gap:12px!important}
+  body #home .detail-right-stack .detailed-nav,body #home .detail-right-stack .detailed-sensors,body #home .detail-right-stack .detailed-route-info{grid-column:1!important;grid-row:auto!important}
+  body .module-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(min-width:1024px) and (max-width:1250px){
+  body .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body #route .module-grid>.module-hero{grid-column:1/-1!important;grid-row:auto!important}
+  body #home .detail-main-grid{grid-template-columns:minmax(0,1fr)!important}
+}
+@media(max-width:1023px){
+  body #home .detail-main-grid{display:flex!important;flex-direction:column!important}
+  body #home .detail-main-grid .detail-right-stack{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
+  body #home .detail-right-stack .detailed-nav,body #home .detail-right-stack .detailed-sensors,body #home .detail-right-stack .detailed-route-info{grid-column:1!important;grid-row:auto!important}
+  body .module-grid{grid-template-columns:minmax(0,1fr)!important}
+  body .module-grid>*{grid-column:1!important}
+  body .route-planner-real-map{height:380px}
+  body .module-console-header{position:relative;display:flex!important}
+  body .module-console-header strong{flex-basis:100%;font-size:18px!important}
+  body .tabbar button{min-height:52px}body .tabbar small{font-size:12px!important}
+  body .sheet-tab{min-height:65px}body .sheet-tab b{font-size:14px}body .sheet-tab small{font-size:12px}
+  body #home .console-header strong{font-size:18px!important}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
