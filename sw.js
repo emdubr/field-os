@@ -1,10 +1,10 @@
-const CACHE='field-os-v1-9';
-const ASSETS=['./','./index.html','./styles.css','./app.js?v=1.9','./workstation.css?v=1.9','./workstation.js?v=1.9','./survival-data.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v2-0';
+const ASSETS=['./','./index.html','./styles.css','./app.js?v=2.0','./workstation.css?v=2.0','./workstation.js?v=2.0','./survival-data.js','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js',
-  'https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'
+  'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
+  'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+  'https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js',
+  'https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'
 ];
 self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(async c=>{
