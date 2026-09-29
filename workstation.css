@@ -156,12 +156,12 @@
 .field-real-map:after{content:"";position:absolute;inset:0;z-index:450;pointer-events:none;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--fg2) 1.8%,transparent) 0,color-mix(in srgb,var(--fg2) 1.8%,transparent) 1px,transparent 1px,transparent 4px),radial-gradient(circle at 50% 45%,transparent 45%,rgba(0,10,5,.18) 100%)}
 .field-real-map .leaflet-control-attribution{z-index:500;background:rgba(0,12,6,.88)!important;color:var(--fg2)!important;font:6.5px/1.25 monospace!important;border-top:1px solid color-mix(in srgb,var(--fg2) 35%,transparent);border-left:1px solid color-mix(in srgb,var(--fg2) 35%,transparent);padding:2px 4px!important}
 .field-real-map .leaflet-control-attribution a{color:var(--fg)!important}
-.field-map-self{stroke:var(--fg)!important;stroke-width:2.5!important;fill:var(--fg2)!important;filter:drop-shadow(0 0 5px rgba(80,255,135,.85))}
+.field-map-self{stroke:var(--fg)!important;stroke-width:2.5!important;fill:var(--fg2)!important;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--fg2) 85%,transparent))}
 .field-map-accuracy{stroke:var(--fg2)!important;fill:var(--fg2)!important;fill-opacity:.08!important;stroke-dasharray:4 3}
-.field-map-route{stroke:var(--fg)!important;filter:drop-shadow(0 0 3px rgba(90,255,145,.8))}
-.field-map-track{stroke:var(--fg2)!important;filter:drop-shadow(0 0 2px rgba(90,255,145,.55))}
+.field-map-route{stroke:var(--fg)!important;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--fg2) 80%,transparent))}
+.field-map-track{stroke:var(--fg2)!important;filter:drop-shadow(0 0 2px color-mix(in srgb,var(--fg2) 55%,transparent))}
 .field-map-waypoint-wrap{background:transparent!important;border:0!important}
-.field-map-waypoint{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--fg2);background:var(--panel2);color:var(--fg);font:700 11px/1 monospace;box-shadow:0 0 7px rgba(90,255,145,.42)}
+.field-map-waypoint{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--fg2);background:var(--panel2);color:var(--fg);font:700 11px/1 monospace;box-shadow:0 0 7px color-mix(in srgb,var(--fg2) 42%,transparent)}
 .field-map-waypoint.base{border-radius:50%;background:var(--fg2);color:var(--panel2)}
 .field-real-map .leaflet-tooltip{background:var(--panel2);color:var(--fg);border:1px solid var(--fg2);border-radius:0;box-shadow:none;font:8px/1.2 monospace;padding:3px 5px}
 .field-real-map .leaflet-tooltip:before{display:none}
@@ -237,8 +237,8 @@
 
 /* v2.0 hiking map controls */
 .map-source-bar{display:grid;grid-template-columns:auto auto auto 1fr;gap:5px;align-items:center;border:1px solid var(--fg2);border-top:0;background:var(--panel2);padding:5px 6px;margin-bottom:6px}
-.map-source-btn{min-height:28px;border:1px solid #3c9d62;background:var(--panel2);color:#9affbc;font:8px/1.2 monospace;letter-spacing:.035em;padding:4px 7px;cursor:pointer}
-.map-source-btn.active{background:var(--fg2);color:var(--bg);border-color:var(--fg2);box-shadow:0 0 7px rgba(98,255,154,.2)}
+.map-source-btn{min-height:28px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font:8px/1.2 monospace;letter-spacing:.035em;padding:4px 7px;cursor:pointer}
+.map-source-btn.active{background:var(--fg2);color:var(--bg);border-color:var(--fg2);box-shadow:0 0 7px color-mix(in srgb,var(--fg2) 20%,transparent)}
 #mapSourceDiag{justify-self:end;color:var(--dim);font-size:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .field-real-map{cursor:grab;touch-action:none}
 .field-real-map.leaflet-grab{cursor:grab}
@@ -291,7 +291,7 @@
 }
 .nav-compass-needle:after{
   content:"";position:absolute;left:50%;bottom:7px;transform:translateX(-50%);
-  width:5px;height:51px;background:#4f8d60;clip-path:polygon(50% 100%,100% 0,50% 15%,0 0);opacity:.82
+  width:5px;height:51px;background:var(--dim);clip-path:polygon(50% 100%,100% 0,50% 15%,0 0);opacity:.82
 }
 .nav-compass-needle.no-course{opacity:.34}
 .nav-compass-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:7;width:15px;height:15px;border-radius:50%;background:var(--panel2);border:2px solid var(--fg);box-shadow:0 0 8px color-mix(in srgb,var(--fg2) 55%,transparent)}
@@ -350,7 +350,7 @@
 .field-compass-svg{display:block;width:100%;height:100%;overflow:visible}
 .compass-svg-outer,.compass-svg-inner{fill:none;stroke:var(--fg2);stroke-width:1}
 .compass-svg-inner{stroke:color-mix(in srgb,var(--fg2) 35%,transparent);stroke-dasharray:2 3}
-.compass-svg-cross line{stroke:rgba(98,255,154,.62);stroke-width:2}
+.compass-svg-cross line{stroke:color-mix(in srgb,var(--fg2) 62%,transparent);stroke-width:2}
 .compass-svg-ticks line{stroke:var(--dim);stroke-width:1}
 .compass-svg-ticks line.major{stroke:var(--fg);stroke-width:1.8}
 .compass-svg-cardinal,.compass-svg-intercardinal{
@@ -480,7 +480,7 @@
 .map-layer-toggle{
   display:flex!important;align-items:center;gap:5px!important;
   padding:4px 2px!important;cursor:pointer!important;white-space:normal!important;
-  color:#89eaa8!important;border-bottom:1px dotted color-mix(in srgb,var(--fg2) 16%,transparent);
+  color:var(--dim)!important;border-bottom:1px dotted color-mix(in srgb,var(--fg2) 16%,transparent);
 }
 .map-layer-toggle input{
   position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;
