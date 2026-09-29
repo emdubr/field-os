@@ -12,7 +12,7 @@
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=2.1">
+  <link rel="stylesheet" href="workstation.css?v=2.2">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.1</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.2</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -81,7 +81,7 @@
               <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
             </nav>
 
-            <section class="terminal-panel map-console detailed-map-console" data-open="map">
+            <section class="terminal-panel map-console detailed-map-console">
               <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">SCHEMATIC</span></div>
               <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
               <div class="map-workarea">
@@ -231,17 +231,37 @@
           <article class="panel compass-panel nav-primary-compass">
             <div class="panel-title"><span>COMPASS CORE</span><span class="tiny" id="navCompassSource">PHONE / DEMO</span></div>
             <div class="field-compass" id="navCompass" role="img" aria-label="Navigation compass">
-              <div class="compass-ticks" aria-hidden="true"></div>
-              <div class="compass-ring" aria-hidden="true"></div>
-              <span class="compass-label n">N</span><span class="compass-label ne">NE</span><span class="compass-label e">E</span><span class="compass-label se">SE</span>
-              <span class="compass-label s">S</span><span class="compass-label sw">SW</span><span class="compass-label w">W</span><span class="compass-label nw">NW</span>
-              <div class="compass-lubber" aria-hidden="true">▼</div>
-              <div class="nav-compass-needle" id="navCompassNeedle" aria-hidden="true"></div>
-              <div class="nav-compass-center" aria-hidden="true"></div>
+              <svg class="field-compass-svg" viewBox="0 0 200 200" aria-hidden="true">
+                <circle class="compass-svg-outer" cx="100" cy="100" r="92"/>
+                <circle class="compass-svg-inner" cx="100" cy="100" r="68"/>
+                <g class="compass-svg-cross">
+                  <line x1="100" y1="17" x2="100" y2="31"/><line x1="183" y1="100" x2="169" y2="100"/>
+                  <line x1="100" y1="183" x2="100" y2="169"/><line x1="17" y1="100" x2="31" y2="100"/>
+                  <line x1="158.7" y1="41.3" x2="149" y2="51"/><line x1="158.7" y1="158.7" x2="149" y2="149"/>
+                  <line x1="41.3" y1="158.7" x2="51" y2="149"/><line x1="41.3" y1="41.3" x2="51" y2="51"/>
+                </g>
+                <g id="navCompassTicks" class="compass-svg-ticks"></g>
+                <text class="compass-svg-cardinal north" x="100" y="28">N</text>
+                <text class="compass-svg-cardinal" x="173" y="104">E</text>
+                <text class="compass-svg-cardinal" x="100" y="181">S</text>
+                <text class="compass-svg-cardinal" x="27" y="104">W</text>
+                <text class="compass-svg-intercardinal" x="151" y="54">NE</text>
+                <text class="compass-svg-intercardinal" x="151" y="155">SE</text>
+                <text class="compass-svg-intercardinal" x="49" y="155">SW</text>
+                <text class="compass-svg-intercardinal" x="49" y="54">NW</text>
+                <g id="navCompassRotor" class="compass-svg-rotor">
+                  <path class="compass-svg-north-needle" d="M100 96 L94 42 L100 28 L106 42 Z"/>
+                  <path class="compass-svg-south-needle" d="M100 104 L95 153 L100 166 L105 153 Z"/>
+                </g>
+                <circle class="compass-svg-center" cx="100" cy="100" r="7"/>
+                <path class="compass-svg-lubber" d="M100 4 L94 16 L106 16 Z"/>
+              </svg>
             </div>
             <div class="compass-readout">
               <div class="big-readout"><span id="navHeading">037°</span> <small id="navHeadingCardinal">NE</small></div>
-              <div class="compass-subreadout"><span>COURSE <b id="navCourseQuality">DEMO</b></span><span>MAG/TRUE <b id="navHeadingMode">GNSS</b></span></div>
+              <div class="compass-subreadout"><span>HEADING SOURCE <b id="navCourseQuality">DEMO</b></span><span>REFERENCE <b id="navHeadingMode">—</b></span></div>
+              <button id="enableCompass" class="compass-enable-btn" type="button">ENABLE DEVICE COMPASS</button>
+              <small id="compassPermissionState" class="compass-permission-state">Use this on iPhone for a true stationary compass.</small>
             </div>
           </article>
           <article class="panel nav-primary-base">
@@ -508,7 +528,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.1"></script>
-  <script src="workstation.js?v=2.1"></script>
+  <script src="app.js?v=2.2"></script>
+  <script src="workstation.js?v=2.2"></script>
 </body>
 </html>
