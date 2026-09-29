@@ -11,7 +11,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="workstation.css?v=2.5">
+  <link rel="stylesheet" href="workstation.css?v=2.6">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -57,7 +57,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.5</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.6</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -89,9 +89,19 @@
                   <span id="homeMapErrorText">No network or map engine error.</span>
                 </div>
                 <aside class="map-controls">
-                  <button id="homeMapZoomIn" type="button" data-map-action="zoom-in" data-map-target="homeRealMap">+ ZOOM +</button><button id="homeMapZoomOut" type="button" data-map-action="zoom-out" data-map-target="homeRealMap">− ZOOM −</button><button id="homeMapCenter" type="button" data-map-action="center" data-map-target="homeRealMap">CENTER</button><button id="homeTopoMode" type="button" data-map-action="topo" data-map-target="homeRealMap">TOPO MAP</button><button id="homeTrailLayer" type="button" data-map-action="trails" data-map-target="homeRealMap">HIKING ROUTES</button>
-                  <b>LAYERS</b><label>☑ Trails</label><label>☑ Topo</label><label>☐ Satellite</label><label>☑ Terrain</label><label>☑ Slope</label><label>☑ Water</label><label>☑ Landmarks</label><label>☐ Grid</label>
-                  <b>ROUTE</b><span>Jay Peak Loop</span><span>12.6 mi</span><span>6h 20m</span>
+                  <button id="homeMapZoomIn" type="button" data-map-action="zoom-in" data-map-target="homeRealMap">+ ZOOM +</button>
+                  <button id="homeMapZoomOut" type="button" data-map-action="zoom-out" data-map-target="homeRealMap">− ZOOM −</button>
+                  <button id="homeMapCenter" type="button" data-map-action="center" data-map-target="homeRealMap">CENTER</button>
+                  <button id="homeLiveLocation" class="map-location-toggle" type="button" data-map-action="location-toggle" data-map-target="homeRealMap" aria-pressed="false">LIVE LOCATION OFF</button>
+                  <b>MAP LAYERS</b>
+                  <label class="map-layer-toggle"><input id="homeLayerTrails" type="checkbox" data-map-layer="trails" checked><span>Hiking routes</span></label>
+                  <label class="map-layer-toggle"><input id="homeLayerTopo" type="checkbox" data-map-layer="topo" checked><span>Topo + contours</span></label>
+                  <label class="map-layer-toggle"><input id="homeLayerSatellite" type="checkbox" data-map-layer="satellite"><span>Satellite</span></label>
+                  <label class="map-layer-toggle"><input id="homeLayerTerrain" type="checkbox" data-map-layer="terrain"><span>Terrain shade</span></label>
+                  <label class="map-layer-toggle"><input id="homeLayerGrid" type="checkbox" data-map-layer="grid"><span>Coordinate grid</span></label>
+                  <div class="map-layer-state"><span>GPS</span><b id="homeLocationState">OFF</b></div>
+                  <div class="map-layer-state"><span>FIX AGE</span><b id="homeLiveFixAge">—</b></div>
+                  <div class="map-layer-state"><span>ACCURACY</span><b id="homeLiveAccuracy">—</b></div>
                 </aside>
               </div>
               <div class="map-footer"><span>TRACK 01:26:13</span><span>FIX AGE <b id="homeFixAge">00:00:04</b></span><span>ACC <b id="homeAccuracy">±4 m</b></span><span>OFF ROUTE 180 ft</span><span>PACK: OFFLINE</span></div>
@@ -138,7 +148,7 @@
       </section>
 
       <section class="view" id="map" data-view="map">
-        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation" data-map-action="location">LIVE LOCATION</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost map-location-toggle" id="requestLiveLocation" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
         <article class="panel full-map">
           <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">MAP STARTING</span></div>
           <div id="realMap" class="field-real-map main-real-map" aria-label="Interactive hiking topographic map"></div>
@@ -155,7 +165,7 @@
           <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
           <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
           <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
-          <button class="map-source-btn" type="button" data-map-action="location">LIVE LOCATION</button>
+          <button id="mapLiveLocation" class="map-source-btn map-location-toggle" type="button" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button>
           <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
         </div>
         <article class="panel offline-map-manager" id="offlineMapManager">
@@ -502,8 +512,8 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.5"></script>
-  <script src="workstation.js?v=2.5"></script>
-  <script src="map-engine.js?v=2.5"></script>
+  <script src="app.js?v=2.6"></script>
+  <script src="workstation.js?v=2.6"></script>
+  <script src="map-engine.js?v=2.6"></script>
 </body>
 </html>
