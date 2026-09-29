@@ -175,26 +175,57 @@
   }
 
   function activate(){
-    const st=state();
-    if(!st||!$(MAP_ID))return;
-    if(!initialized){
-      loadAnchors();
-      if(!ensurePlannerMap())return;
-      bindControls();
-      initialized=true;
+    const el=$(MAP_ID);
+    if(!el){
+      console.warn('FIELD/OS route planner: map container missing');
+      return false;
     }
-    const pts=st.getPoints?.()||[];
-    requestAnimationFrame(()=>{
-      plannerMap?.invalidateSize(false);
-      overlay(pts);
-      if(pts.length>1)fitPlanner(pts,16);
-      else if(anchors.length)fitPlanner(anchors,16);
-      else{
-        const here=st.current?.()||{lat:44.4759,lon:-73.2121};
-        plannerMap?.setView([here.lat,here.lon],14);
+    try{
+      if(!initialized){
+        const map=ensurePlannerMap();
+        if(!map){
+          status('ROUTE MAP STARTUP FAILED -- MAP ENGINE NOT AVAILABLE','error');
+          return false;
+        }
+        bindControls();
+        initialized=true;
       }
-    });
-    status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
+
+      const st=state();
+      if(st){
+        if(!anchors.length)loadAnchors();
+        const pts=st.getPoints?.()||[];
+        requestAnimationFrame(()=>{
+          plannerMap?.invalidateSize(false);
+          overlay(pts);
+          if(pts.length>1)fitPlanner(pts,16);
+          else if(anchors.length)fitPlanner(anchors,16);
+          else{
+            const here=st.current?.()||{lat:44.4759,lon:-73.2121};
+            plannerMap?.setView([here.lat,here.lon],14);
+          }
+        });
+      }else{
+        const fallback={lat:44.4759,lon:-73.2121};
+        requestAnimationFrame(()=>{
+          plannerMap?.invalidateSize(false);
+          plannerMap?.setView([fallback.lat,fallback.lon],14);
+        });
+        status('MAP READY -- WAITING FOR ROUTE DATA BRIDGE','loading');
+        return true;
+      }
+
+      status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
+      return true;
+    }catch(err){
+      console.error('FIELD/OS route planner startup failed',err);
+      status(`ROUTE MAP STARTUP ERROR -- ${String(err?.message||err).toUpperCase()}`,'error');
+      const box=$(MAP_ID);
+      if(box&&!box.querySelector('.route-map-load-error')){
+        box.insertAdjacentHTML('beforeend',`<div class="route-map-load-error"><b>ROUTE MAP STARTUP ERROR</b><span>${String(err?.message||err)}</span></div>`);
+      }
+      return false;
+    }
   }
 
   function bindControls(){
@@ -435,9 +466,36 @@
     }finally{if(!signal.aborted)setBusy(false)}
   }
 
-  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(activate,0)});
+  function routeVisible(){return !!document.querySelector('#route.active')}
+  function kickPlanner(){
+    if(!routeVisible())return;
+    const ok=activate();
+    if(ok&&state()&&initialized)return;
+    setTimeout(()=>{if(routeVisible())activate()},250);
+    setTimeout(()=>{if(routeVisible())activate()},900);
+  }
+
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
   document.addEventListener('fieldos:routechange',()=>{if(initialized)overlay(state()?.getPoints?.()||[])});
-  if(document.querySelector('#route.active'))setTimeout(activate,0);
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('[data-open="route"]'))setTimeout(kickPlanner,60);
+  },true);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)kickPlanner()});
+  window.addEventListener('pageshow',kickPlanner);
+
+  const routeView=document.getElementById('route');
+  if(routeView){
+    new MutationObserver(()=>{if(routeVisible())kickPlanner()}).observe(routeView,{attributes:true,attributeFilter:['class']});
+  }
+
+  let watchdogCount=0;
+  const watchdog=setInterval(()=>{
+    watchdogCount++;
+    if(routeVisible())kickPlanner();
+    if(initialized&&state()||watchdogCount>24)clearInterval(watchdog);
+  },500);
+
+  if(routeVisible())setTimeout(kickPlanner,0);
 
   window.FIELD_ROUTE_PLANNER={activate,recalculate,get anchors(){return anchors.map(p=>({...p}))}};
 })();
