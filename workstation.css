@@ -885,3 +885,41 @@ body[data-theme="mono"] .native-terrain-tile{
   background:
     linear-gradient(135deg,color-mix(in srgb,var(--danger) 5%,var(--panel2)),var(--panel2))!important;
 }
+
+
+/* v3.2 independent Leaflet route-planner map */
+.route-planner-real-map.leaflet-container{
+  background:#d8dccb!important;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.route-planner-real-map .leaflet-pane,
+.route-planner-real-map .leaflet-control{z-index:auto}
+.route-planner-real-map .leaflet-map-pane{z-index:1}
+.route-planner-real-map .leaflet-tile-pane{z-index:2;filter:brightness(.90) contrast(1.06) saturate(.88)}
+.route-planner-real-map .leaflet-overlay-pane{z-index:4;filter:none!important}
+.route-planner-real-map .leaflet-marker-pane,
+.route-planner-real-map .leaflet-tooltip-pane{z-index:5;filter:none!important}
+.route-planner-real-map .leaflet-control-container{position:relative;z-index:10}
+.route-planner-real-map .leaflet-control-zoom a{
+  background:color-mix(in srgb,var(--panel2) 94%,transparent)!important;
+  color:var(--fg)!important;border-color:var(--line)!important;
+}
+.route-planner-real-map .leaflet-control-attribution{
+  background:rgba(10,15,11,.82)!important;color:#d8e5d8!important;
+  border-color:rgba(255,255,255,.14)!important;
+}
+.route-planner-real-map .leaflet-control-attribution a{color:#eef7ee!important}
+.route-planner-real-map .planner-leaflet-label{
+  width:18px;height:18px;margin:0!important;padding:0!important;
+  display:grid;place-items:center;transform:translate(-9px,-9px);
+  background:var(--panel2)!important;color:var(--fg)!important;
+  border:1px solid var(--fg)!important;border-radius:50%!important;
+  box-shadow:none!important;font:700 8px/18px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+}
+.route-planner-real-map .planner-leaflet-label:before{display:none!important}
+.route-map-load-error{
+  position:absolute;inset:0;display:grid;place-content:center;gap:8px;text-align:center;
+  padding:24px;background:var(--panel2);color:var(--danger);z-index:20;
+}
+.route-map-load-error b{font-size:13px;letter-spacing:.06em}
+.route-map-load-error span{max-width:420px;color:var(--dim);font-size:9px;line-height:1.45}
