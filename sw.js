@@ -1,5 +1,5 @@
-const CACHE='field-os-v2-5';
-const ASSETS=['./','./index.html','./styles.css','./app.js?v=2.5','./workstation.css?v=2.5','./workstation.js?v=2.5','./survival-data.js','./map-engine.js?v=2.5','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v2-6';
+const ASSETS=['./','./index.html','./styles.css','./app.js?v=2.6','./workstation.css?v=2.6','./workstation.js?v=2.6','./survival-data.js','./map-engine.js?v=2.6','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
