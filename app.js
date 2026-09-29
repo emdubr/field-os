@@ -317,7 +317,7 @@ document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoin
 document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v1.9" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -422,7 +422,7 @@ function updateTrackUI(){
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v1.9" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
 setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
@@ -502,7 +502,7 @@ document.getElementById('toggleWakeLock')?.addEventListener('click',()=>setField
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&fieldWakeLock)setFieldWakeLock(true)});
 
 
-// v1.9 — interactive OpenStreetMap + repaired live navigation
+// v2.0 — interactive hiking topo map + repaired live navigation
 let fieldLiveSpeed=null;
 let fieldLiveHeading=null;
 let fieldLocationPrompted=false;
@@ -511,11 +511,49 @@ const FIELD_MAP_DB='fieldos-offline-maps-v1';
 const FIELD_MAP_STORE='packs';
 const FIELD_MAP_MAX_BYTES=250*1024*1024;
 const FIELD_OSM_ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>';
-let fieldMapMode=storageGet(STORE_PREFIX+'map-source')||'osm';
+const FIELD_TOPO_ATTR='Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © <a href="https://opentopomap.org/" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)';
+const FIELD_TRAIL_ATTR='© <a href="https://hiking.waymarkedtrails.org/" target="_blank" rel="noopener">Waymarked Trails</a>, OpenStreetMap contributors';
+let fieldMapMode=storageGet(STORE_PREFIX+'map-source')||'topo';
 let fieldActivePackId=storageGet(STORE_PREFIX+'map-pack')||'';
 let fieldActivePackRecord=null;
+let fieldTrailLayerEnabled=storageGet(STORE_PREFIX+'hiking-routes')!=='off';
+let fieldMapLibPromise=null;
 const fieldMaps=new Map();
 
+function loadFieldAsset(tag,attrs){
+  return new Promise((resolve,reject)=>{
+    const existing=[...document.querySelectorAll(tag)].find(el=>Object.entries(attrs).some(([k,v])=>el.getAttribute(k)===v));
+    if(existing){if(tag==='script'&&existing.dataset.fieldLoaded==='1')return resolve(existing);if(tag==='link')return resolve(existing);}
+    const el=document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));
+    el.onload=()=>{el.dataset.fieldLoaded='1';resolve(el)};el.onerror=()=>reject(new Error('Failed to load '+(attrs.src||attrs.href)));
+    document.head.appendChild(el);
+  });
+}
+async function ensureFieldMapLibraries(){
+  if(typeof L!=='undefined')return true;
+  if(fieldMapLibPromise)return fieldMapLibPromise;
+  fieldMapLibPromise=(async()=>{
+    const cssUrls=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'];
+    const jsUrls=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
+    for(const href of cssUrls){try{await loadFieldAsset('link',{rel:'stylesheet',href});break}catch{}}
+    for(const src of jsUrls){try{await loadFieldAsset('script',{src});if(typeof L!=='undefined')break}catch{}}
+    return typeof L!=='undefined';
+  })();
+  return fieldMapLibPromise;
+}
+async function ensureOfflineMapLibraries(){
+  if(typeof pmtiles!=='undefined'&&typeof protomapsL!=='undefined')return true;
+  const groups=[
+    ['https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js','https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'],
+    ['https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js','https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js']
+  ];
+  for(const urls of groups){
+    if((urls[0].includes('/pmtiles@')&&typeof pmtiles!=='undefined')||(urls[0].includes('protomaps-leaflet')&&typeof protomapsL!=='undefined'))continue;
+    for(const src of urls){try{await loadFieldAsset('script',{src});break}catch{}}
+  }
+  return typeof pmtiles!=='undefined'&&typeof protomapsL!=='undefined';
+}
 function hasTrustedMapPosition(){
   return validLatLon(currentNavPosition)&&!String(currentNavPosition.source||'').toUpperCase().includes('DEMO');
 }
@@ -594,7 +632,7 @@ function ensureFieldMap(id,fallbackId,labelId){
   const map=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true,minZoom:2,maxZoom:19});
   map.attributionControl.setPrefix(false);
   const overlay=L.layerGroup().addTo(map);
-  const state={id,el,fallback,label,map,overlay,base:null,baseKind:'',attr:'',centered:false,tileErrors:0};
+  const state={id,el,fallback,label,map,overlay,base:null,trails:null,baseKind:'',attr:'',centered:false,tileErrors:0};
   fieldMaps.set(id,state);
   map.setView([currentNavPosition.lat,currentNavPosition.lon],14);
   map.on('zoomend moveend',()=>{state.centered=true;});
@@ -619,26 +657,57 @@ function removeFieldBase(state){
   state.baseKind='';
 }
 async function setFieldBase(state,kind,pack=null){
-  const key=kind==='offline'&&pack?`offline:${pack.id}`:'osm';
-  if(state.baseKind===key&&state.base)return;
+  const key=kind==='offline'&&pack?`offline:${pack.id}`:kind;
+  if(state.baseKind===key&&state.base){
+    syncHikingOverlay(state);
+    return;
+  }
   removeFieldBase(state);
+  if(state.trails){try{state.map.removeLayer(state.trails);}catch{}state.trails=null;}
   if(kind==='offline'){
-    if(!pack||typeof pmtiles==='undefined'||typeof protomapsL==='undefined')throw new Error('Offline PMTiles renderer unavailable.');
+    if(!pack||!(await ensureOfflineMapLibraries()))throw new Error('Offline PMTiles renderer unavailable.');
     const file=pack.blob instanceof File?pack.blob:new File([pack.blob],pack.name||'offline.pmtiles',{type:'application/octet-stream'});
     const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
     state.base=protomapsL.leafletLayer({url:archive,flavor:'dark',lang:'en'});
     state.base.addTo(state.map);
     state.attr=FIELD_OSM_ATTR+' · OFFLINE PMTiles';
     state.map.attributionControl.addAttribution(state.attr);
-  }else{
+  }else if(kind==='osm'){
     state.tileErrors=0;
     state.base=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      minZoom:2,maxZoom:19,maxNativeZoom:19,attribution:FIELD_OSM_ATTR,crossOrigin:true
+      minZoom:2,maxZoom:19,maxNativeZoom:19,attribution:FIELD_OSM_ATTR
     });
-    state.base.on('tileerror',()=>{state.tileErrors++;if(state.tileErrors===3)setOfflineMapStatus('ONLINE MAP TILE ERROR');});
+    state.base.on('tileerror',()=>{state.tileErrors++;if(state.tileErrors===3)setOfflineMapStatus('OSM TILE ERROR');});
+    state.base.addTo(state.map);
+  }else{
+    state.tileErrors=0;
+    state.base=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+      subdomains:'abc',minZoom:2,maxZoom:19,maxNativeZoom:17,attribution:FIELD_TOPO_ATTR
+    });
+    state.base.on('tileerror',()=>{
+      state.tileErrors++;
+      if(state.tileErrors===4){
+        setOfflineMapStatus('TOPO SERVER ERROR — FALLBACK OSM');
+        const diag=document.getElementById('mapSourceDiag');if(diag)diag.textContent='TOPO ERROR — OSM FALLBACK';
+        setFieldBase(state,'osm').catch(()=>{});
+      }
+    });
     state.base.addTo(state.map);
   }
   state.baseKind=key;
+  syncHikingOverlay(state);
+}
+function syncHikingOverlay(state){
+  if(!state||state.baseKind.startsWith('offline:'))return;
+  if(fieldTrailLayerEnabled){
+    if(!state.trails){
+      state.trails=L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',{
+        minZoom:2,maxZoom:18,maxNativeZoom:18,opacity:.92,attribution:FIELD_TRAIL_ATTR,pane:'overlayPane'
+      });
+      state.trails.on('tileerror',()=>{const d=document.getElementById('mapSourceDiag');if(d)d.textContent='HIKING ROUTE OVERLAY UNAVAILABLE';});
+      state.trails.addTo(state.map);
+    }
+  }else if(state.trails){try{state.map.removeLayer(state.trails);}catch{}state.trails=null;}
 }
 function mapRouteLatLngs(){return routePoints.filter(validLatLon).map(p=>[p.lat,p.lon]);}
 function mapTrackLatLngs(){
@@ -666,6 +735,14 @@ async function resolveActiveFieldPack(){
   try{fieldActivePackRecord=await getFieldMapPack(fieldActivePackId);return fieldActivePackRecord;}catch{return null;}
 }
 async function updateFieldMaps(recenter=false){
+  const libs=await ensureFieldMapLibraries();
+  const diag=document.getElementById('mapSourceDiag');
+  if(!libs){
+    if(diag)diag.textContent='MAP ENGINE FAILED — RETRY';
+    ['homeMapModeLabel','mapModeLabel'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='MAP ENGINE ERROR';});
+    return;
+  }
+  if(diag)diag.textContent='MAP ENGINE READY';
   const states=[
     ensureFieldMap('homeRealMap','homeMapFallback','homeMapModeLabel'),
     ensureFieldMap('realMap','mapFallback','mapModeLabel')
@@ -681,9 +758,10 @@ async function updateFieldMaps(recenter=false){
   }
   for(const state of states){
     try{
-      await setFieldBase(state,useOffline?'offline':'osm',pack);
+      const onlineKind=fieldMapMode==='osm'?'osm':'topo';
+      await setFieldBase(state,useOffline?'offline':onlineKind,pack);
       drawFieldMapOverlays(state);
-      const label=useOffline?(trusted?'OFFLINE OSM / LIVE FIX':'OFFLINE OSM / AWAITING FIX'):(trusted?'LIVE OSM / GNSS':'LIVE OSM / AWAITING FIX');
+      const label=useOffline?(trusted?'OFFLINE MAP / LIVE FIX':'OFFLINE MAP / AWAITING FIX'):(onlineKind==='topo'?(trusted?'HIKING TOPO / GNSS':'HIKING TOPO / AWAITING FIX'):(trusted?'STREET OSM / GNSS':'STREET OSM / AWAITING FIX'));
       showFieldRealMap(state,label);
       if(recenter||!state.centered){
         let center=[currentNavPosition.lat,currentNavPosition.lon];
@@ -697,7 +775,7 @@ async function updateFieldMaps(recenter=false){
       setOfflineMapStatus('MAP SOURCE ERROR');
     }
   }
-  const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):'ONLINE OSM';
+  const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):(fieldMapMode==='osm'?'STREET OSM':'OPEN TOPO HIKING');
 }
 async function activateFieldMapPack(id){
   const rec=await getFieldMapPack(id);
@@ -708,7 +786,24 @@ async function activateFieldMapPack(id){
 }
 async function useOnlineFieldMap(){
   fieldMapMode='osm';storageSet(STORE_PREFIX+'map-source','osm');
-  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('ONLINE OSM ACTIVE',100);
+  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('STREET OSM ACTIVE',100);paintMapSourceButtons();
+}
+async function useTopoFieldMap(){
+  fieldMapMode='topo';storageSet(STORE_PREFIX+'map-source','topo');
+  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('HIKING TOPO ACTIVE',100);paintMapSourceButtons();
+}
+function paintMapSourceButtons(){
+  const topo=fieldMapMode!=='osm'&&fieldMapMode!=='offline';
+  document.getElementById('mapTopoMode')?.classList.toggle('active',topo);
+  document.getElementById('mapOsmMode')?.classList.toggle('active',fieldMapMode==='osm');
+  document.getElementById('mapTrailLayer')?.classList.toggle('active',fieldTrailLayerEnabled);
+  const homeTrail=document.getElementById('homeTrailLayer');if(homeTrail)homeTrail.classList.toggle('active',fieldTrailLayerEnabled);
+}
+async function toggleHikingRoutes(){
+  fieldTrailLayerEnabled=!fieldTrailLayerEnabled;
+  storageSet(STORE_PREFIX+'hiking-routes',fieldTrailLayerEnabled?'on':'off');
+  fieldMaps.forEach(syncHikingOverlay);
+  paintMapSourceButtons();
 }
 async function downloadFieldPmtiles(url){
   const raw=String(url||'').trim();
@@ -754,26 +849,31 @@ document.getElementById('deletePmtiles')?.addEventListener('click',async()=>{
   if(fieldActivePackId===id){fieldActivePackId='';fieldActivePackRecord=null;fieldMapMode='osm';storageRemove(STORE_PREFIX+'map-pack');storageSet(STORE_PREFIX+'map-source','osm');}
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('PACK DELETED',0);
 });
-document.getElementById('useOnlineOsm')?.addEventListener('click',()=>useOnlineFieldMap());
+document.getElementById('useOnlineOsm')?.addEventListener('click',()=>useTopoFieldMap());
+document.getElementById('mapTopoMode')?.addEventListener('click',()=>useTopoFieldMap());
+document.getElementById('homeTopoMode')?.addEventListener('click',()=>useTopoFieldMap());
+document.getElementById('mapOsmMode')?.addEventListener('click',()=>useOnlineFieldMap());
+document.getElementById('mapTrailLayer')?.addEventListener('click',()=>toggleHikingRoutes());
+document.getElementById('homeTrailLayer')?.addEventListener('click',()=>toggleHikingRoutes());
 document.getElementById('centerBtn')?.addEventListener('click',()=>updateFieldMaps(true));
 document.getElementById('homeMapCenter')?.addEventListener('click',()=>updateFieldMaps(true));
 document.getElementById('homeMapZoomIn')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomIn();});
 document.getElementById('homeMapZoomOut')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomOut();});
 function updateLiveNavigationUI(){
   const trusted=hasTrustedMapPosition();
-  const heading=Number.isFinite(fieldLiveHeading)?fieldLiveHeading:demo.heading;
-  const speed=Number.isFinite(fieldLiveSpeed)?fieldLiveSpeed:demo.speed;
-  const card=headingCardinal(heading);
+  const heading=trusted?(Number.isFinite(fieldLiveHeading)?fieldLiveHeading:null):demo.heading;
+  const speed=trusted?(Number.isFinite(fieldLiveSpeed)?fieldLiveSpeed:null):demo.speed;
+  const card=Number.isFinite(heading)?headingCardinal(heading):'--';
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
-  set('navHeading',String(Math.round(heading)).padStart(3,'0')+'°');
+  set('navHeading',Number.isFinite(heading)?String(Math.round(heading)).padStart(3,'0')+'°':'---°');
   set('navHeadingCardinal',card);
   set('navAccuracy',trusted?`±${Math.round(currentAccuracy)} m`:'NO LIVE FIX');
-  set('navCompassSource',Number.isFinite(fieldLiveHeading)?'PHONE COURSE':'DEMO / IMU PENDING');
+  set('navCompassSource',trusted?(Number.isFinite(fieldLiveHeading)?'PHONE COURSE':'COURSE UNAVAILABLE'):'DEMO / IMU PENDING');
   set('navPositionSource',trusted?(currentNavPosition.source||'LIVE POSITION'):'AWAITING LIVE POSITION');
   set('navStripPos',trusted?`${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}`:'AWAITING FIX');
   set('navStripAcc',trusted?`±${Math.round(currentAccuracy)}m`:'—');
   set('navStripSpeed',Number.isFinite(speed)?`${speed.toFixed(1)} mph`:'—');
-  set('navStripHeading',`${String(Math.round(heading)).padStart(3,'0')}° ${card}`);
+  set('navStripHeading',Number.isFinite(heading)?`${String(Math.round(heading)).padStart(3,'0')}° ${card}`:'—');
   set('navStripRoute',routePoints.length>=2?`${routeMiles().toFixed(1)} mi`:'NONE');
   set('navStripTrack',recordedTrack.length?`${recordedTrack.length} pts`:'IDLE');
 }
@@ -819,6 +919,6 @@ renderWaypoints=function(){fieldOriginalRenderWaypoints();updateFieldMaps(false)
 const fieldOriginalUpdateTrackUI=updateTrackUI;
 updateTrackUI=function(){fieldOriginalUpdateTrackUI();updateFieldMaps(false);};
 
-refreshFieldMapPackUI().then(()=>updateFieldMaps(false)).catch(()=>{});
+refreshFieldMapPackUI().then(()=>{paintMapSourceButtons();return updateFieldMaps(false)}).catch(()=>{});
 
 setTimeout(()=>{updateLiveNavigationUI();updateFieldMaps(false);},80);
