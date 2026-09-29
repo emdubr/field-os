@@ -11,7 +11,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="workstation.css?v=2.3">
+  <link rel="stylesheet" href="workstation.css?v=2.4">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -57,7 +57,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.3</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.4</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -81,7 +81,7 @@
             </nav>
 
             <section class="terminal-panel map-console detailed-map-console">
-              <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">SCHEMATIC</span></div>
+              <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">MAP STARTING</span></div>
               <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
               <div class="map-workarea">
                 <div id="homeRealMap" class="field-real-map home-real-map" aria-label="Interactive hiking topographic map"></div><div id="homeMapFallback" class="field-map-fallback home-map-fallback" hidden>
@@ -140,7 +140,7 @@
       <section class="view" id="map" data-view="map">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation" data-map-action="location">LIVE LOCATION</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
         <article class="panel full-map">
-          <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">SCHEMATIC FALLBACK</span></div>
+          <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">MAP STARTING</span></div>
           <div id="realMap" class="field-real-map main-real-map" aria-label="Interactive hiking topographic map"></div>
           <div id="mapFallback" class="field-map-fallback main-map-fallback" hidden>
             <b>LIVE MAP UNAVAILABLE</b>
@@ -501,7 +501,7 @@
     </nav>
   </div>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.3"></script>
-  <script src="workstation.js?v=2.3"></script>
+  <script src="app.js?v=2.4"></script>
+  <script src="workstation.js?v=2.4"></script>
 </body>
 </html>
