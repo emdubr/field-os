@@ -1,4 +1,4 @@
-/* v1.4: consistent terminal workspaces; desktop side navigation + live module status. */
+/* v1.5: home-style integrated terminal workspaces. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -82,4 +82,64 @@
   .module-band{grid-template-columns:repeat(2,minmax(0,1fr))}
   .module-band .ws-band-release{grid-column:1/-1}
   .module-band .ws-band-clock{text-align:left}
+}
+
+/* v1.5 home-screen parity */
+.view:not(#home){background:#000a05;box-shadow:inset 0 0 60px rgba(67,255,133,.035);border:1px solid rgba(98,255,154,.35);padding:4px!important}
+.view:not(#home)>.view-head{display:none!important}
+.module-console-header{height:38px;border:1px solid #62ff9a;background:#000b06;display:flex;align-items:center;gap:18px;padding:0 10px;color:#a6ffc2;font-size:9px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;box-shadow:inset 0 0 18px rgba(67,255,133,.035)}
+.module-console-header strong{font-size:16px;font-weight:500;letter-spacing:.07em;margin-right:auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.module-console-header strong span{color:#a6ffc2}.module-console-header strong em{font-style:normal;font-size:9px;color:var(--dim);margin-left:5px}
+.module-console-header>span{color:var(--dim);font-size:8px}
+.module-console-header .ws-console-battery{color:#a6ffc2}
+.module-band{height:24px;margin:0 0 5px!important;border:1px solid #62ff9a;border-top:0!important;background:#001006;padding:0 8px!important;font-size:8px!important;letter-spacing:.04em;color:#78d997}
+.module-grid{gap:5px!important;padding:0;background:#000a05;align-items:stretch}
+.module-grid .panel{border-color:#62ff9a!important;background:#000b06!important;box-shadow:inset 0 0 36px rgba(67,255,133,.028)!important;padding:8px!important}
+.module-grid .panel-title{min-height:22px!important;margin:-8px -8px 7px!important;padding:4px 6px!important;background:#00140a!important;border-bottom:1px solid #62ff9a!important;color:#a6ffc2!important;font-size:8px!important;letter-spacing:.035em;text-shadow:0 0 5px rgba(102,255,158,.22)}
+.module-grid .panel-title .tiny{font-size:6.5px!important;color:#78d997!important;font-weight:400}
+.module-grid>.module-hero .panel-title{background:#00170b!important}
+.module-grid .ws-card{position:relative}
+.module-grid .ws-card:after{content:"";pointer-events:none;position:absolute;inset:22px 0 0;background:linear-gradient(rgba(93,232,139,.012) 1px,transparent 1px);background-size:100% 5px;opacity:.5}
+.module-grid .ws-card-body{position:relative;z-index:1}
+.ws-readouts{font-size:9px!important;line-height:1.3}
+.ws-readouts>div{padding:4px 0!important;min-height:22px}
+.ws-readouts dt{font-size:7px!important;letter-spacing:.04em}.ws-readouts dd{font-size:9px!important;color:#a6ffc2;font-variant-numeric:tabular-nums}
+.ws-note{font-size:8px!important;line-height:1.4!important;margin:7px 0 2px!important;border-top:1px dotted rgba(98,255,154,.22);padding-top:6px}
+.ws-actions{gap:4px!important;margin-top:7px!important}
+.ws-actions button{min-height:25px!important;padding:4px!important;font-size:7.5px!important;border-color:#62ff9a!important;background:#001108!important;color:#a6ffc2!important}
+.ws-table-wrap{max-height:225px;border:1px solid rgba(98,255,154,.25)}
+.ws-table{font-size:8px!important}.ws-table th{font-size:6.5px!important;color:#91ffb3;background:#00140a!important;letter-spacing:.04em}.ws-table td,.ws-table th{padding:5px 4px!important}
+.ws-route-plot{height:235px!important;border-color:#62ff9a!important;background-color:#001108!important;background-image:linear-gradient(rgba(83,255,143,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(83,255,143,.06) 1px,transparent 1px);background-size:25px 25px}
+.ws-route-plot text{font-size:8px}
+.ws-event{padding:5px 0!important;font-size:8px!important;grid-template-columns:54px 1fr!important}
+.ws-metric{font-size:30px!important}
+.module-grid .terminal-input,.module-grid .terminal-area{background:#000904!important;border-color:#62ff9a!important;color:#a6ffc2!important;font-size:10px!important;padding:7px!important}
+.module-grid .sensor-card,.module-grid .readout-card{background:#001008!important;border-color:rgba(98,255,154,.55)!important}
+.module-grid .sensor-card b,.module-grid .readout-card b{color:#a6ffc2}
+@media(min-width:1024px){
+  .view:not(#home){min-height:calc(100vh - 16px)}
+  .module-console-header{height:36px}
+  .module-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .module-grid>.module-hero{grid-column:span 2!important}
+  #map .module-grid>.module-hero,#route .module-grid>.module-hero,#trailreturn .module-grid>.module-hero,#track .module-grid>.module-hero,#lost .module-grid>.module-hero{grid-row:span 2}
+  #nav .module-grid>.module-hero,#waypoints .module-grid>.module-hero,#trip .module-grid>.module-hero,#system .module-grid>.module-hero,#power .module-grid>.module-hero{grid-column:auto!important;grid-row:auto}
+  .module-slot[data-panel-type="status"]{grid-column:span 1}
+  .module-grid>#guideGrid{grid-column:1/-1!important}
+}
+@media(max-width:1023px){
+  .module-console-header{height:auto;min-height:34px;display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;padding:6px}
+  .module-console-header strong{grid-column:1/-1;font-size:13px}
+  .module-console-header>span{font-size:7px}
+  .module-console-header .ws-console-battery{text-align:right}
+}
+@media(max-width:600px){
+  .view:not(#home){border:0;padding:3px!important}
+  .module-console-header{position:sticky;top:0;z-index:6;background:#000b06}
+  .module-console-header .ws-console-mode,.module-console-header .ws-console-track{display:none}
+  .module-band{height:auto;min-height:22px;padding:3px 5px!important;grid-template-columns:1fr 1fr!important}
+  .module-band .ws-band-sector{display:none}
+  .module-grid{gap:4px!important}
+  .module-grid .panel{padding:7px!important}
+  .module-grid .panel-title{margin:-7px -7px 6px!important}
+  .ws-route-plot{height:200px!important}
 }
