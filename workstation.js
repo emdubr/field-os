@@ -1,4 +1,4 @@
-/* FIELD/OS v2.0: home-style workspaces with density parity across modules. */
+/* FIELD/OS v2.1: home-style workspaces with density parity across modules. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['survival','FIELD MANUAL'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +10,7 @@
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
   const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)} &nbsp; ×</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>2.0</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>2.1</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -79,7 +79,7 @@
     events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
     batteries:()=>rows([['PHONE / COMPUTER',val('mobileBattery')],['TAP V2','UNAVAILABLE'],['SENSOR-2','UNAVAILABLE'],['HARDWARE RESERVE','NOT MEASURED'],['CHARGING',val('mobilePowerState')]])+note('The browser battery reading may be unavailable on some devices.'),
     display:()=>rows([['THEME',document.body.dataset.theme||'green'],['POWER MODE',storageGet(STORE_PREFIX+'power')||'normal'],['WAKE LOCK',fieldWakeLock?'ACTIVE':'OFF'],['SCREEN',`${innerWidth} × ${innerHeight}`],['VISIBILITY',document.visibilityState]])+actions([['system','DISPLAY THEME']]),
-    runtime:()=>rows([['RELEASE','FIELD/OS 2.0'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
+    runtime:()=>rows([['RELEASE','FIELD/OS 2.1'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
     plot,
     navtools:()=>actions([['map','TERRAIN MAP'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','SAVED WAYPOINTS'],['track','TRACK RECORDER'],['lost','LOST MODE']])+note('Use your route, saved base, and position source together when reviewing a return path.'),
     commtools:()=>actions([['trip','CHECK-IN PLAN'],['nav','COORDINATES'],['log','EVENT JOURNAL'],['system','DEVICE STATUS']])+note('Prepare a check-in locally and review the position source before copying it.'),
@@ -98,7 +98,7 @@
     });view.append(grid);
     const consoleBar=document.createElement('div');
     consoleBar.className='module-console-header';
-    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v2.0</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v2.1</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
