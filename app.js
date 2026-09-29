@@ -499,3 +499,267 @@ async function setFieldWakeLock(force){
 }
 document.getElementById('toggleWakeLock')?.addEventListener('click',()=>setFieldWakeLock());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&fieldWakeLock)setFieldWakeLock(true)});
+
+
+// v1.8 — real OpenStreetMap + offline OSM-derived PMTiles
+const FIELD_MAP_DB='fieldos-offline-maps-v1';
+const FIELD_MAP_STORE='packs';
+const FIELD_MAP_MAX_BYTES=250*1024*1024;
+const FIELD_OSM_ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>';
+let fieldMapMode=storageGet(STORE_PREFIX+'map-source')||'osm';
+let fieldActivePackId=storageGet(STORE_PREFIX+'map-pack')||'';
+let fieldActivePackRecord=null;
+const fieldMaps=new Map();
+
+function hasTrustedMapPosition(){
+  return validLatLon(currentNavPosition)&&!String(currentNavPosition.source||'').toUpperCase().includes('DEMO');
+}
+function fmtBytes(n){
+  n=Number(n)||0;
+  if(n<1024)return n+' B';
+  if(n<1024*1024)return (n/1024).toFixed(1)+' KB';
+  if(n<1024*1024*1024)return (n/1024/1024).toFixed(1)+' MB';
+  return (n/1024/1024/1024).toFixed(2)+' GB';
+}
+function setOfflineMapStatus(msg,progress=null){
+  const el=document.getElementById('offlineMapStatus');if(el)el.textContent=msg;
+  const p=document.getElementById('offlineMapProgress');if(p&&progress!=null)p.value=Math.max(0,Math.min(100,progress));
+}
+function openFieldMapDB(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window))return reject(new Error('IndexedDB unavailable'));
+    const req=indexedDB.open(FIELD_MAP_DB,1);
+    req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(FIELD_MAP_STORE))db.createObjectStore(FIELD_MAP_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('Map database open failed'));
+  });
+}
+async function fieldMapDb(mode,action){
+  const db=await openFieldMapDB();
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(FIELD_MAP_STORE,mode),store=tx.objectStore(FIELD_MAP_STORE);
+      let req;
+      try{req=action(store);}catch(err){reject(err);return;}
+      if(req){req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}
+      else{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);}
+    });
+  }finally{db.close();}
+}
+async function listFieldMapPacks(){return await fieldMapDb('readonly',s=>s.getAll());}
+async function getFieldMapPack(id){if(!id)return null;return await fieldMapDb('readonly',s=>s.get(id));}
+async function deleteFieldMapPack(id){if(!id)return;await fieldMapDb('readwrite',s=>s.delete(id));}
+async function saveFieldMapPackBlob(blob,name,source='import'){
+  if(!blob||!blob.size)throw new Error('Map file is empty.');
+  if(blob.size>FIELD_MAP_MAX_BYTES)throw new Error('Map pack is larger than the 250 MB FIELD/OS browser safety limit.');
+  if(typeof pmtiles==='undefined')throw new Error('PMTiles library unavailable.');
+  const safeName=String(name||'offline-map.pmtiles').replace(/[^a-zA-Z0-9._ -]/g,'_');
+  const file=blob instanceof File?blob:new File([blob],safeName,{type:'application/octet-stream'});
+  const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
+  const header=await archive.getHeader();
+  const id='map-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  const rec={id,name:safeName,size:file.size,blob:file,created:new Date().toISOString(),source,minZoom:header.minZoom,maxZoom:header.maxZoom,bounds:[header.minLon,header.minLat,header.maxLon,header.maxLat],center:[header.centerLat,header.centerLon,header.centerZoom]};
+  await fieldMapDb('readwrite',s=>s.put(rec));
+  return rec;
+}
+async function refreshFieldMapPackUI(){
+  const sel=document.getElementById('offlinePmtilesSelect');
+  let packs=[];
+  try{packs=await listFieldMapPacks();}catch(err){setOfflineMapStatus('STORAGE ERROR');return;}
+  packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)));
+  if(sel){
+    sel.innerHTML=packs.length?packs.map(p=>`<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)} — ${fmtBytes(p.size)}</option>`).join(''):'<option value="">NO SAVED PACKS</option>';
+    if(fieldActivePackId&&packs.some(p=>p.id===fieldActivePackId))sel.value=fieldActivePackId;
+  }
+  if(fieldActivePackId&&!packs.some(p=>p.id===fieldActivePackId)){fieldActivePackId='';fieldActivePackRecord=null;storageRemove(STORE_PREFIX+'map-pack');}
+  const src=document.getElementById('offlineMapSource'),sz=document.getElementById('offlineMapSize'),mode=document.getElementById('offlineMapMode');
+  const active=packs.find(p=>p.id===fieldActivePackId);
+  if(src)src.textContent=(fieldMapMode==='offline'&&active)?active.name:'ONLINE OSM';
+  if(sz)sz.textContent=active?fmtBytes(active.size):'—';
+  if(mode)mode.textContent=(fieldMapMode==='offline'&&active)?'OFFLINE PMTILES':'ONLINE OSM';
+  if(navigator.storage?.estimate){
+    try{const e=await navigator.storage.estimate(),st=document.getElementById('offlineMapStorage');if(st)st.textContent=`${fmtBytes(e.usage||0)} / ${fmtBytes(e.quota||0)}`;}catch{}
+  }
+}
+function ensureFieldMap(id,fallbackId,labelId){
+  if(fieldMaps.has(id))return fieldMaps.get(id);
+  const el=document.getElementById(id),fallback=document.getElementById(fallbackId),label=document.getElementById(labelId);
+  if(!el||typeof L==='undefined')return null;
+  const map=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true,minZoom:2,maxZoom:19});
+  map.attributionControl.setPrefix(false);
+  const overlay=L.layerGroup().addTo(map);
+  const state={id,el,fallback,label,map,overlay,base:null,baseKind:'',attr:'',centered:false,tileErrors:0};
+  fieldMaps.set(id,state);
+  map.setView([currentNavPosition.lat,currentNavPosition.lon],14);
+  map.on('zoomend moveend',()=>{state.centered=true;});
+  return state;
+}
+function showFieldFallback(state,message='SCHEMATIC FALLBACK'){
+  if(!state)return;
+  state.el.hidden=true;
+  if(state.fallback)state.fallback.hidden=false;
+  if(state.label)state.label.textContent=message;
+}
+function showFieldRealMap(state,label){
+  if(!state)return;
+  state.el.hidden=false;
+  if(state.fallback)state.fallback.hidden=true;
+  if(state.label)state.label.textContent=label;
+  requestAnimationFrame(()=>state.map.invalidateSize(false));
+}
+function removeFieldBase(state){
+  if(state.base){try{state.map.removeLayer(state.base);}catch{}state.base=null;}
+  if(state.attr){try{state.map.attributionControl.removeAttribution(state.attr);}catch{}state.attr='';}
+  state.baseKind='';
+}
+async function setFieldBase(state,kind,pack=null){
+  const key=kind==='offline'&&pack?`offline:${pack.id}`:'osm';
+  if(state.baseKind===key&&state.base)return;
+  removeFieldBase(state);
+  if(kind==='offline'){
+    if(!pack||typeof pmtiles==='undefined'||typeof protomapsL==='undefined')throw new Error('Offline PMTiles renderer unavailable.');
+    const file=pack.blob instanceof File?pack.blob:new File([pack.blob],pack.name||'offline.pmtiles',{type:'application/octet-stream'});
+    const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
+    state.base=protomapsL.leafletLayer({url:archive,flavor:'dark',lang:'en'});
+    state.base.addTo(state.map);
+    state.attr=FIELD_OSM_ATTR+' · OFFLINE PMTiles';
+    state.map.attributionControl.addAttribution(state.attr);
+  }else{
+    state.tileErrors=0;
+    state.base=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      minZoom:2,maxZoom:19,maxNativeZoom:19,attribution:FIELD_OSM_ATTR,crossOrigin:true
+    });
+    state.base.on('tileerror',()=>{state.tileErrors++;if(state.tileErrors===3)setOfflineMapStatus('ONLINE MAP TILE ERROR');});
+    state.base.addTo(state.map);
+  }
+  state.baseKind=key;
+}
+function mapRouteLatLngs(){return routePoints.filter(validLatLon).map(p=>[p.lat,p.lon]);}
+function mapTrackLatLngs(){
+  const step=Math.max(1,Math.ceil(recordedTrack.length/1500));
+  return recordedTrack.filter((_,i)=>i%step===0).filter(validLatLon).map(p=>[p.lat,p.lon]);
+}
+function drawFieldMapOverlays(state){
+  state.overlay.clearLayers();
+  const pos=[currentNavPosition.lat,currentNavPosition.lon];
+  L.circle(pos,{radius:Math.max(3,Number(currentAccuracy)||4),className:'field-map-accuracy',interactive:false}).addTo(state.overlay);
+  L.circleMarker(pos,{radius:7,className:'field-map-self',fillOpacity:1}).bindTooltip('CURRENT POSITION',{direction:'top'}).addTo(state.overlay);
+  const route=mapRouteLatLngs();if(route.length>=2)L.polyline(route,{className:'field-map-route',weight:4,opacity:.95}).addTo(state.overlay);
+  const track=mapTrackLatLngs();if(track.length>=2)L.polyline(track,{className:'field-map-track',weight:3,opacity:.82,dashArray:'5 5'}).addTo(state.overlay);
+  waypoints.forEach(w=>{
+    if(!validLatLon(w))return;
+    const icon=L.divIcon({className:'field-map-waypoint-wrap',html:`<span class="field-map-waypoint ${w.type==='BASE'?'base':''}">${escapeHTML(waypointSymbol(w.type))}</span>`,iconSize:[22,22],iconAnchor:[11,11]});
+    L.marker([w.lat,w.lon],{icon}).bindTooltip(escapeHTML(w.name),{direction:'top'}).addTo(state.overlay);
+  });
+}
+async function resolveActiveFieldPack(){
+  if(!fieldActivePackId)return null;
+  if(fieldActivePackRecord?.id===fieldActivePackId)return fieldActivePackRecord;
+  try{fieldActivePackRecord=await getFieldMapPack(fieldActivePackId);return fieldActivePackRecord;}catch{return null;}
+}
+async function updateFieldMaps(recenter=false){
+  const states=[
+    ensureFieldMap('homeRealMap','homeMapFallback','homeMapModeLabel'),
+    ensureFieldMap('realMap','mapFallback','mapModeLabel')
+  ].filter(Boolean);
+  if(!states.length)return;
+  if(!hasTrustedMapPosition()){
+    states.forEach(s=>showFieldFallback(s,'WAITING FOR REAL FIX'));
+    return;
+  }
+  const pack=await resolveActiveFieldPack();
+  const useOffline=(fieldMapMode==='offline'||!navigator.onLine)&&!!pack;
+  const canOnline=navigator.onLine!==false;
+  if(!useOffline&&!canOnline){
+    states.forEach(s=>showFieldFallback(s,'NO NETWORK / NO OFFLINE PACK'));
+    return;
+  }
+  for(const state of states){
+    try{
+      await setFieldBase(state,useOffline?'offline':'osm',pack);
+      drawFieldMapOverlays(state);
+      showFieldRealMap(state,useOffline?'OFFLINE OSM / PMTILES':'LIVE OSM');
+      if(recenter||!state.centered){state.map.setView([currentNavPosition.lat,currentNavPosition.lon],Math.max(13,state.map.getZoom()||14));state.centered=true;}
+    }catch(err){
+      console.warn('FIELD/OS map source failed',err);
+      showFieldFallback(state,'MAP SOURCE ERROR');
+      setOfflineMapStatus('MAP SOURCE ERROR');
+    }
+  }
+  const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):'ONLINE OSM';
+}
+async function activateFieldMapPack(id){
+  const rec=await getFieldMapPack(id);
+  if(!rec)throw new Error('Saved map pack not found.');
+  fieldActivePackId=id;fieldActivePackRecord=rec;fieldMapMode='offline';
+  storageSet(STORE_PREFIX+'map-pack',id);storageSet(STORE_PREFIX+'map-source','offline');
+  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('OFFLINE PACK ACTIVE',100);
+}
+async function useOnlineFieldMap(){
+  fieldMapMode='osm';storageSet(STORE_PREFIX+'map-source','osm');
+  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('ONLINE OSM ACTIVE',100);
+}
+async function downloadFieldPmtiles(url){
+  const raw=String(url||'').trim();
+  if(!raw)throw new Error('Enter a PMTiles URL.');
+  const u=new URL(raw,location.href);
+  if(u.protocol!=='https:')throw new Error('Use an HTTPS PMTiles URL.');
+  if(u.hostname==='tile.openstreetmap.org')throw new Error('Official OSM raster tiles cannot be bulk-downloaded for offline use.');
+  setOfflineMapStatus('CONNECTING…',1);
+  const res=await fetch(u.href,{mode:'cors',credentials:'omit'});
+  if(!res.ok)throw new Error(`Download failed: HTTP ${res.status}`);
+  const advertised=Number(res.headers.get('content-length')||0);
+  if(advertised>FIELD_MAP_MAX_BYTES)throw new Error('Map pack exceeds the 250 MB FIELD/OS browser safety limit.');
+  let blob;
+  if(res.body?.getReader){
+    const reader=res.body.getReader(),chunks=[];let got=0;
+    while(true){
+      const {done,value}=await reader.read();if(done)break;
+      got+=value.byteLength;if(got>FIELD_MAP_MAX_BYTES){reader.cancel();throw new Error('Map pack exceeded the 250 MB FIELD/OS browser safety limit.');}
+      chunks.push(value);setOfflineMapStatus(`DOWNLOADING ${fmtBytes(got)}`,advertised?got/advertised*92:Math.min(92,got/FIELD_MAP_MAX_BYTES*100));
+    }
+    blob=new Blob(chunks,{type:'application/octet-stream'});
+  }else blob=await res.blob();
+  const name=decodeURIComponent(u.pathname.split('/').pop()||'downloaded-map.pmtiles');
+  setOfflineMapStatus('VALIDATING…',94);
+  return await saveFieldMapPackBlob(blob,name,'download');
+}
+document.getElementById('offlinePmtilesFile')?.addEventListener('change',async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  try{setOfflineMapStatus('IMPORTING…',20);const rec=await saveFieldMapPackBlob(file,file.name,'import');await refreshFieldMapPackUI();await activateFieldMapPack(rec.id);}catch(err){setOfflineMapStatus('IMPORT FAILED');alert(err.message||String(err));}finally{e.target.value='';}
+});
+document.getElementById('downloadPmtiles')?.addEventListener('click',async()=>{
+  const btn=document.getElementById('downloadPmtiles');if(btn)btn.disabled=true;
+  try{const rec=await downloadFieldPmtiles(document.getElementById('offlinePmtilesUrl')?.value);await refreshFieldMapPackUI();await activateFieldMapPack(rec.id);}catch(err){setOfflineMapStatus('DOWNLOAD FAILED');alert(err.message||String(err));}finally{if(btn)btn.disabled=false;}
+});
+document.getElementById('activatePmtiles')?.addEventListener('click',async()=>{
+  const id=document.getElementById('offlinePmtilesSelect')?.value;if(!id)return alert('No saved map pack selected.');
+  try{await activateFieldMapPack(id);}catch(err){alert(err.message||String(err));}
+});
+document.getElementById('deletePmtiles')?.addEventListener('click',async()=>{
+  const id=document.getElementById('offlinePmtilesSelect')?.value;if(!id)return;
+  if(!confirm('Delete this offline map pack from FIELD/OS?'))return;
+  await deleteFieldMapPack(id);
+  if(fieldActivePackId===id){fieldActivePackId='';fieldActivePackRecord=null;fieldMapMode='osm';storageRemove(STORE_PREFIX+'map-pack');storageSet(STORE_PREFIX+'map-source','osm');}
+  await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('PACK DELETED',0);
+});
+document.getElementById('useOnlineOsm')?.addEventListener('click',()=>useOnlineFieldMap());
+document.getElementById('centerBtn')?.addEventListener('click',()=>updateFieldMaps(true));
+document.getElementById('homeMapCenter')?.addEventListener('click',()=>updateFieldMaps(true));
+document.getElementById('homeMapZoomIn')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomIn();});
+document.getElementById('homeMapZoomOut')?.addEventListener('click',()=>{const s=fieldMaps.get('homeRealMap');if(s&&!s.el.hidden)s.map.zoomOut();});
+window.addEventListener('online',()=>updateFieldMaps(false));
+window.addEventListener('offline',()=>updateFieldMaps(false));
+document.addEventListener('click',e=>{if(e.target.closest('[data-open="map"],[data-open="home"]'))setTimeout(()=>updateFieldMaps(false),30);});
+
+// Patch existing state updates so overlays remain synchronized.
+const fieldOriginalUpdatePositionDisplays=updatePositionDisplays;
+updatePositionDisplays=function(){fieldOriginalUpdatePositionDisplays();updateFieldMaps(false);};
+const fieldOriginalDrawRoute=drawRoute;
+drawRoute=function(){fieldOriginalDrawRoute();updateFieldMaps(false);};
+const fieldOriginalRenderWaypoints=renderWaypoints;
+renderWaypoints=function(){fieldOriginalRenderWaypoints();updateFieldMaps(false);};
+const fieldOriginalUpdateTrackUI=updateTrackUI;
+updateTrackUI=function(){fieldOriginalUpdateTrackUI();updateFieldMaps(false);};
+
+refreshFieldMapPackUI().then(()=>updateFieldMaps(false)).catch(()=>{});
