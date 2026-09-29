@@ -12,7 +12,7 @@
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTUkskMZqSBRfM8aO/Pj7aqx2M=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=1.7">
+  <link rel="stylesheet" href="workstation.css?v=1.8">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v1.7</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v1.8</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -172,6 +172,31 @@
           </div>
         </article>
         <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
+        <article class="panel offline-map-manager" id="offlineMapManager">
+          <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
+          <div class="offline-map-grid">
+            <div>
+              <label class="field-label">IMPORT REGIONAL PMTILES</label>
+              <label class="action file-action offline-file">IMPORT .PMTILES<input id="offlinePmtilesFile" type="file" accept=".pmtiles,application/octet-stream" hidden></label>
+              <p class="muted">Stores an OSM-derived PMTiles archive in this app/browser for offline use.</p>
+            </div>
+            <div>
+              <label class="field-label" for="offlinePmtilesUrl">DOWNLOAD PMTILES URL</label>
+              <input id="offlinePmtilesUrl" class="terminal-input" inputmode="url" placeholder="https://…/regional-map.pmtiles" />
+              <button id="downloadPmtiles" class="action" type="button">DOWNLOAD + SAVE</button>
+            </div>
+            <div>
+              <label class="field-label" for="offlinePmtilesSelect">SAVED MAP PACK</label>
+              <select id="offlinePmtilesSelect" class="terminal-input"><option value="">NO SAVED PACKS</option></select>
+              <div class="button-row compact-map-actions"><button id="activatePmtiles" class="action" type="button">USE SAVED PACK</button><button id="deletePmtiles" class="danger-lite" type="button">DELETE</button><button id="useOnlineOsm" class="action" type="button">ONLINE OSM</button></div>
+            </div>
+            <div class="offline-map-status">
+              <dl class="readouts"><div><dt>ACTIVE SOURCE</dt><dd id="offlineMapSource">ONLINE OSM</dd></div><div><dt>PACK SIZE</dt><dd id="offlineMapSize">—</dd></div><div><dt>APP STORAGE</dt><dd id="offlineMapStorage">CHECKING…</dd></div><div><dt>STATUS</dt><dd id="offlineMapStatus">READY</dd></div></dl>
+              <progress id="offlineMapProgress" max="100" value="0"></progress>
+            </div>
+          </div>
+          <p class="muted">Official OpenStreetMap raster tiles are used for normal interactive online viewing only. Offline packs use PMTiles sources that permit downloading; FIELD/OS does not bulk-prefetch tile.openstreetmap.org.</p>
+        </article>
       </section>
 
       <section class="view" id="comms" data-view="comms">
@@ -266,7 +291,7 @@
           </div>
           <dl class="readouts"><div><dt>CORRIDOR AREA</dt><dd id="corridorArea">---</dd></div><div><dt>EST. STORAGE</dt><dd id="offlineEstimate">---</dd></div><div><dt>LOCAL PACK</dt><dd id="offlineStatus">NOT SAVED</dd></div></dl>
           <div class="button-row"><button id="saveOfflinePack" class="action">SAVE ROUTE PACK</button><button id="exportRoutePack" class="action">EXPORT PACK</button></div>
-          <p class="muted">v0.4 stores the route, corridor bounds and pack settings offline. Actual basemap tile caching will be connected when the production offline-map source is wired in, so FIELD/OS does not bulk-download from a public tile server.</p>
+          <p class="muted">Route corridor metadata is saved locally here. For an actual offline basemap, open MAP → OFFLINE OSM MAP PACKS and save a regional PMTiles archive.</p>
         </article>
       </section>
 
@@ -444,8 +469,10 @@
     </nav>
   </div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
+  <script src="https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=1.7"></script>
-  <script src="workstation.js?v=1.7"></script>
+  <script src="app.js?v=1.8"></script>
+  <script src="workstation.js?v=1.8"></script>
 </body>
 </html>
