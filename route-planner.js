@@ -313,21 +313,27 @@
     if(graphCache.has(key))return graphCache.get(key);
     const q=queryFor(box);let lastErr=null;
     for(const endpoint of OVERPASS_ENDPOINTS){
-      try{
-        const controller=new AbortController();
-        const relay=()=>controller.abort(); signal?.addEventListener('abort',relay,{once:true});
-        const timer=setTimeout(()=>controller.abort(),26000);
-        const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q),signal:controller.signal});
-        clearTimeout(timer); signal?.removeEventListener('abort',relay);
-        if(!res.ok)throw new Error(`trail server ${res.status}`);
-        const json=await res.json();
-        const graph=buildGraph(json.elements||[]);
-        if(graph.nodes.size<2||graph.segments.length<1)throw new Error('no usable trail network in this area');
-        graphCache.set(key,graph);if(graphCache.size>10)graphCache.delete(graphCache.keys().next().value);
-        return graph;
-      }catch(err){
-        if(signal?.aborted)throw err;
-        lastErr=err;
+      for(const method of ['POST','GET']){
+        try{
+          const controller=new AbortController();
+          const relay=()=>controller.abort(); signal?.addEventListener('abort',relay,{once:true});
+          const timer=setTimeout(()=>controller.abort(),26000);
+          const url=method==='GET'?endpoint+'?data='+encodeURIComponent(q):endpoint;
+          const init=method==='GET'
+            ?{method:'GET',signal:controller.signal,cache:'no-store'}
+            :{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q),signal:controller.signal,cache:'no-store'};
+          const res=await fetch(url,init);
+          clearTimeout(timer); signal?.removeEventListener('abort',relay);
+          if(!res.ok)throw new Error(`trail server ${res.status}`);
+          const json=await res.json();
+          const graph=buildGraph(json.elements||[]);
+          if(graph.nodes.size<2||graph.segments.length<1)throw new Error('no usable trail network in this area');
+          graphCache.set(key,graph);if(graphCache.size>10)graphCache.delete(graphCache.keys().next().value);
+          return graph;
+        }catch(err){
+          if(signal?.aborted)throw err;
+          lastErr=err;
+        }
       }
     }
     throw lastErr||new Error('trail network unavailable');
@@ -428,6 +434,125 @@
     return {points:path.map(p=>({lat:p.lat,lon:p.lon})),startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d}};
   }
 
+  function routeDistanceMiles(points){
+    return (Array.isArray(points)?points:[]).reduce((sum,p,i,arr)=>i?sum+miles(arr[i-1],p):0,0);
+  }
+
+  function samplePolyline(points,maxSamples=80){
+    const pts=(Array.isArray(points)?points:[]).filter(valid);
+    if(pts.length<2)return pts;
+    const seg=[],cum=[0];let total=0;
+    for(let i=1;i<pts.length;i++){
+      const d=meters(pts[i-1],pts[i]);seg.push(d);total+=d;cum.push(total);
+    }
+    const count=Math.min(maxSamples,Math.max(2,Math.ceil(total/120)+1));
+    const out=[];let si=0;
+    for(let k=0;k<count;k++){
+      const target=total*(k/(count-1));
+      while(si<seg.length-1&&cum[si+1]<target)si++;
+      const a=pts[si],b=pts[si+1]||a,den=seg[si]||1,t=clamp((target-cum[si])/den,0,1);
+      out.push({lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t,distanceM:target});
+    }
+    return out;
+  }
+
+  async function fetchElevationProfile(points,signal){
+    const samples=samplePolyline(points,80);
+    if(samples.length<2)return null;
+    const lat=samples.map(p=>p.lat.toFixed(6)).join(',');
+    const lon=samples.map(p=>p.lon.toFixed(6)).join(',');
+    const controller=new AbortController();
+    const relay=()=>controller.abort();signal?.addEventListener('abort',relay,{once:true});
+    const timer=setTimeout(()=>controller.abort(),14000);
+    try{
+      const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
+      const res=await fetch(url,{signal:controller.signal,cache:'no-store'});
+      if(!res.ok)throw new Error(`elevation server ${res.status}`);
+      const json=await res.json(),raw=Array.isArray(json.elevation)?json.elevation.map(Number):[];
+      if(raw.length!==samples.length||raw.some(v=>!Number.isFinite(v)))throw new Error('invalid elevation response');
+      const ft=raw.map(v=>v*3.28084);
+      const smooth=ft.map((v,i,arr)=>{
+        const vals=[arr[i-1],v,arr[i+1]].filter(Number.isFinite);
+        return vals.reduce((a,b)=>a+b,0)/vals.length;
+      });
+      let gain=0,loss=0,maxGrade=0;
+      for(let i=1;i<smooth.length;i++){
+        const de=smooth[i]-smooth[i-1],runFt=Math.max(1,(samples[i].distanceM-samples[i-1].distanceM)*3.28084);
+        if(de>5)gain+=de;
+        else if(de<-5)loss+=-de;
+        maxGrade=Math.max(maxGrade,Math.abs(de/runFt*100));
+      }
+      return {
+        samples:samples.map((p,i)=>({lat:p.lat,lon:p.lon,distanceM:p.distanceM,elevationFt:smooth[i]})),
+        gainFt:gain,lossFt:loss,minFt:Math.min(...smooth),maxFt:Math.max(...smooth),maxGrade
+      };
+    }finally{
+      clearTimeout(timer);signal?.removeEventListener('abort',relay);
+    }
+  }
+
+  function drawElevationProfile(profile,distMi){
+    const c=$('routeProfile');if(!c||!profile?.samples?.length)return;
+    const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body);
+    const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',warn=st.getPropertyValue('--warn').trim()||'#ffd166';
+    ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;
+    for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
+    const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),span=Math.max(40,max-min);
+    ctx.strokeStyle=warn;ctx.lineWidth=4;ctx.beginPath();
+    profile.samples.forEach((p,i)=>{
+      const x=i/(profile.samples.length-1)*w,y=h-18-((p.elevationFt-min)/span)*(h-42);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.stroke();ctx.fillStyle=fg;ctx.font='20px monospace';
+    ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,14,27);
+  }
+
+  function applyRouteStats(points,profile){
+    const pts=(Array.isArray(points)?points:[]).filter(valid),dist=routeDistanceMiles(pts);
+    const set=(id,val)=>{const el=$(id);if(el)el.textContent=val};
+    set('routeDistance',`${dist.toFixed(2)} mi`);
+    set('routePointCount',String(pts.length));
+    if(profile){
+      const gain=Math.round(profile.gainFt),loss=Math.round(profile.lossFt),min=Math.round(profile.minFt),max=Math.round(profile.maxFt);
+      set('routeGainOut',`${gain.toLocaleString()} ft`);
+      set('routeLossOut',`${loss.toLocaleString()} ft`);
+      set('routeElevRange',`${min.toLocaleString()}–${max.toLocaleString()} ft`);
+      const gainInput=$('routeGain'),gradeInput=$('routeGrade');
+      if(gainInput)gainInput.value=String(gain);
+      if(gradeInput)gradeInput.value=String(Math.round(profile.maxGrade));
+      gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
+      drawElevationProfile(profile,dist);
+    }else{
+      set('routeLossOut','---');set('routeElevRange','---');
+    }
+    return dist;
+  }
+
+  async function enrichRoute(points,signal,baseStatus){
+    const dist=applyRouteStats(points,null);
+    status(`${baseStatus} -- ${dist.toFixed(2)} MI // LOADING ELEVATION`,'loading');
+    try{
+      const profile=await fetchElevationProfile(points,signal);
+      if(!profile)return {dist,profile:null};
+      applyRouteStats(points,profile);
+      state()?.setMeta?.({
+        distanceMiles:dist,
+        elevationSource:'COPERNICUS GLO-90 / OPEN-METEO',
+        elevationGainFt:Math.round(profile.gainFt),
+        elevationLossFt:Math.round(profile.lossFt),
+        elevationMinFt:Math.round(profile.minFt),
+        elevationMaxFt:Math.round(profile.maxFt),
+        elevationProfile:profile.samples
+      });
+      return {dist,profile};
+    }catch(err){
+      if(signal?.aborted)throw err;
+      console.warn('FIELD/OS elevation lookup failed',err);
+      applyRouteStats(points,null);
+      return {dist,profile:null,elevationError:String(err?.message||err)};
+    }
+  }
+
   async function recalculate(){
     if(anchors.length<2)return;
     aborter?.abort();aborter=new AbortController();
@@ -437,7 +562,9 @@
         const direct=anchors.map(p=>({...p}));
         state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
         fitPlanner(direct,16);
-        status(`DIRECT ROUTE -- ${miles(direct[0],direct.at(-1)).toFixed(2)} MI END-TO-END`,'ready');
+        const enriched=await enrichRoute(direct,signal,'DIRECT ROUTE');
+        const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
+        status(`DIRECT ROUTE -- ${enriched.dist.toFixed(2)} MI${elev}`,'ready');
         return;
       }
       status(`LOADING OSM TRAILS -- LEG 1 / ${anchors.length-1}`,'loading');
@@ -456,8 +583,9 @@
       state()?.setPoints?.(clean);
       state()?.setMeta?.({anchors,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
       overlay(clean);fitPlanner(clean,16);
-      const dist=clean.reduce((sum,p,i)=>i?sum+miles(clean[i-1],p):0,0);
-      status(`SNAPPED TO OSM TRAILS -- ${dist.toFixed(2)} MI * MAX SNAP ${Math.round(maxSnap)} M`,'ready');
+      const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
+      const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
+      status(`SNAPPED TO OSM TRAILS -- ${enriched.dist.toFixed(2)} MI${elev} // MAX SNAP ${Math.round(maxSnap)} M`,'ready');
       navigator.vibrate?.([20,35,20]);
     }catch(err){
       if(signal.aborted)return;
