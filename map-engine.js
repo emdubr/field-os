@@ -316,7 +316,10 @@
     updateLabels();
     ['homeRealMap','realMap'].forEach(id=>ensure(id));
     for(const st of states.values()){
-      if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered))st.center={...centerCandidate()};
+      if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered)){
+        if(plannedRoute().length>1&&!liveEnabled)st.routeFitted=false;
+        else st.center={...centerCandidate()};
+      }
       st.rendered=true;
       if(!st.routeFitted&&plannedRoute().length>1&&st.el.getBoundingClientRect().width>0){
         st.routeFitted=true;fitBounds(st.id,plannedRoute(),{padding:48,maxZoom:16});
