@@ -12,7 +12,7 @@
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=2.0">
+  <link rel="stylesheet" href="workstation.css?v=2.1">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v2.0</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v2.1</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -106,7 +106,7 @@
                   <div class="map-north">N<br>↑</div>
                 </div>
                 <aside class="map-controls">
-                  <button id="homeMapZoomIn" type="button">+ ZOOM +</button><button id="homeMapZoomOut" type="button">− ZOOM −</button><button id="homeMapCenter" type="button">CENTER</button><button id="homeTopoMode" type="button">TOPO MAP</button><button id="homeTrailLayer" type="button">HIKING ROUTES</button>
+                  <button id="homeMapZoomIn" type="button" data-map-action="zoom-in" data-map-target="homeRealMap">+ ZOOM +</button><button id="homeMapZoomOut" type="button" data-map-action="zoom-out" data-map-target="homeRealMap">− ZOOM −</button><button id="homeMapCenter" type="button" data-map-action="center" data-map-target="homeRealMap">CENTER</button><button id="homeTopoMode" type="button" data-map-action="topo" data-map-target="homeRealMap">TOPO MAP</button><button id="homeTrailLayer" type="button" data-map-action="trails" data-map-target="homeRealMap">HIKING ROUTES</button>
                   <b>LAYERS</b><label>☑ Trails</label><label>☑ Topo</label><label>☐ Satellite</label><label>☑ Terrain</label><label>☑ Slope</label><label>☑ Water</label><label>☑ Landmarks</label><label>☐ Grid</label>
                   <b>ROUTE</b><span>Jay Peak Loop</span><span>12.6 mi</span><span>6h 20m</span>
                 </aside>
@@ -155,7 +155,7 @@
       </section>
 
       <section class="view" id="map" data-view="map">
-        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation">LIVE LOCATION</button><button class="ghost" id="centerBtn">CENTER</button></div></div>
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation" data-map-action="location">LIVE LOCATION</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
         <article class="panel full-map">
           <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">SCHEMATIC FALLBACK</span></div>
           <div id="realMap" class="field-real-map main-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div>
@@ -172,10 +172,14 @@
           </div>
         </article>
         <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
-        <div class="map-source-bar">
-          <button id="mapTopoMode" class="map-source-btn active" type="button">TOPO + CONTOURS</button>
-          <button id="mapTrailLayer" class="map-source-btn active" type="button">HIKING ROUTES</button>
-          <button id="mapOsmMode" class="map-source-btn" type="button">STREET OSM</button>
+        <div class="map-source-bar" aria-label="Map controls">
+          <button id="mapTopoMode" class="map-source-btn active" type="button" data-map-action="topo">TOPO + CONTOURS</button>
+          <button id="mapTrailLayer" class="map-source-btn active" type="button" data-map-action="trails">HIKING ROUTES</button>
+          <button id="mapOsmMode" class="map-source-btn" type="button" data-map-action="osm">STREET OSM</button>
+          <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
+          <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
+          <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
+          <button class="map-source-btn" type="button" data-map-action="location">LIVE LOCATION</button>
           <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
         </div>
         <article class="panel offline-map-manager" id="offlineMapManager">
@@ -226,8 +230,19 @@
         <div class="grid two-col">
           <article class="panel compass-panel nav-primary-compass">
             <div class="panel-title"><span>COMPASS CORE</span><span class="tiny" id="navCompassSource">PHONE / DEMO</span></div>
-            <div class="compass"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span><div class="needle"></div><div class="center-dot"></div></div>
-            <div class="big-readout"><span id="navHeading">037°</span> <small id="navHeadingCardinal">NE</small></div>
+            <div class="field-compass" id="navCompass" role="img" aria-label="Navigation compass">
+              <div class="compass-ticks" aria-hidden="true"></div>
+              <div class="compass-ring" aria-hidden="true"></div>
+              <span class="compass-label n">N</span><span class="compass-label ne">NE</span><span class="compass-label e">E</span><span class="compass-label se">SE</span>
+              <span class="compass-label s">S</span><span class="compass-label sw">SW</span><span class="compass-label w">W</span><span class="compass-label nw">NW</span>
+              <div class="compass-lubber" aria-hidden="true">▼</div>
+              <div class="nav-compass-needle" id="navCompassNeedle" aria-hidden="true"></div>
+              <div class="nav-compass-center" aria-hidden="true"></div>
+            </div>
+            <div class="compass-readout">
+              <div class="big-readout"><span id="navHeading">037°</span> <small id="navHeadingCardinal">NE</small></div>
+              <div class="compass-subreadout"><span>COURSE <b id="navCourseQuality">DEMO</b></span><span>MAG/TRUE <b id="navHeadingMode">GNSS</b></span></div>
+            </div>
           </article>
           <article class="panel nav-primary-base">
             <div class="panel-title"><span>RETURN TO BASE</span><span class="tiny">BREADCRUMB MODE</span></div>
@@ -259,10 +274,17 @@
           <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>
           <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd id="navAccuracy">±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
         </article>
-        <article class="panel">
-          <div class="panel-title"><span>SOLAR NAVIGATION</span><span class="tiny">LOCAL CALCULATION</span></div>
-          <div class="solar-row"><div class="sun">☀</div><div><b>Sun azimuth</b><strong id="sunAz">---</strong><small>calculated locally</small></div><div><b>Sun elevation</b><strong id="sunEl">---</strong><small>calculated locally</small></div></div>
-          <div class="button-row"><button class="action">SUN COMPASS</button><button class="action">TAKE SIGHT</button><button class="action">CELESTIAL FIX</button></div>
+        <article class="panel solar-panel">
+          <div class="panel-title"><span>SUNLIGHT / SOLAR NAV</span><span class="tiny" id="solarPositionSource">LOCAL CALCULATION</span></div>
+          <div class="sunlight-summary">
+            <div><span>SUNRISE</span><b id="sunriseTime">---</b></div>
+            <div><span>SUNSET</span><b id="sunsetTime">---</b></div>
+            <div><span>DAYLIGHT</span><b id="daylightDuration">---</b></div>
+            <div><span>REMAINING</span><b id="daylightRemaining">---</b></div>
+          </div>
+          <div class="sun-arc" aria-hidden="true"><i id="sunArcMarker"></i></div>
+          <div class="solar-row"><div class="sun">☀</div><div><b>Sun azimuth</b><strong id="sunAz">---</strong><small>at current position</small></div><div><b>Sun elevation</b><strong id="sunEl">---</strong><small>above horizon</small></div></div>
+          <div class="solar-location-line"><span>LOCATION</span><b id="solarLocation">---</b></div>
         </article>
       </section>
 
@@ -486,7 +508,7 @@
   <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.0"></script>
-  <script src="workstation.js?v=2.0"></script>
+  <script src="app.js?v=2.1"></script>
+  <script src="workstation.js?v=2.1"></script>
 </body>
 </html>
