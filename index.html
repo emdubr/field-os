@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08110b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FIELD/OS" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <title>FIELD/OS</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="green">
+  <div class="crt-overlay" aria-hidden="true"></div>
+  <div class="noise-overlay" aria-hidden="true"></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <div id="boot" class="boot-screen" aria-hidden="true">
+    <div class="boot-box">
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v1.0</span></div>
+      <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
+      <div class="boot-bar"><i id="bootFill"></i></div>
+      <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
+    </div>
+  </div>
+
+  <div id="app" class="shell">
+    <div class="rail left-rail">SECURE // RETRO // FIELD NODE</div>
+    <div class="rail right-rail">CLASSIFIED DISPLAY // LOCAL DEMO</div>
+
+    <header class="topbar">
+      <div>
+        <div class="brand-line">
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v1.0</span></div>
+          <span class="classification">CLASSIFIED DEMO</span>
+        </div>
+        <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
+      </div>
+      <div class="clock-wrap">
+        <div id="clock">--:--:--</div>
+        <div id="date">----</div>
+      </div>
+    </header>
+
+    <section class="status-strip" aria-label="System status">
+      <button class="status-chip good" data-open="system"><span class="dot"></span>LINK <b id="meshCount">07</b></button>
+      <button class="status-chip good" data-open="nav"><span class="dot"></span>GNSS <b id="satCount">18</b></button>
+      <button class="status-chip good" data-open="comms"><span class="dot"></span>CHANNEL OPEN</button>
+      <button class="status-chip warn" data-open="system"><span class="dot"></span>OPS DEMO</button>
+    </section>
+
+    <div class="signal-ticker"><span>RX CH-07 // LOCAL MESH ACTIVE // GNSS LOCK // ENV STREAM // NO EXTERNAL UPLINK // FIELD/OS STANDALONE //</span></div>
+    <main id="screen" class="screen" tabindex="-1">
+      <section class="view active" id="home" data-view="home">
+        <div class="console-viewport"><div class="console-shell detail-console">
+          <div class="console-header">
+            <strong>TAP V2 // FIELD OS <span>v1.2</span></strong>
+            <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
+          </div>
+          <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
+          <section class="handheld-status" aria-label="Handheld field status">
+            <button data-open="nav"><span>GNSS FIX</span><b id="mobileFixState">3D / ±4m</b><small id="mobileFixAge">AGE 00:04</small></button>
+            <button data-open="trailreturn"><span>TO TRAIL</span><b id="mobileTrailDist">0.7 mi</b><small id="mobileTrailBrg">312° NW</small></button>
+            <button data-open="trailreturn"><span>TO BASE</span><b id="mobileBaseDist">6.8 mi</b><small id="mobileBaseBrg">245° SW</small></button>
+            <button data-open="nav"><span>DAYLIGHT</span><b id="mobileDaylight">CALC…</b><small id="mobileSunState">SOLAR</small></button>
+            <button data-open="power"><span>PHONE BAT</span><b id="mobileBattery">--%</b><small id="mobilePowerState">LOCAL</small></button>
+            <button data-open="trip"><span>CHECK-IN</span><b id="mobileCheckin">READY</b><small>LOCAL TIMER</small></button>
+          </section>
+          <div class="handheld-actions" aria-label="Quick field actions">
+            <button data-open="trailreturn">↶ RETURN TRAIL</button><button data-open="trailreturn">⌂ RETURN BASE</button><button data-open="lost">? LOST MODE</button><button class="handheld-sos" data-open="sos">! SOS</button>
+          </div>
+
+          <div class="console-main-grid detail-main-grid">
+            <nav class="console-rail terminal-panel" aria-label="Field modules">
+              <div class="terminal-title">FIELD MODULES <span>?</span></div>
+              <button class="rail-active" data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="survival">▷ SURVIVAL GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
+              <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
+            </nav>
+
+            <section class="terminal-panel map-console detailed-map-console" data-open="map">
+              <div class="terminal-title">♙ TOPOGRAPHIC MAP // VT-021 <span>×</span></div>
+              <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
+              <div class="map-workarea">
+                <div class="generated-map detailed-generated-map">
+                  <svg class="topo-svg" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
+                    <g class="contours">
+                      <path d="M-20 90 C90 15 180 150 290 75 S500 20 840 105"/><path d="M-20 115 C85 45 180 175 300 100 S520 45 840 135"/><path d="M-20 145 C100 70 205 205 325 130 S545 75 840 165"/>
+                      <path d="M-30 285 C80 190 190 350 330 260 S555 190 850 300"/><path d="M-20 315 C100 220 205 380 350 290 S580 220 840 330"/><path d="M-10 350 C120 255 230 415 380 325 S610 255 850 365"/>
+                      <path d="M40 490 C90 400 180 425 235 350 S355 290 410 360 S520 450 590 365 S720 310 820 405"/>
+                      <ellipse cx="625" cy="105" rx="105" ry="62"/><ellipse cx="625" cy="105" rx="78" ry="44"/><ellipse cx="625" cy="105" rx="48" ry="27"/>
+                      <ellipse cx="205" cy="255" rx="120" ry="80"/><ellipse cx="205" cy="255" rx="90" ry="58"/><ellipse cx="205" cy="255" rx="55" ry="34"/>
+                    </g>
+                    <g class="hydro"><path d="M735 -10 C700 90 760 155 705 245 S690 390 635 530"/><path d="M100 0 C135 95 100 160 150 230 S170 390 215 530"/></g>
+                    <g class="route-svg-home"><path d="M115 430 L180 365 L245 340 L315 275 L390 250 L465 180 L545 145 L615 92"/></g>
+                    <g class="minor-trails"><path d="M55 390 L250 250 L400 195 L705 160"/><path d="M220 510 L300 390 L390 250 L520 285 L780 235"/><path d="M330 20 L390 120 L465 180 L520 285 L590 440"/></g>
+                  </svg>
+                  <div class="map-grid-labels"><i style="left:3%;top:5%">44°29'N</i><i style="right:3%;top:5%">073°12'W</i><i style="left:3%;bottom:7%">44°27'N</i><i style="right:3%;bottom:7%">073°09'W</i></div>
+                  <i class="route-dot d1"></i><i class="route-dot d2"></i><i class="route-dot d3"></i>
+                  <div class="map-base">⌂<small>BASE-01<br>6.8 mi / 245°</small></div><div class="map-you">▲<small>TAP-01<br>3,420 ft</small></div><div class="map-trail">⊙<small>TRAIL JCT<br>2.4 mi / 018°</small></div><div class="map-hazard">△<small>STEEP</small></div>
+                  <div class="map-node n1">●<small>RIDGE-01</small></div><div class="map-node n2">●<small>CAMP-01</small></div>
+                  <div class="map-scale">0&nbsp;&nbsp;1&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4 mi<br>├──┼──┼────┤</div>
+                  <div class="map-north">N<br>↑</div>
+                </div>
+                <aside class="map-controls">
+                  <button data-open="map">+ ZOOM +</button><button data-open="map">− ZOOM −</button><button data-open="map">CENTER</button>
+                  <b>LAYERS</b><label>☑ Trails</label><label>☑ Topo</label><label>☐ Satellite</label><label>☑ Terrain</label><label>☑ Slope</label><label>☑ Water</label><label>☑ Landmarks</label><label>☐ Grid</label>
+                  <b>ROUTE</b><span>Jay Peak Loop</span><span>12.6 mi</span><span>6h 20m</span>
+                </aside>
+              </div>
+              <div class="map-footer"><span>TRACK 01:26:13</span><span>FIX AGE <b id="homeFixAge">00:00:04</b></span><span>ACC <b id="homeAccuracy">±4 m</b></span><span>OFF ROUTE 180 ft</span><span>PACK: OFFLINE</span></div>
+            </section>
+
+            <section class="console-right-stack detail-right-stack">
+              <article class="terminal-panel nav-console detailed-nav" data-open="nav">
+                <div class="terminal-title">♙ NAVIGATION <span>×</span></div>
+                <div class="nav-toprow"><div class="nav-readout">N 44.4759°<br>W 73.2121°<br>ELEV 3,420 ft<br>ACC ±4 m</div><div class="nav-fix">FIX<br><b>3D</b><br>HDOP 0.9</div></div>
+                <div class="compass-dial detailed-compass"><b>N</b><em>E</em><i class="compass-needle"></i><strong id="heading">245°</strong><small>SW</small></div>
+                <div class="nav-stats"><span>SPEED <b id="speed">2.4 mph</b></span><span>BEARING <b>245°</b></span><span>DIST NEXT <b>2.4 mi</b></span><span>ETA <b>1h 02m</b></span><span>VERT SPD <b>+380 ft/h</b></span><span>COURSE <b>238°</b></span></div>
+              </article>
+              <article class="terminal-panel sensors-console detailed-sensors" data-open="sensors">
+                <div class="terminal-title">♙ SENSORS / ENV <span>×</span></div>
+                <div class="sensor-lines"><span>TEMP <b id="temp">31°F</b></span><span>BARO <b id="pressure">898 hPa</b></span><span>ALT <b>3,420 ft</b></span><span>HUM <b id="humidity">64%</b></span><span>WIND <b>6.1 mph NW</b></span><span>GNSS <b>3D FIX</b></span><span>MESH <b>07 NODES</b></span><span>RTC <b>SYNC ±0.2s</b></span></div>
+                <div class="mini-chart-title">PRESSURE (24H)</div><svg class="mini-chart" viewBox="0 0 260 72" preserveAspectRatio="none"><g><path d="M0 14H260M0 36H260M0 58H260M40 0V72M90 0V72M140 0V72M190 0V72M240 0V72"/></g><polyline points="0,24 18,19 35,26 52,23 70,34 88,31 105,38 123,42 140,37 158,45 176,51 194,46 212,55 230,49 260,54"/></svg>
+                <div class="chart-axis"><span>-24h</span><span>-12h</span><span>now</span></div>
+              </article>
+              <article class="terminal-panel route-info-console detailed-route-info" data-open="route">
+                <div class="terminal-title">♙ ROUTE INFO <span>×</span></div>
+                <div class="route-info-split"><p>ROUTE: JAY_PEAK_LOOP<br>TYPE: Hike (Loop)<br>DISTANCE: 12.6 mi<br>ELEV GAIN: 3,420 ft<br>MAX GRADE: 28%<br>EST TIME: 6h 20m<br>DIFFICULTY: HARD ▰▰▰▰▱<br>PROGRESS: 41%<br>REMAIN: 7.4 mi</p><div><div class="mini-chart-title">ELEVATION PROFILE</div><svg class="elev-chart" viewBox="0 0 300 115" preserveAspectRatio="none"><g><path d="M0 20H300M0 55H300M0 90H300M60 0V115M120 0V115M180 0V115M240 0V115"/></g><polyline points="0,92 25,82 50,75 75,58 100,51 125,42 150,30 175,20 200,27 225,45 250,65 275,77 300,86"/></svg><div class="chart-axis"><span>0</span><span>6.3</span><span>12.6 mi</span></div></div></div>
+              </article>
+            </section>
+          </div>
+
+          <div class="console-mid-grid detail-mid-grid">
+            <article class="terminal-panel waypoint-console" data-open="waypoints">
+              <div class="terminal-title">♙ WAYPOINTS (6) <span>×</span></div>
+              <div class="waypoint-table-rich"><div class="thead"><b>ID</b><b>NAME</b><b>TYPE</b><b>DIST</b><b>BRG</b><b>ELEV</b><b>AGE</b></div><div><span>01</span><span>BASE</span><span>Base</span><span>6.8 mi</span><span>245°</span><span>312 ft</span><span>01:26</span></div><div><span>02</span><span>CAMP 1</span><span>Camp</span><span>2.4 mi</span><span>018°</span><span>1,180 ft</span><span>00:48</span></div><div><span>03</span><span>WATER</span><span>Water</span><span>3.1 mi</span><span>076°</span><span>1,004 ft</span><span>00:37</span></div><div><span>04</span><span>SUMMIT</span><span>Peak</span><span>5.6 mi</span><span>042°</span><span>3,862 ft</span><span>--</span></div><div><span>05</span><span>BAILOUT</span><span>Escape</span><span>4.2 mi</span><span>133°</span><span>980 ft</span><span>--</span></div><div><span>06</span><span>TRAIL JCT</span><span>Junction</span><span>1.9 mi</span><span>291°</span><span>760 ft</span><span>--</span></div></div>
+              <div class="mini-actions"><button data-open="waypoints">ADD</button><button data-open="waypoints">EDIT</button><button data-open="waypoints">GOTO</button><button data-open="waypoints">EXPORT GPX</button></div>
+            </article>
+            <article class="terminal-panel track-console" data-open="track"><div class="terminal-title">♙ TRACK RECORDER <span>×</span></div><div class="track-rich"><p><b>● RECORDING...</b><br>TIME: 01:26:13<br>DIST: 5.2 mi<br>POINTS: 1,842<br>AVG SPD: 2.6 mph<br>MAX SPD: 5.8 mph<br>ELEV +: 1,120 ft<br>ELEV −: 860 ft</p><div class="vertical-keys"><button data-open="track">PAUSE</button><button data-open="track">STOP</button><button data-open="track">SAVE</button></div></div><div class="track-meter"><i style="width:41%"></i></div></article>
+            <article class="terminal-panel return-console" data-open="trailreturn"><div class="terminal-title">♙ RETURN FUNCTIONS <span>×</span></div><button data-open="trailreturn">← RETURN TO TRAIL</button><p>Nearest route: 0.7 mi<br>Bearing: 312° NW<br>Δ Elev: −140 ft<br>Intercept: LEG 03</p><button data-open="trailreturn">← RETURN TO BASE</button><p>Distance: 6.8 mi<br>Bearing: 245° SW<br>ETA: 2h 42m<br>Breadcrumb: READY</p></article>
+          </div>
+
+          <div class="console-bottom-grid detail-bottom-grid">
+            <article class="terminal-panel event-console" data-open="log"><div class="terminal-title">♙ MESSAGES / EVENT LOG <span>×</span></div><div class="event-lines"><span><b>13:36:12</b> [GPS] 3D fix acquired (18 satellites)</span><span><b>13:36:15</b> [MESH] Node “RIDGE-01” online / -85 dBm</span><span><b>13:36:41</b> [NAV] Off-route warning: 180 ft</span><span><b>13:37:02</b> [ROUTE] Recalculated ETA: 1h 02m</span><span><b>13:37:18</b> [ENV] Pressure trend: -1.7 hPa / 3h</span><span><b>13:37:34</b> [TRACK] Breadcrumb point 1842 committed</span><span><b>13:37:55</b> [SYSTEM] Battery 62% / est. 14h</span></div></article>
+            <article class="terminal-panel trip-console" data-open="trip"><div class="terminal-title">♙ TRIP PLAN <span>×</span></div><p>NAME: Jay Peak Loop<br>DATE: 2026-10-04<br>START: 08:00<br>EST. TIME: 6h 20m<br>CHECK-INS: Every 2 hours<br>NEXT: 14:00 / 00:22:05<br>TURNAROUND: 15:30<br>EMERGENCY: Armed</p><div class="trip-progress"><i style="width:41%"></i></div></article>
+            <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ SURVIVAL GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
+            <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table"><b>NODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DIST&nbsp;&nbsp;RSSI&nbsp;&nbsp;HOP&nbsp;BAT</b><br>BASE-01&nbsp;&nbsp;&nbsp;1.2mi&nbsp;-72&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;88%<br>RIDGE-01&nbsp;&nbsp;3.6mi&nbsp;-85&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;71%<br>CAMP-01&nbsp;&nbsp;&nbsp;4.8mi&nbsp;-91&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;64%<br>RELAY-A&nbsp;&nbsp;&nbsp;5.1mi&nbsp;-96&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;92%</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
+          </div>
+          <div class="console-command-strip"><button data-open="home">FIND</button><button data-open="log">COPY</button><button data-open="comms">PASTE</button><button data-open="map">ZOOM</button><button data-open="sensors">SCAN</button><button data-open="home">CLOSE ALL</button><button data-open="log">PRINT</button><button data-open="system">SAVE</button></div>
+        </div></div>
+      </section>
+
+      <section class="view" id="map" data-view="map">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><button class="ghost" id="centerBtn">CENTER</button></div>
+        <article class="panel full-map">
+          <div class="panel-title"><span>SECTOR VT-021</span><span class="tiny">TRACKING ACTIVE</span></div>
+          <div class="map-demo large">
+            <div class="contour c1"></div><div class="contour c2"></div><div class="contour c3"></div>
+            <div class="trail t1"></div><div class="trail t2"></div>
+            <div class="breadcrumb b1"></div><div class="breadcrumb b2"></div><div class="breadcrumb b3"></div>
+            <div class="sweep"></div>
+            <div class="map-marker self">▲<span>AGENT-01</span></div>
+            <div class="map-marker friend f1">●<span>NODE-02</span></div>
+            <div class="map-marker friend f2">●<span>RELAY-A</span></div>
+            <div class="base-marker">◆<span>BASE</span></div>
+            <div class="map-coords">TRACK: ACTIVE<br>UNCERTAINTY: ±12 m</div>
+          </div>
+        </article>
+        <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
+      </section>
+
+      <section class="view" id="comms" data-view="comms">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>CHANNELS</h2><span></span></div>
+        <article class="panel">
+          <div class="panel-title"><span>ENCRYPTED MESH TRAFFIC</span><span class="tiny">LIVE DEMO</span></div>
+          <div class="message"><b>NODE-02</b><span>00:14</span><p>Reached the junction. Holding here.</p></div>
+          <div class="message"><b>RELAY-A</b><span>00:12</span><p>Telemetry nominal. Battery 82%.</p></div>
+          <div class="message unread"><b>NODE-05</b><span>00:04</span><p>Weather moving in from west.</p></div>
+        </article>
+        <article class="panel compose">
+          <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
+          <label for="messageInput">MESSAGE</label>
+          <textarea id="messageInput" placeholder="Type demo message..."></textarea>
+          <div class="button-row"><button class="action" id="sendDemo">TRANSMIT DEMO</button><button class="action">CHANNEL</button></div>
+        </article>
+      </section>
+
+      <section class="view" id="nav" data-view="nav">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>NAV CORE</h2><span></span></div>
+        <div class="grid two-col">
+          <article class="panel compass-panel">
+            <div class="panel-title"><span>COMPASS CORE</span><span class="tiny">IMU / DEMO</span></div>
+            <div class="compass"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span><div class="needle"></div><div class="center-dot"></div></div>
+            <div class="big-readout">037° <small>NE</small></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><span>RETURN TO BASE</span><span class="tiny">BREADCRUMB MODE</span></div>
+            <dl class="readouts large-readouts"><div><dt>DIST</dt><dd id="rtbDistance">---</dd></div><div><dt>BEARING</dt><dd id="rtbBearing">---</dd></div><div><dt>Δ ALT</dt><dd id="rtbAlt">---</dd></div><div><dt>TRACK</dt><dd id="rtbTrack">NO ROUTE</dd></div></dl>
+            <button id="followBreadcrumbs" class="danger-lite" data-open="map">FOLLOW SAVED ROUTE HOME</button>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><span>RETURN TO TRAIL</span><span class="tiny">NEAREST SAVED ROUTE</span></div>
+            <dl class="readouts large-readouts"><div><dt>OFFSET</dt><dd id="rttDistance">NO ROUTE</dd></div><div><dt>BEARING</dt><dd id="rttBearing">---</dd></div><div><dt>ROUTE</dt><dd id="rttRouteName">---</dd></div><div><dt>POINT</dt><dd id="rttPoint">---</dd></div></dl>
+            <button class="danger-lite" data-open="trailreturn">GUIDE BACK TO TRAIL</button>
+          </article>
+        </div>
+        <article class="panel route-monitor">
+          <div class="panel-title"><span>ROUTE WATCH</span><span class="tiny" id="routeWatchState">MONITORING</span></div>
+          <div id="routeDeviationBanner" class="deviation-banner good-banner">ON ROUTE</div>
+          <dl class="readouts large-readouts"><div><dt>PROGRESS</dt><dd id="routeProgress">---</dd></div><div><dt>REMAINING</dt><dd id="routeRemaining">---</dd></div><div><dt>ETA</dt><dd id="routeEta">---</dd></div><div><dt>OFF ROUTE</dt><dd id="routeDeviation">---</dd></div></dl>
+          <label class="field-label">DEVIATION ALERT</label><select id="deviationThreshold" class="terminal-input"><option value="50">50 ft</option><option value="100" selected>100 ft</option><option value="250">250 ft</option><option value="500">500 ft</option></select>
+          <div class="button-row"><button class="action" data-open="trailreturn">INTERCEPT TRAIL</button><button class="action" data-open="route">EDIT ROUTE</button></div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>POSITION FORMATS</span><span class="tiny">LAST TRUSTED FIX</span></div>
+          <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd>±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>SOLAR NAVIGATION</span><span class="tiny">LOCAL CALCULATION</span></div>
+          <div class="solar-row"><div class="sun">☀</div><div><b>Sun azimuth</b><strong id="sunAz">---</strong><small>calculated locally</small></div><div><b>Sun elevation</b><strong id="sunEl">---</strong><small>calculated locally</small></div></div>
+          <div class="button-row"><button class="action">SUN COMPASS</button><button class="action">TAKE SIGHT</button><button class="action">CELESTIAL FIX</button></div>
+        </article>
+      </section>
+
+      <section class="view" id="route" data-view="route">
+        <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>ROUTE PLANNER</h2><button class="ghost" id="routeSaveTop">SAVE</button></div>
+        <article class="panel">
+          <div class="panel-title"><span>MANUAL FIELD ROUTE</span><span class="tiny">TAP MAP TO ADD POINTS</span></div>
+          <div id="routeMap" class="map-demo large route-edit-map" role="application" aria-label="Route planning map">
+            <div class="contour c1"></div><div class="contour c2"></div><div class="contour c3"></div>
+            <div class="trail t1"></div><div class="trail t2"></div>
+            <svg id="routeSvg" class="route-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"><polyline id="routeLine" points=""/></svg>
+            <div id="routePointsLayer" class="route-points-layer"></div>
+            <div class="map-marker self route-current">▲<span>CURRENT</span></div>
+            <div class="map-scale">TAP TO PLOT • MANUAL ROUTE</div>
+          </div>
+          <div class="button-row"><button id="undoRoutePoint" class="action">UNDO POINT</button><button id="reverseRoute" class="action">REVERSE</button><button id="clearRoute" class="action">CLEAR</button><label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label><button id="exportGpx" class="action">EXPORT GPX</button></div>
+        </article>
+        <div class="grid two-col">
+          <article class="panel">
+            <div class="panel-title"><span>ROUTE PARAMETERS</span><span class="tiny">LOCAL PLAN</span></div>
+            <label class="field-label">ROUTE NAME</label><input id="routeName" class="terminal-input" value="FIELD ROUTE 01" />
+            <label class="field-label">ELEVATION GAIN (FT)</label><input id="routeGain" class="terminal-input" type="number" min="0" step="50" value="1200" />
+            <label class="field-label">MAX GRADE (%)</label><input id="routeGrade" class="terminal-input" type="number" min="0" max="100" step="1" value="12" />
+            <label class="field-label">TERRAIN</label><select id="routeTerrain" class="terminal-input"><option value="maintained">Maintained trail</option><option value="rough">Rough / rocky trail</option><option value="offtrail">Off-trail</option><option value="scramble">Scrambling / technical</option></select>
+            <label class="field-label">NOTES / BAILOUTS</label><textarea id="routeNotes" class="terminal-area" placeholder="Water, junctions, bailout points, turnaround time..."></textarea>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><span>FIELD/OS DIFFICULTY</span><span class="tiny">EFFORT ESTIMATE</span></div>
+            <div class="route-grade-badge" id="routeDifficulty">PLOT ROUTE</div>
+            <dl class="readouts large-readouts"><div><dt>DISTANCE</dt><dd id="routeDistance">0.00 mi</dd></div><div><dt>GAIN</dt><dd id="routeGainOut">1200 ft</dd></div><div><dt>EST. TIME</dt><dd id="routeTime">---</dd></div><div><dt>POINTS</dt><dd id="routePointCount">0</dd></div></dl>
+            <canvas id="routeProfile" width="720" height="180" class="chart"></canvas>
+            <p class="muted">Difficulty is a FIELD/OS planning estimate from distance, ascent, grade and terrain. It is not an official trail rating; weather, snow, exposure, navigation and individual ability can change difficulty substantially.</p>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-title"><span>OFFLINE ROUTE CORRIDOR</span><span class="tiny">PACK PLAN</span></div>
+          <div class="grid two-col">
+            <div><label class="field-label">AREA AROUND ROUTE</label><select id="corridorRadius" class="terminal-input"><option value="0.5">0.5 mi each side</option><option value="1" selected>1 mi each side</option><option value="2">2 mi each side</option><option value="5">5 mi each side</option></select></div>
+            <div><label class="field-label">MAP DETAIL</label><select id="offlineDetail" class="terminal-input"><option value="low">Low / regional</option><option value="medium" selected>Medium / trail</option><option value="high">High / detailed</option></select></div>
+          </div>
+          <dl class="readouts"><div><dt>CORRIDOR AREA</dt><dd id="corridorArea">---</dd></div><div><dt>EST. STORAGE</dt><dd id="offlineEstimate">---</dd></div><div><dt>LOCAL PACK</dt><dd id="offlineStatus">NOT SAVED</dd></div></dl>
+          <div class="button-row"><button id="saveOfflinePack" class="action">SAVE ROUTE PACK</button><button id="exportRoutePack" class="action">EXPORT PACK</button></div>
+          <p class="muted">v0.4 stores the route, corridor bounds and pack settings offline. Actual basemap tile caching will be connected when the production offline-map source is wired in, so FIELD/OS does not bulk-download from a public tile server.</p>
+        </article>
+      </section>
+
+      <section class="view" id="trailreturn" data-view="trailreturn">
+        <div class="view-head"><button class="back" data-open="nav">← NAV</button><h2>RETURN TO TRAIL</h2><button class="ghost" data-open="route">ROUTE</button></div>
+        <article class="panel return-trail-panel">
+          <div class="panel-title"><span>NEAREST ROUTE INTERCEPT</span><span class="tiny" id="rttSource">SAVED ROUTE</span></div>
+          <div class="return-arrow" id="returnArrow">↑</div>
+          <div class="big-readout" id="rttBigBearing">---° <small>---</small></div>
+          <dl class="readouts large-readouts"><div><dt>DIST TO TRAIL</dt><dd id="rttBigDistance">NO ROUTE</dd></div><div><dt>ROUTE</dt><dd id="rttBigRoute">---</dd></div><div><dt>NEAREST LEG</dt><dd id="rttLeg">---</dd></div><div><dt>POSITION</dt><dd id="rttPosSource">DEMO GNSS</dd></div></dl>
+          <div class="button-row"><button id="usePhonePos" class="action">USE PHONE POSITION</button><button class="action" data-open="map">SHOW MAP</button><button class="action" data-open="lost">LOST MODE</button></div>
+          <p class="muted">Return-to-Trail targets the nearest point on the saved route. Verify terrain before moving; the shortest straight line may cross cliffs, water, avalanche terrain, private land or other hazards.</p>
+        </article>
+      </section>
+
+      <section class="view" id="waypoints" data-view="waypoints">
+        <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>WAYPOINTS</h2><button class="ghost" id="addCurrentWaypoint">+ CURRENT</button></div>
+        <div class="grid two-col">
+          <article class="panel">
+            <div class="panel-title"><span>ADD WAYPOINT</span><span class="tiny">LOCAL / OFFLINE</span></div>
+            <label class="field-label">NAME</label><input id="waypointName" class="terminal-input" placeholder="Camp, water, car, junction..." />
+            <label class="field-label">TYPE</label><select id="waypointType" class="terminal-input"><option value="BASE">Base / vehicle</option><option value="CAMP">Camp</option><option value="WATER">Water</option><option value="HAZARD">Hazard</option><option value="JUNCTION">Junction</option><option value="NOTE">General mark</option></select>
+            <label class="field-label">NOTES</label><textarea id="waypointNotes" class="terminal-area" placeholder="Description, access notes, water reliability..."></textarea>
+            <div class="button-row"><button id="saveWaypoint" class="action">SAVE CURRENT POSITION</button><button id="setBaseWaypoint" class="action">SAVE AS BASE</button></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title"><span>NAV TARGET</span><span class="tiny">SELECTED WAYPOINT</span></div>
+            <div class="return-arrow waypoint-arrow" id="waypointArrow">↑</div>
+            <div class="big-readout" id="waypointBearing">---° <small>---</small></div>
+            <dl class="readouts"><div><dt>TARGET</dt><dd id="waypointTarget">NONE</dd></div><div><dt>DIST</dt><dd id="waypointDistance">---</dd></div><div><dt>COORD</dt><dd id="waypointCoord">---</dd></div></dl>
+          </article>
+        </div>
+        <article class="panel"><div class="panel-title"><span>SAVED WAYPOINTS</span><button id="exportWaypoints" class="tiny-button">EXPORT</button></div><div id="waypointList" class="waypoint-list"></div></article>
+      </section>
+
+      <section class="view" id="track" data-view="track">
+        <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>TRACK RECORDER</h2><span></span></div>
+        <article class="panel">
+          <div class="panel-title"><span>BREADCRUMB TRACK</span><span class="tiny" id="trackState">STOPPED</span></div>
+          <div class="track-stat-grid"><div><b id="trackDistance">0.00</b><span>MILES</span></div><div><b id="trackPoints">0</b><span>POINTS</span></div><div><b id="trackDuration">00:00:00</b><span>DURATION</span></div><div><b id="trackAccuracy">---</b><span>ACCURACY</span></div></div>
+          <div class="button-row"><button id="startTrack" class="action">START GPS TRACK</button><button id="stopTrack" class="action">STOP</button><button id="addDemoTrackPoint" class="action">ADD CURRENT</button></div>
+          <p class="muted">On iPhone, continuous recording depends on browser/PWA background limits. The TAP V2 track feed will be more reliable once its data bridge is connected.</p>
+        </article>
+        <article class="panel"><div class="panel-title"><span>RECORDED TRACK</span><span class="tiny">LOCAL STORAGE</span></div><div id="trackMiniMap" class="mini-track-map"><svg viewBox="0 0 1000 400" preserveAspectRatio="none"><polyline id="trackLine" points=""/></svg></div><div class="button-row"><button id="exportTrack" class="action">EXPORT GPX</button><button id="clearTrack" class="action">CLEAR TRACK</button></div></article>
+      </section>
+
+      <section class="view" id="sensors" data-view="sensors">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TELEMETRY</h2><span></span></div>
+        <div class="sensor-list">
+          <article class="panel sensor-card"><div class="sensor-top"><b>GNSS</b><span class="badge good-badge">GOOD</span></div><p>18 satellites • 3D fix • ±4 m</p><div class="bar"><i style="width:88%"></i></div></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1905 IMU</b><span class="badge good-badge">ONLINE</span></div><p>Heading 037° • Pitch +2° • Roll -1°</p><div class="bar"><i style="width:76%"></i></div></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1906 ENV</b><span class="badge good-badge">ONLINE</span></div><p>31°F • 64% RH • 898 hPa • trend falling</p><div class="bar"><i style="width:69%"></i></div></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RTC</b><span class="badge warn-badge">PLANNED</span></div><p>RAK12002 • not installed in demo</p><div class="bar"><i style="width:20%"></i></div></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RADAR / OPTICS</b><span class="badge warn-badge">FUTURE</span></div><p>External device bridge placeholder</p><div class="bar"><i style="width:8%"></i></div></article>
+        </div>
+        <article class="panel"><div class="panel-title"><span>PRESSURE TREND</span><span class="tiny">LAST 60 MIN / DEMO</span></div><canvas id="pressureChart" width="720" height="180" class="chart"></canvas></article>
+        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">CROSS-CHECK</span></div><div class="integrity-grid"><div><b>GNSS FIX</b><span class="good-text">TRUSTED</span></div><div><b>IMU MOTION</b><span>MATCH</span></div><div><b>BARO ALT</b><span>MATCH</span></div><div><b>DRIFT WATCH</b><span class="good-text">CLEAR</span></div></div></article>
+      </section>
+
+      <section class="view" id="survival" data-view="survival">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>FIELD MANUAL</h2><span></span></div>
+        <article class="panel manual-tools">
+          <div class="panel-title"><span>OFFLINE REFERENCE LIBRARY</span><span class="tiny">VETTED SOURCES</span></div>
+          <input id="guideSearch" class="terminal-input" type="search" placeholder="SEARCH: hypothermia, water, bear..." autocomplete="off" />
+          <div id="guideFilters" class="chip-row"></div>
+        </article>
+        <div id="guideGrid" class="grid two-col survival-grid"></div>
+        <article id="guideDetail" class="panel guide-preview">
+          <div class="panel-title"><span>FIELD MANUAL INDEX</span><span class="tiny">SELECT ENTRY</span></div>
+          <p>Select a guide above. Critical first-aid entries are concise reminders, not a replacement for training or professional medical care.</p>
+        </article>
+      </section>
+
+      <section class="view" id="trip" data-view="trip">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TRIP PLAN</h2><span></span></div>
+        <article class="panel">
+          <div class="panel-title"><span>ROUTE / CHECK-IN PLAN</span><span class="tiny">LOCAL STORAGE</span></div>
+          <label class="field-label">TRIP NAME</label><input id="tripName" class="terminal-input" value="Backcountry Day" />
+          <label class="field-label">BASE / TRAILHEAD</label><input id="tripBase" class="terminal-input" placeholder="Saved waypoint or description" />
+          <label class="field-label">EXPECTED RETURN</label><input id="tripReturn" class="terminal-input" type="datetime-local" />
+          <label class="field-label">CHECK-IN INTERVAL</label>
+          <select id="checkinInterval" class="terminal-input"><option value="60">Every 60 min</option><option value="120">Every 2 hr</option><option value="180">Every 3 hr</option><option value="0">Manual only</option></select>
+          <div class="button-row"><button id="saveTrip" class="action">SAVE PLAN</button><button id="checkinNow" class="action">CHECK IN NOW</button></div>
+        </article>
+        <article class="panel checkin-panel"><div class="panel-title"><span>CHECK-IN TIMER</span><span class="tiny">LOCAL REMINDER</span></div><div class="checkin-clock" id="checkinCountdown">MANUAL</div><p id="checkinDetail" class="muted">Set an interval and press CHECK IN NOW to start the countdown.</p><div class="button-row"><button id="resetCheckin" class="action">RESET TIMER</button><button id="copyCheckin" class="action">COPY CHECK-IN</button></div></article>
+        <article class="panel"><div class="panel-title"><span>EMERGENCY PLAN</span><span class="tiny">PRE-TRIP</span></div><textarea id="tripEmergency" class="terminal-area" placeholder="Who has your route? Satellite device? Turnaround time? Medical notes?"></textarea></article>
+        <article class="panel"><div class="panel-title"><span>TEN ESSENTIALS</span><span class="tiny">PACK CHECK</span></div><div id="essentialsChecklist" class="checklist"></div></article>
+      </section>
+
+      <section class="view" id="log" data-view="log">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>FIELD LOG</h2><span></span></div>
+        <article class="panel">
+          <div class="panel-title"><span>NEW ENTRY</span><span class="tiny">TIMESTAMPED</span></div>
+          <textarea id="logInput" class="terminal-area" placeholder="Trail condition, waypoint, injury, weather, equipment note..."></textarea>
+          <div class="button-row"><button id="saveLog" class="action">SAVE ENTRY</button><button id="markLog" class="action">MARK POSITION</button></div>
+        </article>
+        <article class="panel"><div class="panel-title"><span>RECENT LOG</span><button id="exportLog" class="tiny-button">EXPORT</button></div><div id="logList" class="log-list"></div></article>
+      </section>
+
+      <section class="view" id="power" data-view="power">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>POWER CONTROL</h2><span></span></div>
+        <article class="panel"><div class="panel-title"><span>POWER BUDGET</span><span class="tiny">DEMO ESTIMATE</span></div>
+          <div class="power-gauge"><b id="powerPercent">64%</b><span>PHONE / DEMO</span></div>
+          <dl class="readouts large-readouts"><div><dt>TAP V2</dt><dd>78%</dd></div><div><dt>PHONE</dt><dd>64%</dd></div><div><dt>SENSOR-2</dt><dd>OFFLINE</dd></div><div><dt>EST. RESERVE</dt><dd>18h</dd></div></dl>
+        </article>
+        <article class="panel"><div class="panel-title"><span>CONSERVATION MODES</span><span class="tiny">LOCAL UI</span></div><div class="button-row"><button class="action power-mode" data-power="normal">NORMAL</button><button class="action power-mode" data-power="low">LOW POWER</button><button class="action power-mode" data-power="emergency">EMERGENCY</button></div><p id="powerModeText" class="muted">Normal refresh and display behavior.</p></article>
+        <article class="panel"><div class="panel-title"><span>DISPLAY HOLD</span><span class="tiny">SCREEN WAKE LOCK</span></div><p id="wakeLockStatus" class="muted">OFF — screen may sleep normally.</p><div class="button-row"><button id="toggleWakeLock" class="action">KEEP SCREEN AWAKE</button></div><p class="muted">Uses the browser Screen Wake Lock API when supported. iOS may release it when FIELD/OS is backgrounded.</p></article>
+      </section>
+
+      <section class="view" id="lost" data-view="lost">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2 class="sos-title">LOST MODE</h2><span></span></div>
+        <article class="panel lost-panel">
+          <div class="panel-title"><span>STOP / ASSESS / LOCATE / COMMUNICATE</span><span class="tiny">GUIDED WORKFLOW</span></div>
+          <div class="lost-step active-step"><b>01 STOP</b><p>Unless your present location is dangerous, stop adding distance and preserve your last reliable position.</p></div>
+          <div class="lost-step"><b>02 LOCATE</b><p>Use last trusted GNSS fix, breadcrumb track, compass, terrain, altitude trend, and landmarks.</p></div>
+          <div class="lost-step"><b>03 COMMUNICATE</b><p>Use cellular/911 or certified satellite SOS when available; mesh is a supplemental path.</p></div>
+          <div class="lost-step"><b>04 STABILIZE</b><p>Manage exposure, water, injuries, remaining daylight, and battery reserve.</p></div>
+          <div class="button-row"><button class="action" data-open="map">VIEW LAST FIX</button><button class="action" data-open="nav">RETURN / BREADCRUMB</button><button class="action" data-open="survival">FIELD MANUAL</button></div>
+        </article>
+      </section>
+
+      <section class="view" id="sos" data-view="sos">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2 class="sos-title">EMERGENCY / SOS</h2><span></span></div>
+        <article class="panel sos-panel">
+          <div class="sos-ring">SOS</div>
+          <h3>EMERGENCY MODE</h3>
+          <dl class="readouts large-readouts"><div><dt>POSITION</dt><dd>44.4759 / -73.2121</dd></div><div><dt>ALT</dt><dd>3420 ft</dd></div><div><dt>GNSS</dt><dd>GOOD</dd></div><div><dt>BAT</dt><dd>64%</dd></div></dl>
+          <p class="muted center">Prototype only. FIELD/OS should not replace certified emergency communications.</p>
+          <button id="meshSos" class="sos-button">HOLD TO ARM MESH SOS</button>
+          <textarea id="emergencyNotes" class="terminal-area" placeholder="Emergency notes: injury, group size, shelter, medications/allergies you choose to record..."></textarea>
+          <div class="button-row"><button id="copySos" class="action">COPY SOS PACKET</button><a class="action link-action" href="tel:911">OPEN PHONE / 911</a></div>
+          <p class="muted center">Calling 911 or certified satellite SOS is the primary emergency path when available; mesh is supplemental.</p>
+        </article>
+      </section>
+
+      <section class="view" id="system" data-view="system">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>SYSTEM</h2><span></span></div>
+        <article class="panel">
+          <div class="panel-title"><span>DEVICE LINKS</span><span class="tiny">COLLECTIVE HUD</span></div>
+          <dl class="readouts large-readouts"><div><dt>TAP V2</dt><dd class="warn-text">DEMO</dd></div><div><dt>SENSOR-2</dt><dd>OFFLINE</dd></div><div><dt>AWARE-3</dt><dd>OFFLINE</dd></div><div><dt>PHONE</dt><dd>LOCAL</dd></div></dl>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>DISPLAY THEME</span><span class="tiny">RETRO MODES</span></div>
+          <div class="button-row"><button class="action theme-btn" data-theme-choice="green">FIELD GREEN</button><button class="action theme-btn" data-theme-choice="amber">AMBER NAV</button><button class="action theme-btn" data-theme-choice="mono">MONO</button><button class="action theme-btn" data-theme-choice="red">RED NIGHT</button></div>
+        </article>
+        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">FUSION WATCH</span></div><dl class="readouts large-readouts"><div><dt>GNSS</dt><dd class="good-text">TRUSTED</dd></div><div><dt>IMU</dt><dd>ONLINE</dd></div><div><dt>BARO</dt><dd>ONLINE</dd></div><div><dt>DR MODE</dt><dd>STANDBY</dd></div></dl></article>
+        <article class="panel"><div class="panel-title"><span>PRIVACY / STORAGE</span><span class="tiny">LOCAL FIRST</span></div><p class="muted">Prototype stores trip plans, checklists, field logs, theme and preferences locally in your browser. External sync remains disabled until explicitly configured.</p><div class="button-row"><button id="wipeLocal" class="action">WIPE LOCAL DATA</button><button id="exportState" class="action">EXPORT STATE</button></div></article>
+      </section>
+    </main>
+
+    <div id="tabSheetBackdrop" class="tab-sheet-backdrop" hidden></div>
+    <aside id="tabSheet" class="tab-sheet" aria-label="More FIELD/OS sections" aria-hidden="true">
+      <div class="tab-sheet-head"><b>FIELD/OS // MODULES</b><button id="closeTabSheet" class="micro-btn" type="button">CLOSE</button></div>
+      <div class="tab-sheet-grid">
+        <button class="sheet-tab" data-open="route"><span>⌁</span><b>ROUTE</b><small>Plan / difficulty</small></button>
+        <button class="sheet-tab" data-open="trailreturn"><span>↶</span><b>RETURN</b><small>Trail / base</small></button>
+        <button class="sheet-tab" data-open="waypoints"><span>◆</span><b>WAYPOINTS</b><small>Saved positions</small></button>
+        <button class="sheet-tab" data-open="track"><span>⋯</span><b>TRACK</b><small>Breadcrumb log</small></button>
+        <button class="sheet-tab" data-open="trip"><span>▣</span><b>TRIP</b><small>Plan / check-in</small></button>
+        <button class="sheet-tab" data-open="survival"><span>✚</span><b>GUIDE</b><small>Offline manual</small></button>
+        <button class="sheet-tab" data-open="sensors"><span>◫</span><b>SENSORS</b><small>TAP / environment</small></button>
+        <button class="sheet-tab" data-open="log"><span>≡</span><b>FIELD LOG</b><small>Notes / marks</small></button>
+        <button class="sheet-tab" data-open="power"><span>ϟ</span><b>POWER</b><small>Battery modes</small></button>
+        <button class="sheet-tab" data-open="system"><span>⚙</span><b>SYSTEM</b><small>Links / themes</small></button>
+        <button class="sheet-tab emergency-sheet-tab" data-open="sos"><span>!</span><b>SOS</b><small>Emergency panel</small></button>
+      </div>
+    </aside>
+
+    <nav class="tabbar" aria-label="Primary navigation tabs">
+      <button class="tab-btn active" data-open="home" data-tab-for="home"><span>⌂</span><small>HOME</small></button>
+      <button class="tab-btn" data-open="map" data-tab-for="map"><span>⌖</span><small>MAP</small></button>
+      <button class="tab-btn" data-open="nav" data-tab-for="nav"><span>△</span><small>NAV</small></button>
+      <button class="tab-btn" data-open="comms" data-tab-for="comms"><span>✉</span><small>COMMS</small></button>
+      <button class="tab-btn" id="moreTabs" type="button" aria-expanded="false"><span>▦</span><small>MORE</small></button>
+    </nav>
+  </div>
+  <script src="survival-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
