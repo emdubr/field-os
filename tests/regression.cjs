@@ -36,6 +36,9 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
+ const beforeReverse=w.FIELD_ROUTE_STATE.getPoints()[0];click('reverseRoute');
+ assert.equal(extraRequests,0);assert.match(d.getElementById('routePlannerStatus').textContent,/NO DOWNLOAD NEEDED/);assert.notEqual(w.FIELD_ROUTE_STATE.getPoints()[0].lon,beforeReverse.lon);
+ console.log('PASS instant reverse with no network or elevation lookup');
  // Abort a delayed route lookup; it must not restore cleared geometry or lock controls.
  w.fetch=(url,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted'))));r.addAnchor({lat:44.04,lon:-73.01});await tick();assert.equal(d.getElementById('clearRoute').disabled,false);click('clearRoute');await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,0);assert.equal(d.getElementById('routeSnapMode').disabled,false);assert.equal(d.getElementById('undoRoutePoint').disabled,true);
  console.log('PASS cancellation while fetching; empty route and controls recover');
