@@ -1,4 +1,4 @@
-/* FIELD/OS v3.6: home-style workspaces with density parity across modules. */
+/* FIELD/OS v3.7: home-style workspaces with density parity across modules. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['survival','FIELD MANUAL'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +10,7 @@
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
   const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.6</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.7</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -72,8 +72,8 @@
     rtc:()=>rows([['MODULE','RAK12002'],['INSTALLATION','PLANNED'],['CLOCK SOURCE','PHONE / COMPUTER'],['HARDWARE SYNC','UNAVAILABLE'],['LOCAL TIME',new Date().toLocaleTimeString()]])+note('RTC synchronization will require the physical module and a device bridge.'),
     manual:()=>rows([['GUIDES',guides.length],['CATEGORIES',categories.length-1],['STORAGE','BUNDLED WITH APP'],['SEARCH','TITLE / BODY'],['ACCESS','OFFLINE AFTER LOAD']])+note('Use the searchable reference index to open a complete entry.'),
     kit:()=>{const checked=essentials.filter((_,i)=>essentialsState[i]).length;return `<div class="ws-metric">${checked}<small> / ${essentials.length} PACKED</small></div><meter min="0" max="${essentials.length}" value="${checked}"></meter>`+rows(essentials.map((e,i)=>[e,essentialsState[i]?'PACKED':'CHECK']))+actions([['trip','EDIT CHECKLIST']]);},
-    timing:()=>rows([['EXPECTED RETURN',input('tripReturn').replace('T',' ')],['INTERVAL',`${input('checkinInterval')} min`],['COUNTDOWN',val('checkinCountdown')],['STATUS',val('mobileCheckin')]])+note('Local reminders do not notify another person automatically.')+actions([['trip','CHECK-IN PLAN']]),
-    context:()=>rows([['TRIP',input('tripName')],['TRAILHEAD',input('tripBase')],['RETURN',input('tripReturn').replace('T',' ')],['ROUTE',input('routeName')],['POSITION SOURCE',currentNavPosition.source]])+actions([['trip','EDIT PLAN'],['log','FIELD NOTES']]),
+    timing:()=>rows([['EXPECTED RETURN',input('tripReturn').replace(/(?<=\d)T(?=\d)/,' ')],['INTERVAL',`${input('checkinInterval')} min`],['COUNTDOWN',val('checkinCountdown')],['STATUS',val('mobileCheckin')]])+note('Local reminders do not notify another person automatically.')+actions([['trip','CHECK-IN PLAN']]),
+    context:()=>rows([['TRIP',input('tripName')],['TRAILHEAD',input('tripBase')],['RETURN',input('tripReturn').replace(/(?<=\d)T(?=\d)/,' ')],['ROUTE',input('routeName')],['POSITION SOURCE',currentNavPosition.source]])+actions([['trip','EDIT PLAN'],['log','FIELD NOTES']]),
     storage:()=>rows([['WAYPOINTS',waypoints.length],['TRACK SAMPLES',recordedTrack.length],['LOG ENTRIES',fieldLog.length],['ROUTE POINTS',routePoints.length],['CLOUD SYNC','OFF'],['LOCATION','THIS BROWSER']])+note('Export important records before clearing browser data.')+actions([['system','EXPORT / STORAGE']]),
     logstats:()=>rows([['TOTAL ENTRIES',fieldLog.length],['DRAFT LENGTH',`${document.getElementById('logInput').value.length} characters`],['TIMESTAMPS','LOCAL RECORDS'],['SYNC','DISABLED'],['EXPORT','JSON']]),
     events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
@@ -98,7 +98,7 @@
     });view.append(grid);
     const consoleBar=document.createElement('div');
     consoleBar.className='module-console-header';
-    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.6</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.7</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
@@ -107,6 +107,9 @@
   function refreshHome(){
     const set=(selector,html)=>{const el=document.querySelector('#home '+selector);if(el&&el.innerHTML!==html)el.innerHTML=html;};
     set('.route-info-split',bodies.route());
+    set('.detailed-nav .terminal-title',`NAVIGATION <span>${esc(currentNavPosition.source)}</span>`);
+    set('.nav-readout',`${esc(currentNavPosition.lat.toFixed(5))}°<br>${esc(currentNavPosition.lon.toFixed(5))}°<br>${hasTrustedMapPosition()?'±'+Math.round(currentAccuracy)+' m accuracy':'Demo position'}`);
+    set('.nav-stats',rows([['SPEED',val('navStripSpeed')],['HEADING',val('navStripHeading')],['ROUTE',val('routeDistance')],['SOURCE',hasTrustedMapPosition()?'PHONE / GNSS':'SIMULATED']]));
     set('.waypoint-table-rich',table(['NAME','TYPE','COORDINATES'],waypoints.slice(0,6).map(w=>[w.name,w.type,`${w.lat.toFixed(4)}, ${w.lon.toFixed(4)}`]))+(waypoints.length?'':note('No saved waypoints. Add a base, camp, or trail junction.')));
     set('.waypoint-console .terminal-title',`WAYPOINTS <span>${waypoints.length} SAVED</span>`);
     set('.track-rich',bodies.record());
