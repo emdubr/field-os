@@ -1033,3 +1033,17 @@ body .route-elevation-readouts>div{display:block!important;padding:10px 0!import
 body .route-elevation-readouts dt{display:block!important;margin:0 0 6px!important}
 body .route-elevation-readouts dd{display:block!important;margin:0!important;text-align:left!important;white-space:nowrap!important}
 body .route-planner-panel{align-self:start!important}
+
+/* v3.9: blend relief against the basemap, not its isolated tile parent. */
+body .native-map-terrain{mix-blend-mode:multiply!important;opacity:.65!important}
+body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode:normal!important;filter:grayscale(1) contrast(1.18) brightness(1.08)!important}
+/* A full-width map followed by cards avoids the empty column beneath the map. */
+@media(min-width:901px){
+  body #home .detail-main-grid{grid-template-columns:minmax(0,1fr)!important;align-items:start!important}
+  body #home .detail-main-grid>.map-console{grid-column:1!important;width:100%;min-width:0}
+  body #home .detail-main-grid>.detail-right-stack{grid-column:1!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:auto!important;align-items:stretch!important}
+  body #home .detail-right-stack>.detailed-nav,body #home .detail-right-stack>.detailed-sensors,body #home .detail-right-stack>.detailed-route-info{grid-column:auto!important;grid-row:auto!important;min-width:0}
+  body #home .map-workarea{min-height:440px!important}
+  body #home #homeRealMap{height:100%!important;min-height:440px!important}
+  body #home .detailed-nav .mini-compass{width:120px!important;height:120px!important}
+}
