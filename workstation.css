@@ -1029,3 +1029,7 @@ body #home .map-meta{font-size:12px!important;line-height:1.6!important;white-sp
 body #home .ws-actions button{font-size:14px!important;min-height:40px!important;padding:8px!important}
 body .workstation-nav button.selected{background:var(--panel3)!important;color:var(--fg2)!important}
 @media(max-width:600px){body #home .map-workarea{grid-template-columns:1fr!important;min-height:0}body #home .map-controls{display:none!important}}
+body .route-elevation-readouts>div{display:block!important;padding:10px 0!important;min-width:0}
+body .route-elevation-readouts dt{display:block!important;margin:0 0 6px!important}
+body .route-elevation-readouts dd{display:block!important;margin:0!important;text-align:left!important;white-space:nowrap!important}
+body .route-planner-panel{align-self:start!important}
