@@ -95,7 +95,7 @@
     const el=document.getElementById(id);
     if(!el)return null;
     el.hidden=false;
-    el.innerHTML='<div class="native-map-base"></div><div class="native-map-terrain"></div><div class="native-map-trails"></div><div class="native-map-grid"></div><svg class="native-map-overlay" xmlns="http://www.w3.org/2000/svg"></svg><div class="native-map-corner">FIELD/OS MAP</div><div class="native-map-attrib"></div><div class="native-map-diag">TILES 0 / ERR 0</div>';
+    el.innerHTML='<div class="native-map-base"></div><div class="native-map-terrain"></div><div class="native-map-trails"></div><div class="native-map-grid"></div><svg class="native-map-overlay" xmlns="http://www.w3.org/2000/svg"></svg><svg class="native-map-editor-overlay" xmlns="http://www.w3.org/2000/svg"></svg><div class="native-map-corner">FIELD/OS MAP</div><div class="native-map-attrib"></div><div class="native-map-diag">TILES 0 / ERR 0</div>';
     const st={
       id,el,
       base:el.querySelector('.native-map-base'),
@@ -103,8 +103,10 @@
       trail:el.querySelector('.native-map-trails'),
       grid:el.querySelector('.native-map-grid'),
       overlay:el.querySelector('.native-map-overlay'),
+      editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
-      loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,rendered:false
+      loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
+      geoOverlay:null,tapHandler:null,rendered:false
     };
 
     const resetTransform=()=>{
@@ -113,6 +115,7 @@
       st.trail.style.transform='';
       st.grid.style.transform='';
       st.overlay.style.transform='';
+      st.editor.style.transform='';
     };
 
     st.onPointerDown=e=>{
@@ -122,6 +125,7 @@
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1){
         st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center}};
+        st.pointerDownOrigin={x:e.clientX,y:e.clientY};
         st.el.classList.add('native-map-dragging');
       }else if(st.pointers.size===2){
         const p=[...st.pointers.values()];
@@ -133,7 +137,7 @@
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1&&st.dragStart){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,t=`translate(${dx}px,${dy}px)`;
-        st.base.style.transform=t;st.terrain.style.transform=t;st.trail.style.transform=t;st.grid.style.transform=t;st.overlay.style.transform=t;
+        st.base.style.transform=t;st.terrain.style.transform=t;st.trail.style.transform=t;st.grid.style.transform=t;st.overlay.style.transform=t;st.editor.style.transform=t;
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist);
@@ -144,17 +148,22 @@
     st.onPointerUp=e=>{
       const old=[...st.pointers.values()];
       st.pointers.delete(e.pointerId);
+      const origin=st.pointerDownOrigin;
+      const wasTap=!!(origin&&old.length===1&&!st.pinchStart&&Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<7);
       if(st.pinchStart&&old.length>=2){
         const dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,st.pinchStart.dist);
         st.zoom=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
-        st.pinchStart=null;st.dragStart=null;resetTransform();render(st);return;
+        st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;resetTransform();render(st);return;
       }
-      if(st.dragStart){
+      if(st.dragStart&&!wasTap){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
         const c=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
         st.center=unworld(c.x-dx,c.y-dy,st.zoom);
       }
-      st.dragStart=null;st.el.classList.remove('native-map-dragging');resetTransform();render(st);
+      st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');resetTransform();
+      if(wasTap&&typeof st.tapHandler==='function'){
+        try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
+      }else render(st);
     };
     st.onWheel=e=>{e.preventDefault();st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+(e.deltaY<0?1:-1)));render(st)};
     st.onDbl=e=>{e.preventDefault();st.zoom=Math.min(maxZoom(),st.zoom+1);render(st)};
@@ -181,6 +190,36 @@
     }
     st.overlay.setAttribute('viewBox',`0 0 ${w} ${h}`);
     st.overlay.innerHTML=parts.join('');
+  }
+
+  function drawEditorOverlay(st,w,h){
+    if(!st.editor)return;
+    st.editor.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    const data=st.geoOverlay||{},parts=[],c=world(st.center.lat,st.center.lon,st.zoom);
+    const xy=p=>{
+      const q=world(p.lat,p.lon,st.zoom);
+      return {x:q.x-c.x+w/2,y:q.y-c.y+h/2};
+    };
+    const route=Array.isArray(data.route)?data.route.filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon)):[];
+    if(route.length>1){
+      const pts=route.map(p=>{const q=xy(p);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`}).join(' ');
+      parts.push(`<polyline points="${pts}" class="planner-route-line"/>`);
+    }
+    const anchors=Array.isArray(data.anchors)?data.anchors:[];
+    const snaps=Array.isArray(data.snapped)?data.snapped:[];
+    anchors.forEach((p,i)=>{
+      if(!Number.isFinite(+p.lat)||!Number.isFinite(+p.lon))return;
+      const a=xy(p),snap=snaps[i];
+      if(snap&&Number.isFinite(+snap.lat)&&Number.isFinite(+snap.lon)){
+        const b=xy(snap);parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="planner-snap-link"/>`);
+      }
+      parts.push(`<circle cx="${a.x}" cy="${a.y}" r="8" class="planner-anchor"/><text x="${a.x}" y="${a.y+3}" class="planner-anchor-label">${i===0?'S':i===anchors.length-1?'E':i}</text>`);
+    });
+    snaps.forEach(p=>{
+      if(!Number.isFinite(+p.lat)||!Number.isFinite(+p.lon))return;
+      const q=xy(p);parts.push(`<circle cx="${q.x}" cy="${q.y}" r="4" class="planner-snap-point"/>`);
+    });
+    st.editor.innerHTML=parts.join('');
   }
 
   function setFallback(st,message){
@@ -228,6 +267,7 @@
     st.trail.replaceChildren(tf);
     st.grid.classList.toggle('active',grid);
     drawOverlay(st,w,h);
+    drawEditorOverlay(st,w,h);
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
@@ -252,9 +292,9 @@
 
   function refresh(recenter=false){
     updateLabels();
-    for(const id of ['homeRealMap','realMap']){
-      const st=ensure(id);if(!st)continue;
-      if(recenter||!st.rendered)st.center={...centerCandidate()};
+    ['homeRealMap','realMap'].forEach(id=>ensure(id));
+    for(const st of states.values()){
+      if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered))st.center={...centerCandidate()};
       st.rendered=true;render(st);
     }
   }
@@ -275,7 +315,7 @@
     livePosition={lat:p.coords.latitude,lon:p.coords.longitude};
     locationAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:null;
     lastFixTime=Date.now();
-    states.forEach(st=>{st.center={...livePosition}});
+    for(const id of ['homeRealMap','realMap']){const st=states.get(id);if(st)st.center={...livePosition}}
     refresh(true);
   }
 
@@ -306,6 +346,40 @@
   }
 
   function toggleLiveLocation(){liveEnabled?stopLiveLocation():startLiveLocation()}
+
+  function screenToLatLon(st,clientX,clientY){
+    const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
+    return unworld(c.x+(clientX-rect.left)-w/2,c.y+(clientY-rect.top)-h/2,st.zoom);
+  }
+  function mount(id,opts={}){
+    const st=ensure(id);if(!st)return null;
+    if(opts.center&&Number.isFinite(+opts.center.lat)&&Number.isFinite(+opts.center.lon))st.center={lat:+opts.center.lat,lon:+opts.center.lon};
+    if(Number.isFinite(+opts.zoom))st.zoom=Math.max(2,Math.min(maxZoom(),Math.round(+opts.zoom)));
+    st.rendered=true;requestAnimationFrame(()=>render(st));return st;
+  }
+  function setView(id,centerPos,zoomLevel){
+    const st=ensure(id);if(!st||!centerPos)return;
+    if(Number.isFinite(+centerPos.lat)&&Number.isFinite(+centerPos.lon))st.center={lat:+centerPos.lat,lon:+centerPos.lon};
+    if(Number.isFinite(+zoomLevel))st.zoom=Math.max(2,Math.min(maxZoom(),Math.round(+zoomLevel)));
+    st.rendered=true;render(st);
+  }
+  function fitBounds(id,points,opts={}){
+    const st=ensure(id);if(!st)return;
+    const pts=(Array.isArray(points)?points:[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+    if(!pts.length)return;
+    const minLat=Math.min(...pts.map(p=>+p.lat)),maxLat=Math.max(...pts.map(p=>+p.lat)),minLon=Math.min(...pts.map(p=>+p.lon)),maxLon=Math.max(...pts.map(p=>+p.lon));
+    st.center={lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2};
+    const rect=st.el.getBoundingClientRect(),pad=Math.max(0,Number(opts.padding)||36),availW=Math.max(80,(rect.width||600)-pad*2),availH=Math.max(80,(rect.height||360)-pad*2),cap=Math.min(maxZoom(),Number.isFinite(+opts.maxZoom)?+opts.maxZoom:maxZoom());
+    let chosen=2;
+    for(let z=2;z<=cap;z++){
+      const nw=world(maxLat,minLon,z),se=world(minLat,maxLon,z);
+      if(Math.abs(se.x-nw.x)<=availW&&Math.abs(se.y-nw.y)<=availH)chosen=z;else break;
+    }
+    st.zoom=chosen;st.rendered=true;render(st);
+  }
+  function setTapHandler(id,handler){const st=ensure(id);if(st)st.tapHandler=typeof handler==='function'?handler:null}
+  function setGeoOverlay(id,data){const st=ensure(id);if(!st)return;st.geoOverlay=data||null;const rect=st.el.getBoundingClientRect();drawEditorOverlay(st,Math.max(250,Math.round(rect.width||600)),Math.max(220,Math.round(rect.height||360)))}
+  function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
 
   function handleAction(btn){
     const action=btn.dataset.mapAction,target=targetForButton(btn);
@@ -350,6 +424,7 @@
 
   window.FIELD_MAP_ENGINE={
     refresh,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
+    mount,setView,fitBounds,setTapHandler,setGeoOverlay,getView,
     get mode(){return mode},get trails(){return trails},get terrain(){return terrain},get grid(){return grid},get live(){return liveEnabled}
   };
 
