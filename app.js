@@ -60,6 +60,7 @@ function openView(name){
   closeTabSheet();
   document.getElementById('screen')?.focus({preventScroll:true});
   window.scrollTo({top:0, behavior:'auto'});
+  document.dispatchEvent(new CustomEvent('fieldos:viewchange',{detail:{view:name}}));
 }
 
 document.addEventListener('click', (e) => {
@@ -345,13 +346,7 @@ boot?.addEventListener('click',dismissBoot,{once:true});
 const routeMap=document.getElementById('routeMap');
 const routeSvgLine=document.getElementById('routeLine');
 const routePointsLayer=document.getElementById('routePointsLayer');
-const defaultRoute=[
-  {x:.31,y:.75,lat:44.4559,lon:-73.2328},
-  {x:.40,y:.64,lat:44.4647,lon:-73.2229},
-  {x:.48,y:.56,lat:44.4711,lon:-73.2143},
-  {x:.58,y:.43,lat:44.4815,lon:-73.2033},
-  {x:.70,y:.30,lat:44.4919,lon:-73.1901}
-];
+const defaultRoute=[];
 let routePlan=loadJSON('routePlan',null);
 if(!routePlan||typeof routePlan!=='object'||Array.isArray(routePlan)) routePlan={name:'FIELD ROUTE 01',points:defaultRoute,gain:1200,grade:12,terrain:'maintained',notes:''};
 const routeCenter={lat:DEMO_POS.lat,lon:DEMO_POS.lon,latSpan:.08,lonSpan:.11};
@@ -367,6 +362,7 @@ function drawRoute(){
   if(routeSvgLine) routeSvgLine.setAttribute('points',routePoints.map(p=>`${(p.x*1000).toFixed(1)},${(p.y*1000).toFixed(1)}`).join(' '));
   if(routePointsLayer) routePointsLayer.innerHTML=routePoints.map((p,i)=>`<i class="route-point" data-n="${String(i+1).padStart(2,'0')}" style="left:${p.x*100}%;top:${p.y*100}%"></i>`).join('');
   updateRouteMetrics(); updateReturnGuidance();
+  document.dispatchEvent(new CustomEvent('fieldos:routechange',{detail:{points:routePoints.map(p=>({lat:p.lat,lon:p.lon}))}}));
 }
 function routeTerrainFactor(t){return ({maintained:1,rough:1.2,offtrail:1.45,scramble:1.7})[t]||1}
 function updateRouteMetrics(){
@@ -381,15 +377,17 @@ function updateRouteMetrics(){
 }
 function drawRouteProfile(dist,gain,terrain){const c=document.getElementById('routeProfile');if(!c)return;const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#6fcf82',line=st.getPropertyValue('--line').trim()||'#2d6940',warn=st.getPropertyValue('--warn').trim()||'#ffd166';ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}const rough=terrain==='maintained'?.18:terrain==='rough'?.27:.34;ctx.strokeStyle=warn;ctx.lineWidth=4;ctx.beginPath();for(let i=0;i<60;i++){const x=i/59*w,base=.75-(i/59)*.48,und=Math.sin(i*.46)*rough*.16+Math.sin(i*.15)*rough*.13,y=clamp((base+und)*h,12,h-12);i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();ctx.fillStyle=fg;ctx.font='21px monospace';ctx.fillText(`${dist.toFixed(2)} mi // +${Math.round(gain)} ft`,14,28)}
 function updateOfflineEstimate(){const dist=routeMiles(),r=Number(document.getElementById('corridorRadius')?.value||1),detail=document.getElementById('offlineDetail')?.value||'medium',area=dist>0?dist*2*r+Math.PI*r*r:0,rate=({low:5,medium:20,high:75})[detail],mb=area*rate;const a=document.getElementById('corridorArea'),e=document.getElementById('offlineEstimate');if(a)a.textContent=area?`~${area.toFixed(1)} sq mi`:'---';if(e)e.textContent=area?(mb>1024?`~${(mb/1024).toFixed(1)} GB`:`~${Math.round(mb)} MB`):'---'}
-function saveRoutePlan(){const metrics=updateRouteMetrics();routePlan={name:document.getElementById('routeName')?.value.trim()||'FIELD ROUTE',points:routePoints,gain:metrics.gain,grade:metrics.grade,terrain:metrics.terrain,notes:document.getElementById('routeNotes')?.value||'',savedAt:new Date().toISOString()};saveJSON('routePlan',routePlan);updateReturnGuidance();navigator.vibrate?.(25);addLog(`ROUTE SAVED — ${routePlan.name}; ${metrics.dist.toFixed(2)} mi; +${Math.round(metrics.gain)} ft; ${metrics.label}.`,'ROUTE')}
+function saveRoutePlan(){const metrics=updateRouteMetrics();routePlan={...routePlan,name:document.getElementById('routeName')?.value.trim()||'FIELD ROUTE',points:routePoints.map(({lat,lon})=>({lat,lon})),gain:metrics.gain,grade:metrics.grade,terrain:metrics.terrain,notes:document.getElementById('routeNotes')?.value||'',savedAt:new Date().toISOString()};saveJSON('routePlan',routePlan);updateReturnGuidance();navigator.vibrate?.(25);addLog(`ROUTE SAVED — ${routePlan.name}; ${metrics.dist.toFixed(2)} mi; +${Math.round(metrics.gain)} ft; ${metrics.label}.`,'ROUTE')}
 function loadRouteFields(){if(document.getElementById('routeName'))document.getElementById('routeName').value=routePlan.name||'FIELD ROUTE 01';if(document.getElementById('routeGain'))document.getElementById('routeGain').value=routePlan.gain??1200;if(document.getElementById('routeGrade'))document.getElementById('routeGrade').value=routePlan.grade??12;if(document.getElementById('routeTerrain'))document.getElementById('routeTerrain').value=routePlan.terrain||'maintained';if(document.getElementById('routeNotes'))document.getElementById('routeNotes').value=routePlan.notes||''}
 routeMap?.addEventListener('click',e=>{if(e.target.closest('button,input,select,label,textarea,.route-point'))return;if(routePoints.length>=1000)return alert('Route point limit reached (1000). Simplify or save this route before adding more.');const r=routeMap.getBoundingClientRect(),x=clamp((e.clientX-r.left)/r.width,0,1),y=clamp((e.clientY-r.top)/r.height,0,1),ll=mapXYToLatLon(x,y);routePoints.push({x,y,...ll});drawRoute();navigator.vibrate?.(18)});
-document.getElementById('undoRoutePoint')?.addEventListener('click',()=>{routePoints.pop();drawRoute()});
-document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoints.reverse();drawRoute();addLog('ROUTE REVERSED — start/end swapped.','ROUTE')});
-document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
+if(routeMap){
+  document.getElementById('undoRoutePoint')?.addEventListener('click',()=>{routePoints.pop();drawRoute()});
+  document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoints.reverse();drawRoute();addLog('ROUTE REVERSED — start/end swapped.','ROUTE')});
+  document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
+}
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.9" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -407,6 +405,7 @@ document.getElementById('gpxImport')?.addEventListener('change',async e=>{
   if(pts.length>500){const step=(pts.length-1)/499;pts=Array.from({length:500},(_,i)=>pts[Math.round(i*step)]);}
   const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat)),minLon=Math.min(...pts.map(p=>p.lon)),maxLon=Math.max(...pts.map(p=>p.lon)),latRange=Math.max(maxLat-minLat,.0001),lonRange=Math.max(maxLon-minLon,.0001);
   routePoints=pts.map(p=>({...p,x:.08+.84*(p.lon-minLon)/lonRange,y:.08+.84*(maxLat-p.lat)/latRange}));
+  routePlan={...routePlan,anchors:[{lat:pts[0].lat,lon:pts[0].lon},{lat:pts.at(-1).lat,lon:pts.at(-1).lon}],routingMode:'direct',routingSource:'GPX IMPORT'};
   document.getElementById('routeName').value=f.name.replace(/\.gpx$/i,''); drawRoute(); addLog(`GPX IMPORT — ${f.name}; ${pts.length} plotted points.`,'ROUTE');
   e.target.value='';
 });
@@ -420,6 +419,14 @@ function updateReturnGuidance(){const n=nearestPointOnRoute(currentNavPosition),
 document.getElementById('usePhonePos')?.addEventListener('click',()=>requestFieldLiveLocation());
 document.getElementById('followBreadcrumbs')?.addEventListener('click',()=>{addLog(`RETURN TO BASE STARTED — target ${routePlan.name||'route start'}.`,'NAV')});
 document.getElementById('mapMarkBtn')?.addEventListener('click',()=>addLog(`MAP MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}.`,'POSITION'));
+window.FIELD_ROUTE_STATE={
+  getPoints:()=>routePoints.map(p=>({lat:Number(p.lat),lon:Number(p.lon)})).filter(validLatLon),
+  setPoints:(pts=[])=>{routePoints=(Array.isArray(pts)?pts:[]).filter(validLatLon).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));drawRoute()},
+  getPlan:()=>({...routePlan,anchors:Array.isArray(routePlan.anchors)?routePlan.anchors.map(p=>({...p})):[]}),
+  setMeta:(meta={})=>{routePlan={...routePlan,...meta}},
+  save:()=>saveRoutePlan(),
+  current:()=>({lat:Number(currentNavPosition.lat),lon:Number(currentNavPosition.lon),alt:currentNavPosition.alt??null,source:currentNavPosition.source||'POSITION'})
+};
 loadRouteFields();drawRoute();
 const savedPack=loadJSON('offlineRoutePack',null);if(savedPack){const st=document.getElementById('offlineStatus');if(st){st.textContent='ROUTE + CORRIDOR SAVED';st.className='route-pack-saved'}}
 
@@ -494,7 +501,7 @@ function updateTrackUI(){
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.9" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
 setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
