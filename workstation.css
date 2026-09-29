@@ -1,4 +1,4 @@
-/* v1.8: home-style workspaces + themed live/offline OSM maps. */
+/* v1.9: interactive OSM + repaired navigation workspace. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -187,4 +187,52 @@
   .offline-map-grid{grid-template-columns:1fr}
   .compact-map-actions{grid-template-columns:1fr!important}
   .field-real-map .leaflet-control-attribution{font-size:5.5px!important;max-width:78%;white-space:normal}
+}
+
+
+/* v1.9 navigation repair */
+.view-head-actions{display:flex;align-items:center;gap:5px}
+#nav .nav-live-strip{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid #62ff9a;background:#001006;min-height:31px;align-items:center;padding:3px 6px;gap:4px;color:#78d997;font-size:7px;letter-spacing:.035em}
+#nav .nav-live-strip span{display:flex;justify-content:space-between;gap:5px;min-width:0;border-right:1px dotted rgba(98,255,154,.28);padding:2px 6px}
+#nav .nav-live-strip span:last-child{border-right:0}
+#nav .nav-live-strip b{color:#baffce;font-size:8px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+#nav .nav-primary-compass{display:flex;flex-direction:column;min-height:260px}
+#nav .nav-primary-compass .compass{margin:8px auto 4px!important;width:170px!important;height:170px!important;flex:0 0 auto}
+#nav .nav-primary-compass .big-readout{text-align:center;margin-top:auto;font-size:24px;color:#baffce;letter-spacing:.06em}
+#nav .nav-primary-compass .big-readout small{font-size:10px;color:#78d997}
+#nav .nav-primary-base,#nav .nav-primary-trail{min-height:260px;display:flex;flex-direction:column}
+#nav .nav-primary-base .danger-lite,#nav .nav-primary-trail .danger-lite{margin-top:auto}
+#nav .nav-route-watch{min-height:245px}
+#nav .nav-route-watch .large-readouts{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+#nav .nav-route-watch .button-row{margin-top:8px}
+#nav .solar-row{min-height:112px}
+#nav #coordDD,#nav #coordDMS{font-size:8px;word-break:break-word}
+@media(min-width:1024px){
+  #nav .module-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-flow:row!important;align-items:stretch}
+  #nav .module-grid>.nav-primary-compass{grid-column:1!important;grid-row:auto!important}
+  #nav .module-grid>.nav-primary-base{grid-column:2!important;grid-row:auto!important}
+  #nav .module-grid>.nav-primary-trail{grid-column:3!important;grid-row:auto!important}
+  #nav .module-grid>.nav-live-strip{grid-column:1/-1!important}
+  #nav .module-grid>.nav-route-watch{grid-column:1/span 2!important}
+  #nav .module-grid>.nav-route-watch+article.panel{grid-column:3!important}
+  #nav .module-grid>.nav-route-watch+article.panel+article.panel{grid-column:1!important}
+  #nav .module-grid>.module-slot{grid-column:auto!important;grid-row:auto!important}
+  #nav .module-grid>.module-slot[data-panel-type="plot"]{grid-column:span 2!important}
+}
+@media(max-width:1023px){
+  #nav .nav-live-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #nav .nav-live-strip span:nth-child(3n){border-right:0}
+  #nav .nav-primary-compass .compass{width:150px!important;height:150px!important}
+}
+@media(max-width:600px){
+  .view-head-actions{gap:3px}
+  .view-head-actions .ghost{font-size:7px;padding:5px}
+  #nav .nav-live-strip{grid-template-columns:repeat(2,minmax(0,1fr));font-size:6.5px}
+  #nav .nav-live-strip span{border-right:1px dotted rgba(98,255,154,.28)!important;padding:3px}
+  #nav .nav-live-strip span:nth-child(even){border-right:0!important}
+  #nav .nav-primary-compass,#nav .nav-primary-base,#nav .nav-primary-trail{min-height:0}
+  #nav .nav-primary-compass .compass{width:132px!important;height:132px!important}
+  #nav .nav-primary-compass .big-readout{font-size:20px}
+  #nav .nav-route-watch{min-height:0}
+  #nav .nav-route-watch .large-readouts{grid-template-columns:1fr}
 }
