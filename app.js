@@ -994,7 +994,7 @@ function updateLiveNavigationUI(){
   const deviceHeading=Number.isFinite(fieldDeviceHeading)?fieldDeviceHeading:null;
   const courseHeading=Number.isFinite(fieldLiveHeading)?fieldLiveHeading:null;
   const heading=deviceHeading??(trusted?courseHeading:demo.heading);
-  const source=deviceHeading?(fieldDeviceHeadingSource||'DEVICE'):courseHeading?'GNSS COURSE':trusted?'NO HEADING':'DEMO';
+  const source=Number.isFinite(deviceHeading)?(fieldDeviceHeadingSource||'DEVICE'):Number.isFinite(courseHeading)?'GNSS COURSE':trusted?'NO HEADING':'DEMO';
   const speed=trusted?(Number.isFinite(fieldLiveSpeed)?fieldLiveSpeed:null):demo.speed;
   const card=Number.isFinite(heading)?headingCardinal(heading):'--';
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
@@ -1011,7 +1011,7 @@ function updateLiveNavigationUI(){
   set('navStripRoute',routePoints.length>=2?`${routeMiles().toFixed(1)} mi`:'NONE');
   set('navStripTrack',recordedTrack.length?`${recordedTrack.length} pts`:'IDLE');
   set('navCourseQuality',source);
-  set('navHeadingMode',deviceHeading?(fieldDeviceHeadingSource.includes('MAG')?'MAG':'DEVICE'):courseHeading?'GNSS':'—');
+  set('navHeadingMode',Number.isFinite(deviceHeading)?(fieldDeviceHeadingSource.includes('MAG')?'MAG':'DEVICE'):Number.isFinite(courseHeading)?'GNSS':'—');
 
   const rotor=document.getElementById('navCompassRotor');
   if(rotor){
