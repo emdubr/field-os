@@ -197,7 +197,7 @@ function updateSolar(){
   const marker=document.getElementById('sunArcMarker');
   if(marker){
     const daylight=ev.sunrise&&ev.sunset?ev.sunset-ev.sunrise:0;
-    const frac=daylight?Math.max(0,Math.min(1,(now-ev.sunrise)/daylight)):(p.el>threshold?0.5:0);
+    const frac=daylight?Math.max(0,Math.min(1,(now-ev.sunrise)/daylight)):(p.el>-0.833?0.5:0);
     marker.style.left=`${(frac*100).toFixed(1)}%`;
     marker.classList.toggle('below-horizon',p.el<=threshold);
   }
