@@ -33,6 +33,9 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await tick();await tick();
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);
  console.log('PASS snapped route with elevation success and saved profile');
+ let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
+ await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
+ assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
  // Abort a delayed route lookup; it must not restore cleared geometry or lock controls.
  w.fetch=(url,{signal})=>new Promise((resolve,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted'))));r.addAnchor({lat:44.04,lon:-73.01});await tick();assert.equal(d.getElementById('clearRoute').disabled,false);click('clearRoute');await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,0);assert.equal(d.getElementById('routeSnapMode').disabled,false);assert.equal(d.getElementById('undoRoutePoint').disabled,true);
  console.log('PASS cancellation while fetching; empty route and controls recover');
