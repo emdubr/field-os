@@ -1047,3 +1047,10 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   body #home #homeRealMap{height:100%!important;min-height:440px!important}
   body #home .detailed-nav .mini-compass{width:120px!important;height:120px!important}
 }
+
+/* Planned route remains legible across map sources and interface themes. */
+.planned-route-outline,.planned-route-line{fill:none;stroke-linejoin:round;stroke-linecap:round;stroke:#10202b;stroke-width:8}
+.planned-route-line{stroke:#ffcf40;stroke-width:4}
+.planned-route-arrow{fill:none;stroke:#10202b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.planned-route-marker circle{fill:#10202b;stroke:#ffcf40;stroke-width:3}
+.planned-route-marker text{fill:#fff;font:bold 12px monospace;text-anchor:middle}
