@@ -1,4 +1,4 @@
-/* v2.2: stable SVG/device compass + isolated Home map controls. */
+/* v2.3: native interactive topo map + stable SVG/device compass. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -375,3 +375,68 @@
 #home .map-controls button{position:relative;z-index:8;cursor:pointer;touch-action:manipulation}
 @media(max-width:900px){.field-compass{width:168px!important;height:168px!important}}
 @media(max-width:600px){.field-compass{width:146px!important;height:146px!important}.compass-enable-btn{min-height:32px;font-size:7px}}
+
+
+/* v2.3 native map engine */
+.field-real-map{
+  position:relative!important;
+  overflow:hidden!important;
+  background:#d8dccb!important;
+  touch-action:none!important;
+  user-select:none!important;
+  -webkit-user-select:none!important;
+}
+.field-real-map[hidden]{display:none!important}
+.native-map-base,.native-map-trails,.native-map-overlay{
+  position:absolute;inset:0;transform:translate(0,0);will-change:transform;
+}
+.native-map-base{z-index:10;background:#d8dccb}
+.native-map-trails{z-index:20;pointer-events:none}
+.native-map-overlay{z-index:30;width:100%;height:100%;pointer-events:none;overflow:visible}
+.native-map-tile{
+  position:absolute;width:256px;height:256px;max-width:none!important;
+  border:0!important;margin:0!important;padding:0!important;
+  user-select:none;-webkit-user-drag:none;pointer-events:none;
+  filter:brightness(.92) contrast(1.04) saturate(.9);
+}
+.native-trail-tile{
+  filter:none!important;opacity:.88;mix-blend-mode:multiply;
+}
+.native-map-corner{
+  position:absolute;right:6px;top:6px;z-index:40;
+  border:1px solid rgba(4,45,22,.48);background:rgba(238,244,226,.90);color:#073719;
+  padding:3px 5px;font:700 7px/1.15 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.03em;pointer-events:none;
+}
+.native-route-line{fill:none;stroke:#006d2c;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px rgba(255,255,255,.8))}
+.native-track-line{fill:none;stroke:#8b3a00;stroke-width:3;stroke-dasharray:6 5;stroke-linecap:round}
+.native-accuracy-ring{fill:rgba(0,105,44,.08);stroke:#006d2c;stroke-width:1.5;stroke-dasharray:4 3}
+.native-self-marker{fill:#00a83f;stroke:#fff;stroke-width:2.2;filter:drop-shadow(0 0 3px rgba(0,0,0,.55))}
+.native-self-arrow{fill:#003f18;stroke:#fff;stroke-width:.7}
+.native-waypoint-marker{fill:#fff;stroke:#006d2c;stroke-width:2}
+.native-base-marker{fill:#ffd166;stroke:#4c3600;stroke-width:2}
+.native-waypoint-label{
+  fill:#062e15;stroke:rgba(255,255,255,.92);stroke-width:3px;paint-order:stroke fill;
+  font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.native-map-dragging{cursor:grabbing!important}
+.field-real-map:not(.native-map-dragging){cursor:grab!important}
+.field-map-fallback{
+  min-height:220px;display:grid;place-items:center;align-content:center;gap:8px;
+  border:1px solid #62ff9a;background:#001008;color:#baffce;text-align:center;padding:20px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.field-map-fallback[hidden]{display:none!important}
+.field-map-fallback b{font-size:13px;letter-spacing:.08em}
+.field-map-fallback span{font-size:8px;color:#78d997;max-width:360px;line-height:1.45}
+.home-map-fallback{height:430px;grid-column:1;grid-row:1}
+.main-map-fallback{height:380px}
+#home .map-workarea{position:relative}
+#home .home-real-map{grid-column:1;grid-row:1;z-index:1}
+#home .map-controls{z-index:3}
+.field-real-map:after{
+  background:repeating-linear-gradient(0deg,rgba(0,70,28,.018) 0,rgba(0,70,28,.018) 1px,transparent 1px,transparent 4px)!important;
+  opacity:.35!important;
+}
+@media(max-width:900px){.home-map-fallback{height:350px}.main-map-fallback{height:340px}}
+@media(max-width:600px){.home-map-fallback{height:300px}.main-map-fallback{height:310px}.native-waypoint-label{font-size:8px}}
