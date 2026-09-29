@@ -1,0 +1,93 @@
+/* FIELD/OS v1.3: shared desktop navigation and detailed module workspaces. */
+(() => {
+  const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['survival','FIELD MANUAL'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
+  const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const val=id=>document.getElementById(id)?.textContent?.trim()||'—';
+  const input=id=>document.getElementById(id)?.value||'NOT SET';
+  const rows=items=>`<dl class="ws-readouts">${items.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>`;
+  const actions=items=>`<div class="ws-actions">${items.map(([view,label])=>`<button data-open="${view}">${esc(label)}</button>`).join('')}</div>`;
+  const table=(heads,data)=>`<div class="ws-table-wrap"><table class="ws-table"><thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const note=t=>`<p class="ws-note">${esc(t)}</p>`;
+  const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>${esc(title)}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
+  const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>1.3</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>LOCAL WORKSPACE<br>HARDWARE: NOT CONNECTED<br><span class="ws-clock"></span></footer>`;
+  document.getElementById('app').prepend(nav);
+  const specs={
+    map:[['Route geometry','SCHEMATIC','plot'],['Position solution','SOURCE / AGE','position'],['Active route','PLANNER DATA','route'],['Saved marks','LOCAL DATABASE','marks'],['Map coverage','AVAILABILITY','coverage'],['Recording summary','BREADCRUMBS','record'],['Navigation shortcuts','FIELD TOOLS','navtools']],
+    comms:[['Radio connection','TRANSPORT','radio'],['Node roster','ILLUSTRATIVE / DEMO','mesh'],['Packet delivery','CURRENT SESSION','delivery'],['Location payload','CURRENT SOURCE','position'],['Channel configuration','NOT CONNECTED','channel'],['Communications workflow','LOCAL TOOLS','commtools']],
+    nav:[['Route geometry','SCHEMATIC','plot'],['Navigation workspace','RELATED TOOLS','navtools']],
+    route:[['Leg schedule','CALCULATED','legs'],['Route geometry','SCHEMATIC','plot'],['Navigation source','SOURCE / AGE','position'],['Stored marks','REFERENCE','marks']],
+    trailreturn:[['Route intercept','CALCULATED','intercept'],['Route geometry','SCHEMATIC','plot'],['Position solution','SOURCE / AGE','position'],['Route definition','PLANNER DATA','route'],['Base reference','CALCULATED','base'],['Recording summary','LOCAL TRACK','record'],['Field tools','RELATED MODULES','navtools']],
+    waypoints:[['Mark inventory','LOCAL DATABASE','inventory'],['Position to save','SOURCE / AGE','position'],['Route overview','SCHEMATIC','plot'],['Base reference','SELECTED BASE','base'],['Waypoint workflow','LOCAL TOOLS','marktools']],
+    track:[['Track sample ledger','RECENT POINTS','samples'],['Position source','SOURCE / AGE','position'],['Route geometry','REFERENCE','plot'],['Recording health','LOCAL SESSION','record'],['Storage inventory','LOCAL DATA','storage'],['Track workflow','RELATED TOOLS','tracktools']],
+    sensors:[['Position source','SOURCE / AGE','position'],['Sensor bridge','HARDWARE STATUS','hardware'],['Clock module','PLANNED UPGRADE','rtc']],
+    survival:[['Reference index','LOCAL LIBRARY','manual'],['Field context','PLANNING','context'],['Position reference','SOURCE / AGE','position'],['Equipment readiness','CHECKLIST','kit'],['Emergency tools','RELATED MODULES','emergencytools']],
+    trip:[['Route snapshot','PLANNER DATA','route'],['Equipment readiness','CHECKLIST','kit'],['Trip timing','LOCAL REMINDERS','timing'],['Route geometry','SCHEMATIC','plot']],
+    log:[['Entry inventory','LOCAL RECORDS','logstats'],['Recent activity','SAVED EVENTS','events'],['Position reference','SOURCE / AGE','position'],['Trip context','CURRENT PLAN','context'],['Storage inventory','LOCAL DATA','storage'],['Field workflow','RELATED MODULES','logtools']],
+    power:[['Device power sources','AVAILABILITY','batteries'],['Display state','LOCAL PREFERENCES','display'],['Recording load','CURRENT SESSION','record'],['Local data inventory','STORAGE','storage'],['Power workflow','RELATED MODULES','powertools']],
+    system:[['Runtime information','LOCAL BROWSER','runtime'],['Storage inventory','LOCAL DATA','storage'],['Hardware integration','CONNECTION STATUS','hardware'],['Offline coverage','CAPABILITIES','coverage']],
+    lost:[['Position reference','SOURCE / AGE','position'],['Route geometry','SCHEMATIC','plot'],['Base reference','CALCULATED','base'],['Route intercept','CALCULATED','intercept'],['Trip timing','LOCAL PLAN','timing'],['Communication status','TRANSPORT','radio'],['Support modules','FIELD TOOLS','emergencytools']],
+    sos:[['Communication status','TRANSPORT','radio'],['Position reference','SOURCE / AGE','position'],['Trip context','LOCAL PLAN','context'],['Base reference','CALCULATED','base'],['Device availability','CONNECTION STATUS','hardware'],['Check-in state','LOCAL REMINDER','timing'],['Support modules','FIELD TOOLS','emergencytools']]
+  };
+  function plot(){
+    if(routePoints.length<2)return note('Plot at least two points in Route Planner to show a route diagram.')+actions([['route','OPEN ROUTE PLANNER']]);
+    const lat=routePoints.map(p=>p.lat),lon=routePoints.map(p=>p.lon),minLa=Math.min(...lat),minLo=Math.min(...lon),dLa=Math.max(...lat)-minLa||.001,dLo=Math.max(...lon)-minLo||.001;
+    const pts=routePoints.map(p=>[24+(p.lon-minLo)/dLo*352,196-(p.lat-minLa)/dLa*172]);
+    return `<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Schematic diagram of the planned route, not a terrain map"><defs><pattern id="grid-${document.querySelector('.view.active')?.id||'x'}" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0H0V25" fill="none" stroke="currentColor" opacity=".13"/></pattern></defs><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Route geometry only. Axes scaled independently; no terrain or obstacle information.');
+  }
+  const bodies={
+    position:()=>rows([['SOURCE',currentNavPosition.source||'DEMO GNSS'],['LATITUDE',currentNavPosition.lat.toFixed(6)],['LONGITUDE',currentNavPosition.lon.toFixed(6)],['ALTITUDE',`${currentNavPosition.alt??'—'} ft`],['ACCURACY',`${currentAccuracy} m`],['FIX AGE',fmtAge(fixAge)],['FRESHNESS',fixAge>180?'STALE':'RECENT']])+note('Demo coordinates remain active until a real position is acquired.'),
+    route:()=>rows([['NAME',input('routeName')],['DISTANCE',val('routeDistance')],['GAIN',val('routeGainOut')],['EFFORT',val('routeDifficulty')],['EST. TIME',val('routeTime')],['POINTS',routePoints.length]])+actions([['route','EDIT ROUTE'],['trip','TRIP PLAN']]),
+    marks:()=>table(['NAME','TYPE','LAT / LON'],waypoints.slice(0,6).map(w=>[w.name,w.type,`${w.lat.toFixed(4)}, ${w.lon.toFixed(4)}`]))+(waypoints.length?'':note('No saved waypoints. Add a position to build your field reference.'))+actions([['waypoints','MANAGE MARKS']]),
+    inventory:()=>rows([['TOTAL',waypoints.length],...['BASE','CAMP','WATER','HAZARD','JUNCTION','NOTE'].map(t=>[t,waypoints.filter(w=>w.type===t).length])]),
+    base:()=>rows([['DISTANCE',val('rtbDistance')],['BEARING',val('rtbBearing')],['REFERENCE',val('rtbTrack')],['ALTITUDE',val('rtbAlt')]])+actions([['nav','RETURN TO BASE'],['waypoints','BASE WAYPOINTS']]),
+    intercept:()=>rows([['TRAIL OFFSET',val('rttDistance')],['BEARING',val('rttBearing')],['ROUTE',val('rttRouteName')],['NEAREST LEG',val('rttPoint')]])+actions([['trailreturn','INTERCEPT DETAILS']]),
+    record:()=>rows([['STATE',val('trackState')],['DISTANCE',`${val('trackDistance')} mi`],['SAMPLES',recordedTrack.length],['DURATION',val('trackDuration')],['ACCURACY',val('trackAccuracy')],['LAST POINT',recordedTrack.at(-1)?.time||'NONE']])+actions([['track','OPEN RECORDER']]),
+    samples:()=>table(['TIME','LATITUDE','LONGITUDE'],recordedTrack.slice(-6).map(p=>[p.time||'—',p.lat.toFixed(5),p.lon.toFixed(5)]))+(recordedTrack.length?'':note('No recorded samples. Start a GPS track to populate this ledger.')),
+    legs:()=>table(['LEG','DISTANCE','BEARING'],routePoints.slice(1,9).map((p,i)=>[`${i+1} → ${i+2}`,`${(haversineMiles(routePoints[i],p)).toFixed(2)} mi`,`${Math.round(bearingDeg(routePoints[i],p))}°`])),
+    coverage:()=>rows([['APP INTERFACE','CACHED AFTER LOAD'],['ROUTES / NOTES','LOCAL BROWSER'],['BASEMAP TILES','NOT AVAILABLE'],['TERRAIN DISPLAY','ILLUSTRATIVE'],['HARDWARE FEED','NOT CONNECTED']])+note('Saved route packs contain route geometry and settings, not downloaded terrain maps.'),
+    radio:()=>rows([['TAP V2','NOT CONNECTED'],['TRANSPORT','DEMO ONLY'],['DELIVERY ACK','UNAVAILABLE'],['ENCRYPTION','NOT VERIFIED'],['REMOTE SOS','NOT AVAILABLE']])+note('Messages in this prototype do not leave the browser.'),
+    mesh:()=>table(['NODE','RSSI','HOPS','STATUS'],[['BASE-01','−72 dBm','1','DEMO'],['RIDGE-01','−85 dBm','2','DEMO'],['CAMP-01','−91 dBm','2','DEMO'],['RELAY-A','−96 dBm','3','DEMO']])+note('Illustrative roster. No radios have been discovered.'),
+    delivery:()=>rows([['EDITOR LENGTH',`${document.getElementById('messageInput').value.length} characters`],['PACKET SOURCE','LOCAL TEXT EDITOR'],['REMOTE RECIPIENT','NONE'],['ACKNOWLEDGED','0'],['QUEUE','NOT CONNECTED']]),
+    channel:()=>rows([['CHANNEL','DEMO'],['FREQUENCY','NOT CONFIGURED'],['MODEM','NOT CONNECTED'],['KEY STATUS','NOT CONFIGURED'],['DEVICE SETTINGS','UNAVAILABLE']])+actions([['system','DEVICE LINKS']]),
+    hardware:()=>table(['MODULE','STATE'],[['TAP V2','NOT CONNECTED'],['GNSS / IMU / BARO','DEMO FEED'],['RAK12002 RTC','PLANNED'],['SENSOR-2 RADAR','PLANNED'],['THERMAL / LOW-LIGHT','PLANNED']])+note('Sensor values shown by the prototype are not measurements from connected hardware.'),
+    rtc:()=>rows([['MODULE','RAK12002'],['INSTALLATION','PLANNED'],['CLOCK SOURCE','PHONE / COMPUTER'],['HARDWARE SYNC','UNAVAILABLE'],['LOCAL TIME',new Date().toLocaleTimeString()]])+note('RTC synchronization will require the physical module and a device bridge.'),
+    manual:()=>rows([['GUIDES',guides.length],['CATEGORIES',categories.length-1],['STORAGE','BUNDLED WITH APP'],['SEARCH','TITLE / BODY'],['ACCESS','OFFLINE AFTER LOAD']])+note('Use the searchable reference index to open a complete entry.'),
+    kit:()=>{const checked=essentials.filter((_,i)=>essentialsState[i]).length;return `<div class="ws-metric">${checked}<small> / ${essentials.length} PACKED</small></div><meter min="0" max="${essentials.length}" value="${checked}"></meter>`+rows(essentials.map((e,i)=>[e,essentialsState[i]?'PACKED':'CHECK']))+actions([['trip','EDIT CHECKLIST']]);},
+    timing:()=>rows([['EXPECTED RETURN',input('tripReturn').replace('T',' ')],['INTERVAL',`${input('checkinInterval')} min`],['COUNTDOWN',val('checkinCountdown')],['STATUS',val('mobileCheckin')]])+note('Local reminders do not notify another person automatically.')+actions([['trip','CHECK-IN PLAN']]),
+    context:()=>rows([['TRIP',input('tripName')],['TRAILHEAD',input('tripBase')],['RETURN',input('tripReturn').replace('T',' ')],['ROUTE',input('routeName')],['POSITION SOURCE',currentNavPosition.source]])+actions([['trip','EDIT PLAN'],['log','FIELD NOTES']]),
+    storage:()=>rows([['WAYPOINTS',waypoints.length],['TRACK SAMPLES',recordedTrack.length],['LOG ENTRIES',fieldLog.length],['ROUTE POINTS',routePoints.length],['CLOUD SYNC','OFF'],['LOCATION','THIS BROWSER']])+note('Export important records before clearing browser data.')+actions([['system','EXPORT / STORAGE']]),
+    logstats:()=>rows([['TOTAL ENTRIES',fieldLog.length],['DRAFT LENGTH',`${document.getElementById('logInput').value.length} characters`],['TIMESTAMPS','LOCAL RECORDS'],['SYNC','DISABLED'],['EXPORT','JSON']]),
+    events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
+    batteries:()=>rows([['PHONE / COMPUTER',val('mobileBattery')],['TAP V2','UNAVAILABLE'],['SENSOR-2','UNAVAILABLE'],['HARDWARE RESERVE','NOT MEASURED'],['CHARGING',val('mobilePowerState')]])+note('The browser battery reading may be unavailable on some devices.'),
+    display:()=>rows([['THEME',document.body.dataset.theme||'green'],['POWER MODE',storageGet(STORE_PREFIX+'power')||'normal'],['WAKE LOCK',fieldWakeLock?'ACTIVE':'OFF'],['SCREEN',`${innerWidth} × ${innerHeight}`],['VISIBILITY',document.visibilityState]])+actions([['system','DISPLAY THEME']]),
+    runtime:()=>rows([['RELEASE','FIELD/OS 1.3'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
+    plot,
+    navtools:()=>actions([['map','TERRAIN MAP'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','SAVED WAYPOINTS'],['track','TRACK RECORDER'],['lost','LOST MODE']])+note('Use your route, saved base, and position source together when reviewing a return path.'),
+    commtools:()=>actions([['trip','CHECK-IN PLAN'],['nav','COORDINATES'],['log','EVENT JOURNAL'],['system','DEVICE STATUS']])+note('Prepare a check-in locally and review the position source before copying it.'),
+    marktools:()=>actions([['map','MAP VIEW'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['log','FIELD NOTES']])+note('Select a saved waypoint to inspect its bearing and distance. Export the list from Saved Waypoints.'),
+    tracktools:()=>actions([['route','PLANNED ROUTE'],['nav','ROUTE WATCH'],['log','TRACK NOTES'],['power','DISPLAY / POWER']])+note('Export the recorded track as GPX from the recorder. Phone background recording remains device dependent.'),
+    emergencytools:()=>actions([['lost','LOST WORKFLOW'],['survival','FIELD MANUAL'],['nav','POSITION / RETURN'],['power','POWER CONTROL'],['trip','TRIP PLAN']])+note('The app cannot send a real SOS. Use a working phone or certified emergency device.'),
+    logtools:()=>actions([['waypoints','SAVE A MARK'],['trip','TRIP CONTEXT'],['sensors','SENSOR PANEL'],['track','TRACK RECORDER']])+note('Entries and position marks remain in this browser until exported.'),
+    powertools:()=>actions([['system','DISPLAY THEME'],['track','RECORDER'],['trip','CHECK-IN TIMER'],['sensors','SENSOR STATUS']])+note('Conservation settings affect the interface only; hardware power control is not connected.')
+  };
+  // Use the existing controls and their original DOM nodes, preserving their listeners.
+  for(const view of views.filter(v=>v.id!=='home')){
+    const head=view.querySelector('.view-head');const grid=document.createElement('div');grid.className='module-grid';
+    [...view.children].filter(c=>c!==head).forEach(child=>{
+      if(child.matches('.grid.two-col')&&!child.id){[...child.children].forEach(c=>grid.append(c));child.remove();}
+      else grid.append(child);
+    });view.append(grid);
+    const band=document.createElement('div');band.className='module-band';band.innerHTML='<span>FIELD / OS 1.3</span><span>LOCAL WORKSPACE</span><span>HARDWARE NOT CONNECTED</span>';head.after(band);
+    for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
+    const hero=grid.querySelector(':scope > .panel');hero?.classList.add('module-hero');
+  }
+  function refresh(){
+    const active=document.querySelector('.view.active');if(!active)return;
+    nav.querySelectorAll('[data-module]').forEach(b=>{b.classList.toggle('selected',b.dataset.module===active.id);if(b.dataset.module===active.id)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    nav.querySelector('.ws-clock').textContent=new Date().toLocaleTimeString();
+    active.querySelectorAll('.module-slot').forEach(slot=>{const body=bodies[slot.dataset.panelType];if(!body)return;let content=slot.querySelector('.ws-card-body');if(!content){content=document.createElement('div');content.className='ws-card-body';slot.firstElementChild.append(content);}const html=body();if(content.innerHTML!==html)content.innerHTML=html;});
+  }
+  document.addEventListener('click',()=>queueMicrotask(refresh));document.addEventListener('input',()=>queueMicrotask(refresh));setInterval(refresh,2000);refresh();
+  window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();refresh();});
+})();
