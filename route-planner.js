@@ -3,13 +3,16 @@
 
   const MAP_ID='routePlannerMap';
   const OVERPASS_ENDPOINTS=[
-    'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter',
     'https://overpass.private.coffee/api/interpreter'
   ];
   const graphCache=new Map();
   const pendingGraphs=new Map();
   const CACHE_MS=20*60*1000;
+  const legCache=new Map();
+  let lastSuccessfulAnchors=[];
+  const legKey=(a,b)=>[a.lat,a.lon,b.lat,b.lon].map(n=>Number(n).toFixed(6)).join(',');
   let anchors=[];
   let snapped=[];
   let busy=false;
@@ -57,6 +60,8 @@
     anchors=sanitizeAnchors(plan.anchors);
     if(!anchors.length&&pts.length>=2)anchors=[{lat:+pts[0].lat,lon:+pts[0].lon},{lat:+pts.at(-1).lat,lon:+pts.at(-1).lon}];
     if($('routeSnapMode'))$('routeSnapMode').value=plan.routingMode==='direct'?'direct':'trail';
+    if(pts.length>1)lastSuccessfulAnchors=sanitizeAnchors(plan.routedAnchors||anchors);
+    for(const leg of plan.legs||[])if(valid(leg.a)&&valid(leg.b)&&Array.isArray(leg.result?.points))legCache.set(legKey(leg.a,leg.b),leg.result);
   }
 
   function updateControls(){
@@ -252,7 +257,7 @@
   function addAnchor(p){
     if(!valid(p))return;
     if(anchors.length>=30)return status('Waypoint limit reached. Save this route before adding more.','error');
-    anchors.push({lat:+p.lat,lon:+p.lon});
+    anchors=[...anchors,{lat:+p.lat,lon:+p.lon}];
     navigator.vibrate?.(18);
     state()?.setMeta?.({anchors,routingMode:routeMode()});
     overlay();
@@ -268,7 +273,7 @@
   function undo(){
     if(!anchors.length)return;
     aborter?.abort();setBusy(false);
-    anchors.pop();snapped=[];
+    anchors=anchors.slice(0,-1);snapped=[];
     state()?.setMeta?.({anchors,routingMode:routeMode()});
     if(anchors.length>=2)recalculate();
     else{
@@ -280,14 +285,31 @@
 
   function reverse(){
     if(anchors.length<2)return;
-    anchors.reverse();snapped=[];
-    state()?.setMeta?.({anchors,routingMode:routeMode()});
-    recalculate();
+    aborter?.abort();setBusy(false);
+    const plan=planMeta(),points=state()?.getPoints?.()||[];
+    anchors=[...anchors].reverse();snapped.reverse();
+    if(points.length<2){state()?.setMeta?.({anchors});recalculate();return;}
+    points.reverse();setBusy(true);
+    const reversedAnchors=anchors.map(p=>({...p}));
+    const samples=plan.elevationProfile,total=samples?.at(-1)?.distanceM||0;
+    const profile=Array.isArray(samples)&&samples.length>1?{
+      samples:[...samples].reverse().map(p=>({...p,distanceM:total-p.distanceM})),
+      gainFt:plan.elevationLossFt,lossFt:plan.elevationGainFt,minFt:plan.elevationMinFt,maxFt:plan.elevationMaxFt,maxGrade:Number(plan.grade)||0
+    }:null;
+    state()?.setPoints?.(points);
+    state()?.setMeta?.({...plan,anchors:reversedAnchors,routedAnchors:reversedAnchors,points,
+      elevationProfile:profile?.samples||null,elevationGainFt:profile?.gainFt??null,elevationLossFt:profile?.lossFt??null,
+      gain:profile?.gainFt||0,grade:plan.grade||0});
+    // setPoints emits a route event; restore the newly reversed control points.
+    anchors=sanitizeAnchors(state()?.getPlan?.().anchors);
+    lastSuccessfulAnchors=anchors.map(p=>({...p}));
+    applyRouteStats(points,profile);state()?.save?.();overlay(points);setBusy(false);
+    status(`ROUTE REVERSED -- ${routeDistanceMiles(points).toFixed(2)} MI // NO DOWNLOAD NEEDED`,'ready');
   }
 
   function clearAll(){
     aborter?.abort();setBusy(false);
-    anchors=[];snapped=[];
+    anchors=[];snapped=[];lastSuccessfulAnchors=[];
     state()?.setMeta?.({anchors:[],routingMode:routeMode()});
     state()?.setPoints?.([]);overlay([]);
     status('TAP MAP TO SET START','ready');
@@ -305,13 +327,13 @@
 
   function bboxFor(a,b){
     const legMiles=Math.max(.1,miles(a,b));
-    const padMiles=clamp(Math.max(1.0,legMiles*.28),1,4);
+    const padMiles=clamp(Math.max(miles(a,b)<.01?.7:.4,legMiles*.22),.4,2);
     const midLat=(a.lat+b.lat)/2,latPad=padMiles/69,lonPad=padMiles/(69*Math.max(.25,Math.cos(midLat*Math.PI/180)));
     return {s:Math.min(a.lat,b.lat)-latPad,w:Math.min(a.lon,b.lon)-lonPad,n:Math.max(a.lat,b.lat)+latPad,e:Math.max(a.lon,b.lon)+lonPad};
   }
   function bboxKey(b){return [b.s,b.w,b.n,b.e].map(x=>(Math.round(x*200)/200).toFixed(3)).join(',')}
   function queryFor(b){
-    return `[out:json][timeout:8];\nway["highway"~"^(path|footway|track|bridleway|steps|pedestrian|unclassified|service|residential)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s.toFixed(6)},${b.w.toFixed(6)},${b.n.toFixed(6)},${b.e.toFixed(6)});\nout body geom;`;
+    return `[out:json][timeout:20];\nway["highway"~"^(path|footway|track|bridleway|steps|pedestrian|unclassified|service|residential)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s.toFixed(6)},${b.w.toFixed(6)},${b.n.toFixed(6)},${b.e.toFixed(6)});\nout body geom;`;
   }
 
   function covers(box,a,b){
@@ -334,7 +356,9 @@
       if(!force&&covers(entry.box,a,b))return entry.graph;
     }
     for(const entry of pendingGraphs.values())if(covers(entry.box,a,b))return waitForGraph(entry.promise,signal);
-    const box=bboxFor(a,b),key=bboxKey(box),q=queryFor(box);
+    const box=bboxFor(a,b);
+    if(force){box.s-=.02;box.n+=.02;box.w-=.03;box.e+=.03;}
+    const key=bboxKey(box),q=queryFor(box);
     if(pendingGraphs.has(key))return waitForGraph(pendingGraphs.get(key).promise,signal);
     // Start a backup only if the preferred server is still slow. First valid
     // response wins; cancel the other requests rather than waiting serially.
@@ -344,18 +368,20 @@
       const stop=()=>{clearTimeout(start);clearTimeout(deadline);reject(new DOMException('Cancelled','AbortError'));};
       controller.signal.addEventListener('abort',stop,{once:true});
       start=setTimeout(async()=>{
-        deadline=setTimeout(()=>controller.abort(),8500);
+        deadline=setTimeout(()=>controller.abort(),24000);
         try{
-          const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q),signal:controller.signal,cache:'no-store'});
+          const res=await fetch(endpoint+'?data='+encodeURIComponent(q),{signal:controller.signal,cache:'no-store'});
           if(!res.ok)throw new Error(`Trail server ${res.status}`);
           const json=await res.json(),graph=buildGraph(json.elements||[]);
           if(graph.nodes.size<2||graph.segments.length<1)throw new Error('No mapped trails in this area');
-          resolve(graph);
-        }catch(err){reject(err)}finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',stop)}
+          graph.rawElements=json.elements;resolve(graph);
+        }catch(err){if(err?.name!=='AbortError')console.warn('Trail lookup',endpoint,err.message);reject(err)}finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',stop)}
       },[0,1200,3000][i]);
     }));
     const promise=Promise.any(requests).then(graph=>{
       graphCache.set(key,{box,graph,created:Date.now()});
+      try{const raw=JSON.stringify({box,elements:graph.rawElements,created:Date.now()});if(raw.length<2500000)sessionStorage.setItem('fieldos-trail-network',raw)}catch{}
+      delete graph.rawElements;
       if(graphCache.size>8)graphCache.delete(graphCache.keys().next().value);
       return graph;
     }).catch(()=>{throw new Error('Trail servers unavailable. Try again, or choose DIRECT / OFF-TRAIL.');})
@@ -363,6 +389,13 @@
     pendingGraphs.set(key,{box,promise});
     return waitForGraph(promise,signal);
   }
+
+  try{
+    const cached=JSON.parse(sessionStorage.getItem('fieldos-trail-network')||'null');
+    if(cached?.box&&Array.isArray(cached.elements)&&Date.now()-cached.created<CACHE_MS){
+      graphCache.set(bboxKey(cached.box),{box:cached.box,graph:buildGraph(cached.elements),created:cached.created});
+    }
+  }catch{}
 
   function wayFactor(tags={}){
     const h=tags.highway||'';
@@ -466,6 +499,9 @@
   }
 
   async function routeLeg(a,b,signal,retry=false){
+    const cached=legCache.get(legKey(a,b));if(cached)return cached;
+    const back=legCache.get(legKey(b,a));
+    if(back)return {points:[...back.points].reverse(),startSnap:back.endSnap,endSnap:back.startSnap};
     if(miles(a,b)>35)throw new Error('A single snapped leg is too long for the lightweight trail router. Add a via point closer to the trail corridor.');
     const source=await fetchTrailGraph(a,b,signal,retry);
     const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments:source.segments.slice()};
@@ -474,7 +510,8 @@
     const path=shortestPath(graph,sa.id,sb.id);
     if(!path&&!retry)return routeLeg(a,b,signal,true);
     if(!path)throw new Error('The nearby mapped trails are not connected. Add an intermediate point or use DIRECT mode for an off-trail leg.');
-    return {points:path.map(p=>({lat:p.lat,lon:p.lon})),startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d}};
+    const result={points:path.map(p=>({lat:p.lat,lon:p.lon})),startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d}};
+    legCache.set(legKey(a,b),result);if(legCache.size>100)legCache.delete(legCache.keys().next().value);return result;
   }
 
   function routeDistanceMiles(points){
@@ -605,11 +642,12 @@
     if(anchors.length<2)return;
     aborter?.abort();aborter=new AbortController();
     const signal=aborter.signal;setBusy(true);snapped=[];
-    state()?.setPoints?.([]);
+    const previousPoints=state()?.getPoints?.()||[],previousAnchors=lastSuccessfulAnchors.map(p=>({...p}));
     try{
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
-        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
+        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
+        lastSuccessfulAnchors=anchors.map(p=>({...p}));
         fitPlanner(direct,16);setBusy(false);
         const enriched=await enrichRoute(direct,signal,'DIRECT ROUTE');
         const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
@@ -617,11 +655,13 @@
         return;
       }
       status(`LOADING OSM TRAILS -- LEG 1 / ${anchors.length-1}`,'loading');
-      const full=[];let maxSnap=0;
+      const full=[],legs=[];let maxSnap=0;
       for(let i=1;i<anchors.length;i++){
         if(signal.aborted)return;
         status(`SNAPPING TO TRAILS -- LEG ${i} / ${anchors.length-1}`,'loading');
         const leg=await routeLeg(anchors[i-1],anchors[i],signal);
+        if(signal.aborted)return;
+        legs.push({a:{...anchors[i-1]},b:{...anchors[i]},result:leg});
         maxSnap=Math.max(maxSnap,leg.startSnap.d,leg.endSnap.d);
         if(i===1)snapped.push({lat:leg.startSnap.lat,lon:leg.startSnap.lon});
         snapped.push({lat:leg.endSnap.lat,lon:leg.endSnap.lon});
@@ -631,7 +671,8 @@
       const clean=dedupe(full);
       if(clean.length<2)throw new Error('The trail router returned an empty path.');
       state()?.setPoints?.(clean);
-      state()?.setMeta?.({anchors,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
+      lastSuccessfulAnchors=anchors.map(p=>({...p}));
       overlay(clean);fitPlanner(clean,16);setBusy(false);
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
@@ -640,8 +681,9 @@
     }catch(err){
       if(signal.aborted)return;
       console.warn('FIELD/OS trail routing failed',err);
-      status(`TRAIL ROUTE FAILED -- ${String(err.message||err).toUpperCase()}`,'error');
-      overlay(state()?.getPoints?.()||[]);
+      if(previousPoints.length>1){anchors=previousAnchors;state()?.setMeta?.({anchors});}
+      status(`TRAIL ROUTE FAILED -- ${String(err.message||err).toUpperCase()}${previousPoints.length>1?' LAST WORKING ROUTE KEPT.':''}`,'error');
+      overlay(previousPoints);
     }finally{if(aborter?.signal===signal)setBusy(false)}
   }
 
