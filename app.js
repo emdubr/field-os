@@ -1048,6 +1048,10 @@ function requestFieldLiveLocation({quiet=false}={}){
 window.addEventListener('online',()=>updateFieldMaps(false));
 window.addEventListener('offline',()=>updateFieldMaps(false));
 document.addEventListener('click',e=>{
+  if(window.FIELD_MAP_ENGINE_EXTERNAL){
+    if(e.target.closest('[data-open="map"],[data-open="home"]'))setTimeout(()=>{window.FIELD_MAP_ENGINE?.refresh?.(false);updateLiveNavigationUI();},30);
+    return;
+  }
   const opensMap=e.target.closest('[data-open="map"]');
   if(opensMap&&!hasTrustedMapPosition()&&!fieldLocationPrompted){
     fieldLocationPrompted=true;
