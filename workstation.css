@@ -1,4 +1,4 @@
-/* v2.3: native interactive topo map + stable SVG/device compass. */
+/* v2.4: progressive OSM-under-topo map + visible tile diagnostics. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -440,3 +440,19 @@
 }
 @media(max-width:900px){.home-map-fallback{height:350px}.main-map-fallback{height:340px}}
 @media(max-width:600px){.home-map-fallback{height:300px}.main-map-fallback{height:310px}.native-waypoint-label{font-size:8px}}
+
+
+/* v2.4 tile diagnostics */
+.native-osm-base{z-index:1}
+.native-topo-tile{z-index:2}
+.native-trail-tile{z-index:3}
+.native-map-attrib,.native-map-diag{
+  position:absolute;bottom:4px;z-index:520;
+  background:rgba(245,248,236,.90);color:#173821;border:1px solid rgba(23,56,33,.28);
+  padding:2px 4px;font:6px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.native-map-attrib{right:4px}
+.native-map-diag{left:4px;font-weight:700}
+.native-map-corner{z-index:520!important}
+.field-real-map:after{z-index:450!important}
