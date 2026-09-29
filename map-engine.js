@@ -178,8 +178,30 @@
     return st;
   }
 
+  function plannedRoute(){
+    return (window.FIELD_ROUTE_STATE?.getPoints?.()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  }
   function drawOverlay(st,w,h){
     const c=world(st.center.lat,st.center.lon,st.zoom),parts=[];
+    const route=plannedRoute();
+    if(route.length){
+      const pts=route.map(p=>{const q=world(p.lat,p.lon,st.zoom);return {x:q.x-c.x+w/2,y:q.y-c.y+h/2}});
+      const line=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      if(pts.length>1){
+        parts.push(`<polyline points="${line}" class="planned-route-outline"/><polyline points="${line}" class="planned-route-line"/>`);
+        let distance=0;
+        for(let i=1;i<pts.length;i++){
+          const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+          if(!len)continue;
+          for(let at=90-distance;at<len;at+=90){
+            const x=a.x+dx*at/len,y=a.y+dy*at/len;
+            if(x>=0&&x<=w&&y>=0&&y<=h)parts.push(`<path d="M -5 -5 L 1 0 L -5 5" transform="translate(${x},${y}) rotate(${Math.atan2(dy,dx)*180/Math.PI})" class="planned-route-arrow"/>`);
+          }
+          distance=(distance+len)%90;
+        }
+      }
+      [pts[0],...(pts.length>1?[pts[pts.length-1]]:[])].forEach((p,i)=>parts.push(`<g class="planned-route-marker"><title>${i?'Route finish':'Route start'}</title><circle cx="${p.x}" cy="${p.y}" r="12"/><text x="${p.x}" y="${p.y+4}">${i?'E':'S'}</text></g>`));
+    }
     if(livePosition){
       const p=world(livePosition.lat,livePosition.lon,st.zoom),x=p.x-c.x+w/2,y=p.y-c.y+h/2;
       const mpp=Math.max(.01,156543.03392*Math.cos(livePosition.lat*Math.PI/180)/Math.pow(2,st.zoom));
@@ -295,9 +317,16 @@
     ['homeRealMap','realMap'].forEach(id=>ensure(id));
     for(const st of states.values()){
       if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered))st.center={...centerCandidate()};
-      st.rendered=true;render(st);
+      st.rendered=true;
+      if(!st.routeFitted&&plannedRoute().length>1&&st.el.getBoundingClientRect().width>0){
+        st.routeFitted=true;fitBounds(st.id,plannedRoute(),{padding:48,maxZoom:16});
+      }else render(st);
     }
   }
+
+  document.addEventListener('fieldos:routechange',()=>{
+    states.forEach(st=>{st.routeFitted=false});refresh(false);
+  });
 
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
@@ -391,6 +420,7 @@
     else if(action==='zoom-in')zoom(target,1);
     else if(action==='zoom-out')zoom(target,-1);
     else if(action==='center')center(target);
+    else if(action==='fit-route')fitBounds(target,plannedRoute(),{padding:48,maxZoom:16});
     else if(action==='location-toggle')toggleLiveLocation();
   }
 
