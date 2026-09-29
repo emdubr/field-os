@@ -95,16 +95,14 @@
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
       maxZoom:19,
-      attribution:'© OpenStreetMap contributors',
-      crossOrigin:true
+      attribution:'© OpenStreetMap contributors'
     }).addTo(plannerMap);
 
     const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
       subdomains:'abc',
       maxZoom:17,
       opacity:.93,
-      attribution:'OpenTopoMap',
-      crossOrigin:true
+      attribution:'OpenTopoMap'
     }).addTo(plannerMap);
 
     let topoErrors=0;
@@ -120,8 +118,7 @@
     const hiking=L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',{
       maxZoom:18,
       opacity:.72,
-      attribution:'Waymarked Trails',
-      crossOrigin:true
+      attribution:'Waymarked Trails'
     });
     hiking.on('tileerror',()=>{});
     hiking.addTo(plannerMap);
