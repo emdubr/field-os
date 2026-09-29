@@ -1,4 +1,4 @@
-/* v2.5: isolated standalone topo map engine + visible diagnostics. */
+/* v2.6: live map layer toggles + continuous GNSS tracking. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -473,4 +473,34 @@
   left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);
   max-width:90%;white-space:normal;text-align:center;font-size:8px;
   background:#001008;color:#ffb0a8;border-color:#ff8f85;padding:10px 12px;
+}
+
+
+/* v2.6 live map toggles */
+.map-layer-toggle{
+  display:flex!important;align-items:center;gap:5px!important;
+  padding:4px 2px!important;cursor:pointer!important;white-space:normal!important;
+  color:#89eaa8!important;border-bottom:1px dotted rgba(98,255,154,.16);
+}
+.map-layer-toggle input{
+  appearance:none;-webkit-appearance:none;width:12px;height:12px;min-width:12px;margin:0;
+  border:1px solid #62ff9a;background:#001008;display:grid;place-items:center;cursor:pointer;
+}
+.map-layer-toggle input:checked{background:#91ffb3;box-shadow:0 0 5px rgba(98,255,154,.25)}
+.map-layer-toggle input:checked:after{content:"✓";color:#001207;font:700 9px/1 monospace}
+.map-layer-toggle span{font-size:7px;line-height:1.15}
+.map-location-toggle.active{background:#91ffb3!important;color:#001207!important;border-color:#91ffb3!important}
+.map-layer-state{display:flex;justify-content:space-between;gap:5px;padding:3px 1px;border-top:1px dotted rgba(98,255,154,.16);font-size:6.5px;color:#78d997}
+.map-layer-state b{margin:0!important;padding:0!important;border:0!important;color:#baffce!important;font-size:6.5px!important}
+.native-map-terrain{position:absolute;inset:0;z-index:15;pointer-events:none;will-change:transform}
+.native-map-grid{position:absolute;inset:0;z-index:24;pointer-events:none;display:none;background-image:linear-gradient(rgba(0,88,36,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(0,88,36,.22) 1px,transparent 1px);background-size:64px 64px}
+.native-map-grid.active{display:block}
+.native-satellite-tile{z-index:2;filter:brightness(.90) contrast(1.04) saturate(.95)}
+.native-terrain-tile{z-index:1;opacity:.33;mix-blend-mode:multiply;filter:contrast(1.2)}
+.native-topo-tile{z-index:3}
+.native-trail-tile{z-index:4}
+@media(max-width:600px){
+  .map-layer-toggle{padding:5px 1px!important}
+  .map-layer-toggle span{font-size:6.3px}
+  .map-layer-state,.map-layer-state b{font-size:6px!important}
 }
