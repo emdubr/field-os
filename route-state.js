@@ -34,7 +34,7 @@
 
   let plan=read(KEY,{});
   if(!plan||typeof plan!=='object'||Array.isArray(plan))plan={};
-  plan={name:'FIELD ROUTE 01',points:[],gain:1200,grade:12,terrain:'maintained',notes:'',...plan};
+  plan={name:'FIELD ROUTE 01',points:[],gain:0,grade:0,terrain:'maintained',notes:'',...plan};
   plan.points=cleanPoints(plan.points);
 
   function persist(){
