@@ -1,4 +1,4 @@
-# FIELD/OS 3.6
+# FIELD/OS 3.8
 
 TAP V2 companion interface. GitHub Pages deploys from main / root.
 
@@ -20,3 +20,5 @@ Browser validation remains necessary for layout, live tile servers, routing/elev
 ## Data and offline behavior
 
 Existing fieldos-v12 local-storage keys are preserved. Route changes save locally. Service workers cache the app shell; regional PMTiles are managed separately. Trail routing and elevation lookup require online services. Elevation uses sampled terrain data and is an estimate. Missing elevation is displayed as unavailable; no simulated profile is substituted.
+
+Routing improvements: first-point trail preloading, session cache, cached completed legs, instant local reverse, concurrent backup servers, and nonblocking elevation. Network failures retain the last completed route. First-time routing still depends on public Overpass availability.
