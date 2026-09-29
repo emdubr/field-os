@@ -333,7 +333,21 @@ function collectState(){return {version:'0.5.1',exported:new Date().toISOString(
 document.getElementById('exportState')?.addEventListener('click',()=>downloadJSON('fieldos-state.json',collectState()));
 document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('Erase FIELD/OS v1.2 local trip plans, logs, checklists and emergency notes?')){storageKeys().filter(k=>k.startsWith(STORE_PREFIX)).forEach(storageRemove);location.reload()}});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.3',{updateViaCache:'none'});
+      await reg.update();
+      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        const key='fieldos-sw-reloaded-v3.3';
+        if(sessionStorage.getItem(key))return;
+        sessionStorage.setItem(key,'1');
+        location.reload();
+      });
+    }catch(err){console.warn('FIELD/OS service worker update failed',err)}
+  });
+}
 
 const bootLines=['FIELD/OS SECURE FIELD CONSOLE v0.7','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
 const boot=document.getElementById('boot'), bootText=document.getElementById('bootText'), bootFill=document.getElementById('bootFill');
