@@ -1,5 +1,5 @@
-const CACHE='field-os-v1-8';
-const ASSETS=['./','./index.html','./styles.css','./app.js?v=1.8','./workstation.css?v=1.8','./workstation.js?v=1.8','./survival-data.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v1-9';
+const ASSETS=['./','./index.html','./styles.css','./app.js?v=1.9','./workstation.css?v=1.9','./workstation.js?v=1.9','./survival-data.js','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
