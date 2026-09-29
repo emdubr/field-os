@@ -539,3 +539,130 @@ body>.app>.topbar,body>.app>.status-strip,body>.app>.signal-ticker{display:none!
 /* v1.2 status severity cues */
 .handheld-status button.status-stale{border-color:#ff8f85!important;color:#ff9b91!important;box-shadow:inset 0 0 12px rgba(255,103,103,.08)}
 .handheld-status button.status-soon{border-color:var(--warn)!important;color:var(--warn)!important}
+
+
+/* v2.8 global theme bridge — one palette drives the full FIELD/OS chrome */
+body{
+  --glow:color-mix(in srgb,var(--fg2) 48%,transparent);
+  --theme-soft:color-mix(in srgb,var(--fg2) 10%,transparent);
+  --theme-faint:color-mix(in srgb,var(--fg2) 4%,transparent);
+  --theme-mid:color-mix(in srgb,var(--fg2) 28%,transparent);
+  --theme-strong:color-mix(in srgb,var(--fg2) 52%,transparent);
+  --theme-black:color-mix(in srgb,var(--bg) 82%,#000);
+  color:var(--fg)!important;
+  background:
+    radial-gradient(circle at 50% 0%,color-mix(in srgb,var(--fg2) 15%,transparent) 0,transparent 24%),
+    linear-gradient(180deg,color-mix(in srgb,var(--bg) 90%,#000) 0,var(--bg) 44%,#000 100%)!important;
+  text-shadow:0 0 5px color-mix(in srgb,var(--fg2) 20%,transparent);
+}
+body[data-theme="mono"]{text-shadow:none}
+body .shell{
+  background:
+    linear-gradient(180deg,color-mix(in srgb,var(--fg) 2%,transparent),transparent 14%),
+    var(--bg)!important;
+  border-color:var(--line)!important;
+}
+body .crt-overlay{background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--fg) 1.5%,transparent) 0,color-mix(in srgb,var(--fg) 1.5%,transparent) 1px,transparent 1px,transparent 4px)}
+body .noise-overlay{background-image:radial-gradient(circle,color-mix(in srgb,var(--fg) 70%,transparent) 0 1px,transparent 1.1px)}
+body .topbar,body .status-strip,body .tabbar,body .tab-sheet{background:color-mix(in srgb,var(--bg) 96%,#000)!important;border-color:var(--line)!important}
+
+/* Home workstation */
+#home .console-shell,
+#home .detail-console{
+  background:var(--bg)!important;
+  border-color:var(--fg2)!important;
+  box-shadow:inset 0 0 50px var(--theme-faint)!important;
+  color:var(--fg)!important;
+}
+#home .console-header,
+#home .detail-statusline,
+#home .map-footer,
+#home .console-command-strip{
+  border-color:var(--fg2)!important;
+  color:var(--dim)!important;
+}
+#home .console-header{color:var(--fg)!important}
+#home .terminal-panel{
+  background:var(--panel)!important;
+  border-color:var(--fg2)!important;
+  color:var(--fg)!important;
+}
+#home .terminal-title{
+  background:color-mix(in srgb,var(--fg2) 8%,var(--panel2))!important;
+  border-color:var(--fg2)!important;
+  color:var(--fg)!important;
+}
+#home .terminal-title span{border-color:var(--fg2)!important}
+#home .map-controls{
+  background:var(--panel2)!important;
+  color:var(--fg)!important;
+}
+#home .map-controls button{
+  background:var(--panel)!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+#home .map-controls button.active,
+#home .map-controls button[aria-pressed="true"]{
+  background:var(--fg2)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg2)!important;
+}
+#home .map-controls b{border-color:var(--theme-strong)!important;color:var(--fg2)!important}
+#home .nav-fix,
+#home .mini-chart,
+#home .elev-chart,
+#home .sparkline{
+  background:var(--panel)!important;
+  border-color:var(--theme-strong)!important;
+}
+#home .detailed-compass,
+#home .compass-dial{border-color:var(--fg2)!important}
+#home .detailed-compass:before{border-color:var(--theme-strong)!important}
+#home .detailed-compass:after{border-color:var(--theme-mid)!important}
+#home .compass-needle{background:var(--fg)!important;color:var(--fg)!important}
+#home .mini-chart g path,
+#home .elev-chart g path{stroke:color-mix(in srgb,var(--fg2) 18%,transparent)!important}
+#home .mini-chart polyline,
+#home .elev-chart polyline{stroke:var(--fg2)!important}
+#home .waypoint-table-rich>div,
+#home .terminal-table>div{border-color:color-mix(in srgb,var(--fg2) 22%,transparent)!important}
+#home .waypoint-table-rich .thead{border-color:var(--fg2)!important;color:var(--fg2)!important}
+#home .track-meter,
+#home .trip-progress{border-color:var(--line)!important}
+#home .track-meter i,
+#home .trip-progress i{background:var(--fg2)!important;box-shadow:0 0 5px var(--glow)!important}
+#home .vertical-keys button,
+#home .return-console button,
+#home .mesh-console button,
+#home .console-command-strip button{
+  background:var(--panel2)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+#home .console-command-strip button:hover,
+#home .vertical-keys button:hover,
+#home .return-console button:hover{
+  background:var(--fg2)!important;
+  color:var(--bg)!important;
+}
+#home .event-lines b,
+#home .mini-chart-title,
+#home .nav-fix b,
+#home .recording-line{color:var(--fg2)!important}
+
+/* Global controls and status components */
+.action,.ghost,.micro-btn,.sheet-tab,.tab-btn,.danger-lite,
+.terminal-input,.terminal-area,select,input,textarea{
+  border-color:var(--line);
+}
+.action,.ghost,.micro-btn,.sheet-tab,.tab-btn{
+  color:var(--fg);
+}
+.theme-btn[data-theme-choice]{transition:background .12s,color .12s,border-color .12s,box-shadow .12s}
+.theme-btn[data-theme-choice].active{
+  background:var(--fg2)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg2)!important;
+  box-shadow:0 0 8px var(--glow);
+}
