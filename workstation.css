@@ -1,4 +1,4 @@
-/* v1.6: home-style integrated terminal workspaces with dense module parity. */
+/* v1.8: home-style workspaces + themed live/offline OSM maps. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -142,4 +142,49 @@
   .module-grid .panel{padding:7px!important}
   .module-grid .panel-title{margin:-7px -7px 6px!important}
   .ws-route-plot{height:200px!important}
+}
+
+
+/* v1.8 FIELD/OS map skin */
+.field-real-map{position:relative;width:100%;background:#001008;border:1px solid #62ff9a;overflow:hidden;isolation:isolate}
+.main-real-map{height:380px}
+.home-real-map{height:430px;grid-column:1;grid-row:1}
+#homeMapFallback{grid-column:1;grid-row:1}
+#home .map-controls{grid-column:2;grid-row:1}
+.field-real-map .leaflet-tile-pane{filter:grayscale(1) sepia(.8) hue-rotate(72deg) saturate(2.15) brightness(.58) contrast(1.32)}
+.field-real-map .leaflet-overlay-pane,.field-real-map .leaflet-marker-pane,.field-real-map .leaflet-tooltip-pane{filter:none}
+.field-real-map:after{content:"";position:absolute;inset:0;z-index:450;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(105,255,155,.018) 0,rgba(105,255,155,.018) 1px,transparent 1px,transparent 4px),radial-gradient(circle at 50% 45%,transparent 45%,rgba(0,10,5,.18) 100%)}
+.field-real-map .leaflet-control-attribution{z-index:500;background:rgba(0,12,6,.88)!important;color:#72e58e!important;font:6.5px/1.25 monospace!important;border-top:1px solid rgba(98,255,154,.35);border-left:1px solid rgba(98,255,154,.35);padding:2px 4px!important}
+.field-real-map .leaflet-control-attribution a{color:#a6ffc2!important}
+.field-map-self{stroke:#d0ffdc!important;stroke-width:2.5!important;fill:#34ff78!important;filter:drop-shadow(0 0 5px rgba(80,255,135,.85))}
+.field-map-accuracy{stroke:#73ff9f!important;fill:#62ff9a!important;fill-opacity:.08!important;stroke-dasharray:4 3}
+.field-map-route{stroke:#b9ffd0!important;filter:drop-shadow(0 0 3px rgba(90,255,145,.8))}
+.field-map-track{stroke:#56ff8b!important;filter:drop-shadow(0 0 2px rgba(90,255,145,.55))}
+.field-map-waypoint-wrap{background:transparent!important;border:0!important}
+.field-map-waypoint{display:grid;place-items:center;width:20px;height:20px;border:1px solid #62ff9a;background:#001108;color:#baffce;font:700 11px/1 monospace;box-shadow:0 0 7px rgba(90,255,145,.42)}
+.field-map-waypoint.base{border-radius:50%;background:#62ff9a;color:#001108}
+.field-real-map .leaflet-tooltip{background:#001108;color:#baffce;border:1px solid #62ff9a;border-radius:0;box-shadow:none;font:8px/1.2 monospace;padding:3px 5px}
+.field-real-map .leaflet-tooltip:before{display:none}
+.offline-map-manager{grid-column:1/-1!important}
+.offline-map-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.offline-map-grid>div{border:1px solid rgba(98,255,154,.28);background:#000d06;padding:8px;min-width:0}
+.offline-map-grid .action,.offline-map-grid .danger-lite{width:100%;margin-top:6px}
+.offline-file{display:flex!important;align-items:center;justify-content:center;min-height:34px;cursor:pointer}
+.offline-map-status progress{width:100%;height:8px;margin-top:8px;accent-color:#62ff9a;background:#001108}
+.compact-map-actions{grid-template-columns:1.15fr .7fr .9fr!important}
+#offlinePmtilesUrl{width:100%}
+@media(min-width:1024px){
+  #map .main-real-map{height:430px}
+  #map .offline-map-manager{grid-column:1/-1!important}
+}
+@media(max-width:900px){
+  .home-real-map{height:350px}
+  .main-real-map{height:340px}
+}
+@media(max-width:600px){
+  .home-real-map{height:300px}
+  .main-real-map{height:310px}
+  .offline-map-grid{grid-template-columns:1fr}
+  .compact-map-actions{grid-template-columns:1fr!important}
+  .field-real-map .leaflet-control-attribution{font-size:5.5px!important;max-width:78%;white-space:normal}
 }
