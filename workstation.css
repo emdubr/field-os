@@ -1,4 +1,4 @@
-/* v2.1: repaired hiking map controls, readable topo color, compass + sunlight telemetry. */
+/* v2.2: stable SVG/device compass + isolated Home map controls. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -337,3 +337,41 @@
   .sunlight-summary b{font-size:10px}
   .map-source-bar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+
+/* v2.2 SVG compass */
+.field-compass{
+  width:190px!important;height:190px!important;margin:8px auto 5px!important;
+  position:relative;border:1px solid #62ff9a;border-radius:50%;
+  background:radial-gradient(circle,#00130a 0 45%,#000b06 46% 67%,#001008 68% 100%);
+  box-shadow:inset 0 0 30px rgba(98,255,154,.08),0 0 10px rgba(98,255,154,.07);
+  overflow:hidden;
+}
+.field-compass-svg{display:block;width:100%;height:100%;overflow:visible}
+.compass-svg-outer,.compass-svg-inner{fill:none;stroke:#62ff9a;stroke-width:1}
+.compass-svg-inner{stroke:rgba(98,255,154,.35);stroke-dasharray:2 3}
+.compass-svg-cross line{stroke:rgba(98,255,154,.62);stroke-width:2}
+.compass-svg-ticks line{stroke:#78d997;stroke-width:1}
+.compass-svg-ticks line.major{stroke:#baffce;stroke-width:1.8}
+.compass-svg-cardinal,.compass-svg-intercardinal{
+  fill:#baffce;text-anchor:middle;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;
+}
+.compass-svg-cardinal{font-size:13px}.compass-svg-cardinal.north{fill:#ffd166;font-size:15px}
+.compass-svg-intercardinal{font-size:7px;fill:#78d997}
+.compass-svg-rotor{transition:transform .28s cubic-bezier(.2,.8,.2,1);transform-box:view-box;transform-origin:100px 100px}
+.compass-svg-rotor.no-course{opacity:.28}
+.compass-svg-north-needle{fill:#ffd166;stroke:#ffe59a;stroke-width:.7;filter:drop-shadow(0 0 3px rgba(255,209,102,.55))}
+.compass-svg-south-needle{fill:#3b7f52;stroke:#62ff9a;stroke-width:.7}
+.compass-svg-center{fill:#001108;stroke:#d5ffe1;stroke-width:2}
+.compass-svg-lubber{fill:#ffd166;filter:drop-shadow(0 0 3px rgba(255,209,102,.45))}
+.compass-enable-btn{
+  width:100%;min-height:29px;margin-top:4px;border:1px solid #62ff9a;background:#001108;color:#baffce;
+  font:700 7.5px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;cursor:pointer;
+}
+.compass-enable-btn:active{background:#91ffb3;color:#001207}
+.compass-permission-state{display:block!important;margin-top:4px!important;color:#78d997!important;font-size:6.5px!important;line-height:1.35}
+#nav .nav-primary-compass .compass-readout{width:100%}
+#home .map-console{cursor:default}
+#home .map-controls button{position:relative;z-index:8;cursor:pointer;touch-action:manipulation}
+@media(max-width:900px){.field-compass{width:168px!important;height:168px!important}}
+@media(max-width:600px){.field-compass{width:146px!important;height:146px!important}.compass-enable-btn{min-height:32px;font-size:7px}}
