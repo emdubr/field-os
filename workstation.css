@@ -1,4 +1,4 @@
-/* v1.3: consistent terminal workspaces; desktop has one navigation surface. */
+/* v1.4: consistent terminal workspaces; desktop side navigation + live module status. */
 .workstation-nav{display:none}
 .module-band{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:8px 10px;margin-bottom:8px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
@@ -68,3 +68,18 @@
 @media(min-width:1600px){#home .detail-mid-grid{grid-template-columns:2fr 1fr 1fr!important}#home .detail-mid-grid>.return-console{grid-column:auto}#home .detail-bottom-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media(max-width:600px){.module-grid{grid-template-columns:minmax(0,1fr)}.module-grid>*{grid-column:1!important}.module-grid .sensor-list,.module-grid>#guideGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.module-band{font-size:8px}.module-grid .map-demo.large{height:290px}.module-grid .ws-route-plot{height:180px}}
 @media(max-width:360px){.module-grid .sensor-list,.module-grid>#guideGrid{grid-template-columns:minmax(0,1fr)}}
+
+/* v1.4 live status/detail */
+.module-band{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center}
+.module-band span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.module-band .ws-band-release{color:var(--fg2);font-weight:700}
+.module-band .ws-band-clock{text-align:right;color:var(--fg2);font-variant-numeric:tabular-nums}
+.ws-footer-line{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--line);padding:4px 0}
+.ws-footer-line span{color:var(--dim)}
+.ws-footer-line b{color:var(--fg2);font-weight:700;text-align:right;max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workstation-nav footer>.ws-clock{display:block;padding-top:8px;color:var(--fg2);font-variant-numeric:tabular-nums}
+@media(max-width:600px){
+  .module-band{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .module-band .ws-band-release{grid-column:1/-1}
+  .module-band .ws-band-clock{text-align:left}
+}
