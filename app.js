@@ -63,7 +63,8 @@ function openView(name){
 }
 
 document.addEventListener('click', (e) => {
-  const trigger = e.target.closest('[data-open]');
+  const isMapControl=e.target.closest('[data-map-action]');
+  const trigger = isMapControl?null:e.target.closest('[data-open]');
   if(trigger) openView(trigger.dataset.open);
   const theme = e.target.closest('[data-theme-choice]');
   if(theme){
@@ -98,11 +99,8 @@ setInterval(()=>{
   demo.alt += Math.random() > .5 ? 1 : -1;
   demo.press += Math.random() > .58 ? 0.1 : -0.1;
   pressureHistory.push(demo.press); if(pressureHistory.length>36) pressureHistory.shift();
-  document.getElementById('heading').textContent = `${String(Math.round(demo.heading)).padStart(3,'0')}° ${headingCardinal(demo.heading)}`;
   document.getElementById('altitude').textContent = `${demo.alt} ft`;
   document.getElementById('pressure').textContent = `${demo.press.toFixed(1)} hPa`;
-  const needle = document.querySelector('.needle');
-  if(needle) needle.style.transform = `translate(-50%,-100%) rotate(${demo.heading}deg)`;
   updateLiveNavigationUI?.();
   drawPressureChart();
 }, 4000);
@@ -366,7 +364,7 @@ document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoin
 document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.2" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -471,7 +469,7 @@ function updateTrackUI(){
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.2" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
 setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
@@ -556,10 +554,66 @@ document.getElementById('toggleWakeLock')?.addEventListener('click',()=>setField
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&fieldWakeLock)setFieldWakeLock(true)});
 
 
-// v2.1 — hiking topo map controls, sunlight telemetry, and compass polish
+// v2.2 — stable SVG/device compass and isolated Home map controls
 let fieldLiveSpeed=null;
 let fieldLiveHeading=null;
+let fieldDeviceHeading=null;
+let fieldDeviceHeadingSource='';
+let fieldCompassEnabled=false;
 let fieldLocationPrompted=false;
+function renderFieldCompassTicks(){
+  const g=document.getElementById('navCompassTicks');if(!g||g.childNodes.length)return;
+  const ns='http://www.w3.org/2000/svg';
+  for(let deg=0;deg<360;deg+=10){
+    const major=deg%30===0,line=document.createElementNS(ns,'line');
+    line.setAttribute('x1','100');line.setAttribute('x2','100');
+    line.setAttribute('y1',major?'18':'20');line.setAttribute('y2',major?'29':'25');
+    line.setAttribute('transform',`rotate(${deg} 100 100)`);
+    line.setAttribute('class',major?'major':'minor');g.appendChild(line);
+  }
+}
+function handleFieldDeviceOrientation(e){
+  let heading=null,source='';
+  if(Number.isFinite(e.webkitCompassHeading)){
+    heading=normalizeDeg(e.webkitCompassHeading);source='DEVICE / MAG';
+  }else if(Number.isFinite(e.alpha)){
+    const angle=Number(screen.orientation?.angle ?? window.orientation ?? 0)||0;
+    heading=normalizeDeg(360-e.alpha+angle);
+    source=e.absolute?'DEVICE / TRUE':'DEVICE / REL';
+  }
+  if(!Number.isFinite(heading))return;
+  fieldDeviceHeading=heading;fieldDeviceHeadingSource=source;fieldCompassEnabled=true;
+  updateLiveNavigationUI();
+}
+async function enableFieldDeviceCompass(){
+  const status=document.getElementById('compassPermissionState'),btn=document.getElementById('enableCompass');
+  if(typeof DeviceOrientationEvent==='undefined'){
+    if(status)status.textContent='Device orientation is unavailable in this browser.';
+    if(btn)btn.textContent='COMPASS UNAVAILABLE';
+    return;
+  }
+  try{
+    if(typeof DeviceOrientationEvent.requestPermission==='function'){
+      const result=await DeviceOrientationEvent.requestPermission();
+      if(result!=='granted')throw new Error('Compass permission was not granted.');
+    }
+    window.removeEventListener('deviceorientation',handleFieldDeviceOrientation,true);
+    window.removeEventListener('deviceorientationabsolute',handleFieldDeviceOrientation,true);
+    window.addEventListener('deviceorientation',handleFieldDeviceOrientation,true);
+    window.addEventListener('deviceorientationabsolute',handleFieldDeviceOrientation,true);
+    fieldCompassEnabled=true;
+    if(status)status.textContent='Device compass enabled. Rotate the phone to test heading.';
+    if(btn)btn.textContent='DEVICE COMPASS ON';
+  }catch(err){
+    fieldCompassEnabled=false;fieldDeviceHeading=null;fieldDeviceHeadingSource='';
+    if(status)status.textContent=String(err?.message||'Compass permission failed.');
+    if(btn)btn.textContent='ENABLE DEVICE COMPASS';
+    updateLiveNavigationUI();
+  }
+}
+document.getElementById('enableCompass')?.addEventListener('click',enableFieldDeviceCompass);
+renderFieldCompassTicks();
+
 // v1.8 — real OpenStreetMap + offline OSM-derived PMTiles
 const FIELD_MAP_DB='fieldos-offline-maps-v1';
 const FIELD_MAP_STORE='packs';
@@ -937,28 +991,37 @@ document.addEventListener('click',e=>{
 });
 function updateLiveNavigationUI(){
   const trusted=hasTrustedMapPosition();
-  const heading=trusted?(Number.isFinite(fieldLiveHeading)?fieldLiveHeading:null):demo.heading;
+  const deviceHeading=Number.isFinite(fieldDeviceHeading)?fieldDeviceHeading:null;
+  const courseHeading=Number.isFinite(fieldLiveHeading)?fieldLiveHeading:null;
+  const heading=deviceHeading??(trusted?courseHeading:demo.heading);
+  const source=deviceHeading?(fieldDeviceHeadingSource||'DEVICE'):courseHeading?'GNSS COURSE':trusted?'NO HEADING':'DEMO';
   const speed=trusted?(Number.isFinite(fieldLiveSpeed)?fieldLiveSpeed:null):demo.speed;
   const card=Number.isFinite(heading)?headingCardinal(heading):'--';
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
-  set('navHeading',Number.isFinite(heading)?String(Math.round(heading)).padStart(3,'0')+'°':'---°');
+  const headingText=Number.isFinite(heading)?String(Math.round(heading)).padStart(3,'0')+'°':'---°';
+  set('navHeading',headingText);
   set('navHeadingCardinal',card);
   set('navAccuracy',trusted?`±${Math.round(currentAccuracy)} m`:'NO LIVE FIX');
-  set('navCompassSource',trusted?(Number.isFinite(fieldLiveHeading)?'PHONE COURSE':'COURSE UNAVAILABLE'):'DEMO / IMU PENDING');
+  set('navCompassSource',source);
   set('navPositionSource',trusted?(currentNavPosition.source||'LIVE POSITION'):'AWAITING LIVE POSITION');
   set('navStripPos',trusted?`${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}`:'AWAITING FIX');
   set('navStripAcc',trusted?`±${Math.round(currentAccuracy)}m`:'—');
   set('navStripSpeed',Number.isFinite(speed)?`${speed.toFixed(1)} mph`:'—');
-  set('navStripHeading',Number.isFinite(heading)?`${String(Math.round(heading)).padStart(3,'0')}° ${card}`:'—');
+  set('navStripHeading',Number.isFinite(heading)?`${headingText} ${card}`:'—');
   set('navStripRoute',routePoints.length>=2?`${routeMiles().toFixed(1)} mi`:'NONE');
   set('navStripTrack',recordedTrack.length?`${recordedTrack.length} pts`:'IDLE');
-  set('navCourseQuality',trusted?(Number.isFinite(fieldLiveHeading)?'LIVE':'NO COURSE'):'DEMO');
-  set('navHeadingMode',Number.isFinite(fieldLiveHeading)?'GNSS':'—');
-  const needle=document.getElementById('navCompassNeedle');
-  if(needle){
-    needle.style.transform=Number.isFinite(heading)?`rotate(${heading}deg)`:'rotate(0deg)';
-    needle.classList.toggle('no-course',!Number.isFinite(heading));
+  set('navCourseQuality',source);
+  set('navHeadingMode',deviceHeading?(fieldDeviceHeadingSource.includes('MAG')?'MAG':'DEVICE'):courseHeading?'GNSS':'—');
+
+  const rotor=document.getElementById('navCompassRotor');
+  if(rotor){
+    rotor.setAttribute('transform',Number.isFinite(heading)?`rotate(${heading} 100 100)`:'rotate(0 100 100)');
+    rotor.classList.toggle('no-course',!Number.isFinite(heading));
   }
+  const homeHeading=document.getElementById('heading');
+  if(homeHeading)homeHeading.textContent=Number.isFinite(heading)?`${headingText} ${card}`:'---° --';
+  const homeNeedle=document.querySelector('#home .compass-needle');
+  if(homeNeedle)homeNeedle.style.transform=Number.isFinite(heading)?`rotate(${heading}deg)`:'rotate(0deg)';
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
