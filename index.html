@@ -12,7 +12,7 @@
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ3ynHTUkskMZqSBRfM8aO/Pj7aqx2M=" crossorigin="" />
-  <link rel="stylesheet" href="workstation.css?v=1.8">
+  <link rel="stylesheet" href="workstation.css?v=1.9">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v1.8</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v1.9</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -155,7 +155,7 @@
       </section>
 
       <section class="view" id="map" data-view="map">
-        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><button class="ghost" id="centerBtn">CENTER</button></div>
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost" id="requestLiveLocation">LIVE LOCATION</button><button class="ghost" id="centerBtn">CENTER</button></div></div>
         <article class="panel full-map">
           <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">SCHEMATIC FALLBACK</span></div>
           <div id="realMap" class="field-real-map main-real-map" hidden aria-label="Live OpenStreetMap centered on current position"></div>
@@ -218,23 +218,31 @@
       <section class="view" id="nav" data-view="nav">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>NAV CORE</h2><span></span></div>
         <div class="grid two-col">
-          <article class="panel compass-panel">
-            <div class="panel-title"><span>COMPASS CORE</span><span class="tiny">IMU / DEMO</span></div>
+          <article class="panel compass-panel nav-primary-compass">
+            <div class="panel-title"><span>COMPASS CORE</span><span class="tiny" id="navCompassSource">PHONE / DEMO</span></div>
             <div class="compass"><span class="north">N</span><span class="east">E</span><span class="south">S</span><span class="west">W</span><div class="needle"></div><div class="center-dot"></div></div>
-            <div class="big-readout">037° <small>NE</small></div>
+            <div class="big-readout"><span id="navHeading">037°</span> <small id="navHeadingCardinal">NE</small></div>
           </article>
-          <article class="panel">
+          <article class="panel nav-primary-base">
             <div class="panel-title"><span>RETURN TO BASE</span><span class="tiny">BREADCRUMB MODE</span></div>
             <dl class="readouts large-readouts"><div><dt>DIST</dt><dd id="rtbDistance">---</dd></div><div><dt>BEARING</dt><dd id="rtbBearing">---</dd></div><div><dt>Δ ALT</dt><dd id="rtbAlt">---</dd></div><div><dt>TRACK</dt><dd id="rtbTrack">NO ROUTE</dd></div></dl>
             <button id="followBreadcrumbs" class="danger-lite" data-open="map">FOLLOW SAVED ROUTE HOME</button>
           </article>
-          <article class="panel">
+          <article class="panel nav-primary-trail">
             <div class="panel-title"><span>RETURN TO TRAIL</span><span class="tiny">NEAREST SAVED ROUTE</span></div>
             <dl class="readouts large-readouts"><div><dt>OFFSET</dt><dd id="rttDistance">NO ROUTE</dd></div><div><dt>BEARING</dt><dd id="rttBearing">---</dd></div><div><dt>ROUTE</dt><dd id="rttRouteName">---</dd></div><div><dt>POINT</dt><dd id="rttPoint">---</dd></div></dl>
             <button class="danger-lite" data-open="trailreturn">GUIDE BACK TO TRAIL</button>
           </article>
         </div>
-        <article class="panel route-monitor">
+        <div class="nav-live-strip" id="navLiveStrip">
+          <span>POS <b id="navStripPos">AWAITING FIX</b></span>
+          <span>ACC <b id="navStripAcc">—</b></span>
+          <span>SPD <b id="navStripSpeed">—</b></span>
+          <span>HDG <b id="navStripHeading">—</b></span>
+          <span>ROUTE <b id="navStripRoute">NONE</b></span>
+          <span>TRACK <b id="navStripTrack">IDLE</b></span>
+        </div>
+        <article class="panel route-monitor nav-route-watch">
           <div class="panel-title"><span>ROUTE WATCH</span><span class="tiny" id="routeWatchState">MONITORING</span></div>
           <div id="routeDeviationBanner" class="deviation-banner good-banner">ON ROUTE</div>
           <dl class="readouts large-readouts"><div><dt>PROGRESS</dt><dd id="routeProgress">---</dd></div><div><dt>REMAINING</dt><dd id="routeRemaining">---</dd></div><div><dt>ETA</dt><dd id="routeEta">---</dd></div><div><dt>OFF ROUTE</dt><dd id="routeDeviation">---</dd></div></dl>
@@ -242,8 +250,8 @@
           <div class="button-row"><button class="action" data-open="trailreturn">INTERCEPT TRAIL</button><button class="action" data-open="route">EDIT ROUTE</button></div>
         </article>
         <article class="panel">
-          <div class="panel-title"><span>POSITION FORMATS</span><span class="tiny">LAST TRUSTED FIX</span></div>
-          <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd>±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
+          <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>
+          <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd id="navAccuracy">±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
         </article>
         <article class="panel">
           <div class="panel-title"><span>SOLAR NAVIGATION</span><span class="tiny">LOCAL CALCULATION</span></div>
@@ -472,7 +480,7 @@
   <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js"></script>
   <script src="https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=1.8"></script>
-  <script src="workstation.js?v=1.8"></script>
+  <script src="app.js?v=1.9"></script>
+  <script src="workstation.js?v=1.9"></script>
 </body>
 </html>
