@@ -515,3 +515,259 @@
   .map-layer-toggle span{font-size:6.3px}
   .map-layer-state,.map-layer-state b{font-size:6px!important}
 }
+
+
+/* v2.9 strict theme coverage */
+body[data-theme]{
+  --theme-surface:color-mix(in srgb,var(--panel) 94%,var(--bg));
+  --theme-surface-2:color-mix(in srgb,var(--panel2) 94%,var(--bg));
+  --theme-accent-faint:color-mix(in srgb,var(--fg2) 5%,transparent);
+  --theme-accent-soft:color-mix(in srgb,var(--fg2) 12%,transparent);
+  --theme-accent-mid:color-mix(in srgb,var(--fg2) 30%,transparent);
+  --theme-accent-strong:color-mix(in srgb,var(--fg2) 58%,transparent);
+}
+
+/* Base chrome: no fixed green survives a theme change. */
+body[data-theme] .shell,
+body[data-theme] .topbar,
+body[data-theme] .status-strip,
+body[data-theme] .signal-ticker,
+body[data-theme] .screen,
+body[data-theme] .view,
+body[data-theme] .workstation-nav,
+body[data-theme] .tabbar,
+body[data-theme] .tab-sheet,
+body[data-theme] .tab-sheet-backdrop,
+body[data-theme] .module-console-header,
+body[data-theme] .module-band{
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] .topbar,
+body[data-theme] .status-strip,
+body[data-theme] .signal-ticker,
+body[data-theme] .workstation-nav,
+body[data-theme] .tabbar,
+body[data-theme] .tab-sheet,
+body[data-theme] .module-console-header{
+  background:var(--bg)!important;
+}
+body[data-theme] .panel,
+body[data-theme] .terminal-window,
+body[data-theme] .terminal-panel,
+body[data-theme] .message,
+body[data-theme] .dossier-card,
+body[data-theme] .lost-step,
+body[data-theme] .survival-card,
+body[data-theme] .waypoint-row,
+body[data-theme] .track-stat-grid>div,
+body[data-theme] .sensor-card,
+body[data-theme] .readout-card{
+  background:var(--panel)!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] .panel-title,
+body[data-theme] .window-title,
+body[data-theme] .terminal-title{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--fg2) 16%,var(--panel3)),var(--panel3))!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] .window-subline,
+body[data-theme] .ws-readouts>div,
+body[data-theme] .ws-event,
+body[data-theme] .ws-table td,
+body[data-theme] .ws-table th,
+body[data-theme] .menu-line,
+body[data-theme] .guide-line,
+body[data-theme] .terminal-table>div,
+body[data-theme] .waypoint-table-rich>div{
+  border-color:var(--theme-accent-mid)!important;
+}
+
+/* Interactive controls. */
+body[data-theme] .action,
+body[data-theme] .ghost,
+body[data-theme] .micro-btn,
+body[data-theme] .tiny-button,
+body[data-theme] .terminal-button,
+body[data-theme] .mini-actions button,
+body[data-theme] .return-console-btn,
+body[data-theme] .map-source-btn,
+body[data-theme] .tab-btn,
+body[data-theme] .sheet-tab,
+body[data-theme] .vertical-keys button,
+body[data-theme] .return-console button,
+body[data-theme] .mesh-console button,
+body[data-theme] .console-command-strip button,
+body[data-theme] .workstation-nav button,
+body[data-theme] .terminal-input,
+body[data-theme] .terminal-area,
+body[data-theme] select,
+body[data-theme] input,
+body[data-theme] textarea{
+  background:var(--panel2)!important;
+  color:var(--fg)!important;
+  border-color:var(--line)!important;
+}
+body[data-theme] .menu-line.selected,
+body[data-theme] .rail-active,
+body[data-theme] .tab-btn.active,
+body[data-theme] .sheet-tab.active,
+body[data-theme] .map-source-btn.active,
+body[data-theme] .workstation-nav button.selected,
+body[data-theme] .workstation-nav button:hover,
+body[data-theme] .action:hover,
+body[data-theme] .action:focus-visible{
+  background:var(--fg2)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg2)!important;
+  text-shadow:none!important;
+}
+body[data-theme] .workstation-nav button.selected span,
+body[data-theme] .workstation-nav button:hover span{color:var(--bg)!important}
+body[data-theme] .field-label,
+body[data-theme] .muted,
+body[data-theme] .tiny,
+body[data-theme] .ws-note,
+body[data-theme] .ws-nav-label{color:var(--dim)!important}
+
+/* Home console and generated topo map. */
+body[data-theme] #home .detail-console,
+body[data-theme] #home .console-shell{
+  background:var(--bg)!important;
+  border-color:var(--fg2)!important;
+  color:var(--fg)!important;
+  box-shadow:inset 0 0 60px var(--theme-accent-faint)!important;
+}
+body[data-theme] #home .console-header,
+body[data-theme] #home .detail-statusline,
+body[data-theme] #home .map-footer,
+body[data-theme] #home .console-command-strip{
+  border-color:var(--fg2)!important;
+}
+body[data-theme] #home .detail-statusline,
+body[data-theme] #home .map-footer{color:var(--dim)!important}
+body[data-theme] #home .detail-console .terminal-panel{
+  background:var(--panel)!important;
+  border-color:var(--fg2)!important;
+}
+body[data-theme] #home .detail-console .terminal-title{
+  background:color-mix(in srgb,var(--fg2) 10%,var(--panel2))!important;
+  border-color:var(--fg2)!important;
+  color:var(--fg)!important;
+  text-shadow:0 0 5px var(--theme-accent-mid)!important;
+}
+body[data-theme] #home .detail-console .generated-map,
+body[data-theme] #home .detailed-generated-map{
+  background-color:var(--panel2)!important;
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--fg2) 8%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,var(--fg2) 8%,transparent) 1px,transparent 1px),
+    radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--fg2) 4%,transparent),transparent 45%)!important;
+}
+body[data-theme] #home .topo-svg .contours path,
+body[data-theme] #home .topo-svg .contours ellipse{stroke:color-mix(in srgb,var(--fg2) 35%,transparent)!important}
+body[data-theme] #home .topo-svg .minor-trails path{stroke:color-mix(in srgb,var(--fg2) 28%,transparent)!important}
+body[data-theme] #home .topo-svg .hydro path{stroke:color-mix(in srgb,var(--cyan) 62%,transparent)!important}
+body[data-theme] #home .topo-svg .route-svg-home path{stroke:var(--fg2)!important}
+body[data-theme] #home .map-controls{
+  background:var(--panel2)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] #home .map-controls button,
+body[data-theme] #home .vertical-keys button,
+body[data-theme] #home .return-console button,
+body[data-theme] #home .mini-actions button{
+  background:var(--panel2)!important;
+  border-color:var(--line)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] #home .map-controls b{color:var(--fg2)!important;border-color:var(--theme-accent-strong)!important}
+body[data-theme] #home .console-command-strip{background:var(--bg)!important}
+body[data-theme] #home .console-command-strip button{background:var(--panel2)!important}
+body[data-theme] #home .map-footer span{border-color:var(--theme-accent-mid)!important}
+body[data-theme] #home .detailed-compass,
+body[data-theme] #home .compass-dial{
+  border-color:var(--fg2)!important;
+  box-shadow:inset 0 0 20px var(--theme-accent-faint)!important;
+}
+body[data-theme] #home .mini-chart,
+body[data-theme] #home .elev-chart{filter:drop-shadow(0 0 2px var(--theme-accent-mid))}
+
+/* Handheld-only surfaces. */
+body[data-theme] .handheld-status button{
+  border-color:var(--theme-accent-strong)!important;
+  background:var(--panel)!important;
+  color:var(--fg)!important;
+  box-shadow:inset 0 0 10px var(--theme-accent-faint)!important;
+}
+body[data-theme] .handheld-status span,
+body[data-theme] .handheld-status small{color:var(--dim)!important}
+body[data-theme] .handheld-actions button{
+  border-color:var(--line)!important;
+  background:var(--panel2)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] .handheld-actions .handheld-sos,
+body[data-theme] .danger-line,
+body[data-theme] .handheld-status button.status-stale{
+  border-color:var(--danger)!important;
+  color:var(--danger)!important;
+}
+body[data-theme] .handheld-status button.status-stale{box-shadow:inset 0 0 12px color-mix(in srgb,var(--danger) 10%,transparent)!important}
+body[data-theme] .handheld-status button.status-soon{border-color:var(--warn)!important;color:var(--warn)!important}
+
+/* Map chrome follows the theme while base-map imagery stays readable. */
+body[data-theme] .map-source-bar,
+body[data-theme] .field-embed-head,
+body[data-theme] .field-map-fallback{
+  background:var(--panel)!important;
+  border-color:var(--fg2)!important;
+  color:var(--fg)!important;
+}
+body[data-theme] .native-map-corner,
+body[data-theme] .native-map-attrib,
+body[data-theme] .native-map-diag{
+  background:color-mix(in srgb,var(--panel2) 92%,transparent)!important;
+  color:var(--fg)!important;
+  border-color:var(--theme-accent-strong)!important;
+}
+body[data-theme] .field-real-map:after{
+  background:repeating-linear-gradient(
+    0deg,
+    color-mix(in srgb,var(--fg2) 2%,transparent) 0,
+    color-mix(in srgb,var(--fg2) 2%,transparent) 1px,
+    transparent 1px,
+    transparent 4px
+  )!important;
+}
+body[data-theme] .native-map-grid{
+  background-image:
+    linear-gradient(color-mix(in srgb,var(--fg2) 24%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,var(--fg2) 24%,transparent) 1px,transparent 1px)!important;
+}
+body[data-theme] .native-track-line{stroke:var(--warn)!important}
+body[data-theme] .native-self-marker{stroke:var(--fg)!important}
+body[data-theme] .native-self-arrow{stroke:var(--fg)!important}
+body[data-theme] .native-waypoint-marker{fill:var(--panel)!important;stroke:var(--fg2)!important}
+body[data-theme] .native-waypoint-label{fill:var(--fg)!important;stroke:var(--panel2)!important}
+
+/* Boot/loading screen also reflects the selected saved theme. */
+body[data-theme] .boot-screen{background:color-mix(in srgb,var(--bg) 96%,#000)!important;color:var(--fg)!important}
+body[data-theme] .boot-box{background:var(--panel)!important;border-color:var(--line)!important;box-shadow:0 0 40px #000,0 0 20px var(--theme-accent-soft)!important}
+body[data-theme] .boot-title,
+body[data-theme] .boot-skip{color:var(--fg2)!important}
+body[data-theme] .boot-bar{border-color:var(--line)!important}
+body[data-theme] .boot-bar i{background:var(--fg2)!important;box-shadow:0 0 12px var(--theme-accent-strong)!important}
+
+/* Semantic warning/error colors remain semantic, not theme-colored. */
+body[data-theme] .warn-badge,
+body[data-theme] .checkin-clock.soon,
+body[data-theme] .active-step,
+body[data-theme] .route-pack-unsaved{color:var(--warn)!important}
+body[data-theme] .critical-banner,
+body[data-theme] .checkin-clock.overdue,
+body[data-theme] .micro-btn.danger,
+body[data-theme] .sos-dock{color:var(--danger)!important}
