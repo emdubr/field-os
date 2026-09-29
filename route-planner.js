@@ -4,6 +4,7 @@
   const MAP_ID='routePlannerMap';
   const OVERPASS_ENDPOINTS=[
     'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
     'https://overpass.private.coffee/api/interpreter'
   ];
   const graphCache=new Map();
@@ -367,7 +368,7 @@
     return {nodes,adj,segments};
   }
 
-  function nearestNode(graph,p,maxMeters=650){
+  function nearestNode(graph,p,maxMeters=1200){
     let best=null;
     for(const node of graph.nodes.values()){
       const d=meters(p,node);
