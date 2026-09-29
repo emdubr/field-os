@@ -12,6 +12,11 @@
   let busy=false;
   let aborter=null;
   let initialized=false;
+  let plannerMap=null;
+  let plannerRouteLayer=null;
+  let plannerAnchorLayer=null;
+  let plannerSnapLayer=null;
+  let plannerBaseFallbackActive=false;
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -23,7 +28,6 @@
   };
   const meters=(a,b)=>miles(a,b)*1609.344;
   const state=()=>window.FIELD_ROUTE_STATE;
-  const engine=()=>window.FIELD_MAP_ENGINE;
 
   function status(text,kind=''){
     const el=$('routePlannerStatus');
@@ -60,26 +64,139 @@
     $('clearRoute')?.toggleAttribute('disabled',count===0||busy);
   }
 
+  function plannerColors(){
+    const st=getComputedStyle(document.body);
+    return {
+      route:st.getPropertyValue('--warn').trim()||'#ffd166',
+      fg:st.getPropertyValue('--fg').trim()||'#baf7c7',
+      fg2:st.getPropertyValue('--fg2').trim()||'#72e58e',
+      panel:st.getPropertyValue('--panel2').trim()||'#09120b',
+      bg:st.getPropertyValue('--bg').trim()||'#071009'
+    };
+  }
+
+  function ensurePlannerMap(){
+    if(plannerMap)return plannerMap;
+    const el=$(MAP_ID);
+    if(!el)return null;
+    if(!window.L){
+      status('ROUTE MAP LIBRARY FAILED TO LOAD -- CHECK CONNECTION AND REFRESH','error');
+      el.innerHTML='<div class="route-map-load-error"><b>MAP ENGINE UNAVAILABLE</b><span>Leaflet did not load. Refresh FIELD/OS while online once so the planner map can be cached.</span></div>';
+      return null;
+    }
+    const here=state()?.current?.()||{lat:44.4759,lon:-73.2121};
+    plannerMap=L.map(el,{
+      zoomControl:true,
+      attributionControl:true,
+      preferCanvas:true,
+      doubleClickZoom:true,
+      tap:true
+    }).setView([here.lat,here.lon],14);
+
+    const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      maxZoom:19,
+      attribution:'© OpenStreetMap contributors',
+      crossOrigin:true
+    }).addTo(plannerMap);
+
+    const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
+      subdomains:'abc',
+      maxZoom:17,
+      opacity:.93,
+      attribution:'OpenTopoMap',
+      crossOrigin:true
+    }).addTo(plannerMap);
+
+    let topoErrors=0;
+    topo.on('tileerror',()=>{
+      topoErrors++;
+      if(topoErrors>=3&&!plannerBaseFallbackActive){
+        plannerBaseFallbackActive=true;
+        topo.setOpacity(0);
+        status('TOPO TILES UNAVAILABLE -- USING OSM BASEMAP','ready');
+      }
+    });
+
+    const hiking=L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',{
+      maxZoom:18,
+      opacity:.72,
+      attribution:'Waymarked Trails',
+      crossOrigin:true
+    });
+    hiking.on('tileerror',()=>{});
+    hiking.addTo(plannerMap);
+
+    plannerRouteLayer=L.layerGroup().addTo(plannerMap);
+    plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
+    plannerSnapLayer=L.layerGroup().addTo(plannerMap);
+
+    plannerMap.on('click',e=>{if(!busy)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
+    plannerMap.on('load',()=>requestAnimationFrame(()=>plannerMap?.invalidateSize(false)));
+    return plannerMap;
+  }
+
+  function fitPlanner(points,maxZoom=16){
+    const map=ensurePlannerMap();
+    const pts=(Array.isArray(points)?points:[]).filter(valid);
+    if(!map||!pts.length)return;
+    if(pts.length===1){map.setView([pts[0].lat,pts[0].lon],Math.min(maxZoom,15));return;}
+    map.fitBounds(pts.map(p=>[p.lat,p.lon]),{padding:[42,42],maxZoom});
+  }
+
   function overlay(route=state()?.getPoints?.()||[]){
-    engine()?.setGeoOverlay?.(MAP_ID,{route,anchors,snapped});
+    const map=ensurePlannerMap();
+    if(map&&plannerRouteLayer&&plannerAnchorLayer&&plannerSnapLayer){
+      const c=plannerColors();
+      plannerRouteLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
+      const pts=(Array.isArray(route)?route:[]).filter(valid);
+      if(pts.length>1){
+        L.polyline(pts.map(p=>[p.lat,p.lon]),{
+          color:c.route,weight:5,opacity:.96,lineCap:'round',lineJoin:'round'
+        }).addTo(plannerRouteLayer);
+      }
+      anchors.forEach((p,i)=>{
+        if(!valid(p))return;
+        const label=i===0?'S':i===anchors.length-1?'E':String(i);
+        L.circleMarker([p.lat,p.lon],{
+          radius:8,color:c.fg,weight:2,fillColor:c.panel,fillOpacity:1
+        }).bindTooltip(label,{permanent:true,direction:'center',className:'planner-leaflet-label'}).addTo(plannerAnchorLayer);
+        const sp=snapped[i];
+        if(valid(sp)){
+          L.polyline([[p.lat,p.lon],[sp.lat,sp.lon]],{
+            color:c.fg2,weight:1.5,opacity:.7,dashArray:'4 5'
+          }).addTo(plannerSnapLayer);
+        }
+      });
+      snapped.forEach(p=>{
+        if(!valid(p))return;
+        L.circleMarker([p.lat,p.lon],{
+          radius:4,color:c.bg,weight:2,fillColor:c.fg2,fillOpacity:1
+        }).addTo(plannerSnapLayer);
+      });
+    }
     updateControls();
   }
 
   function activate(){
-    const eng=engine(),st=state();
-    if(!eng||!st||!$(MAP_ID))return;
+    const st=state();
+    if(!st||!$(MAP_ID))return;
     if(!initialized){
       loadAnchors();
-      eng.mount?.(MAP_ID,{center:st.current?.()||undefined,zoom:14});
-      eng.setTapHandler?.(MAP_ID,p=>{if(!busy)addAnchor(p)});
+      if(!ensurePlannerMap())return;
       bindControls();
       initialized=true;
-    }else eng.mount?.(MAP_ID,{});
+    }
     const pts=st.getPoints?.()||[];
-    overlay(pts);
-    if(pts.length>1)eng.fitBounds?.(MAP_ID,pts,{padding:42,maxZoom:16});
-    else if(anchors.length)eng.fitBounds?.(MAP_ID,anchors,{padding:55,maxZoom:16});
-    else eng.setView?.(MAP_ID,st.current?.()||{lat:44.4759,lon:-73.2121},14);
+    requestAnimationFrame(()=>{
+      plannerMap?.invalidateSize(false);
+      overlay(pts);
+      if(pts.length>1)fitPlanner(pts,16);
+      else if(anchors.length)fitPlanner(anchors,16);
+      else{
+        const here=st.current?.()||{lat:44.4759,lon:-73.2121};
+        plannerMap?.setView([here.lat,here.lon],14);
+      }
+    });
     status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
   }
 
@@ -143,8 +260,12 @@
 
   function recenter(){
     const pts=state()?.getPoints?.()||[];
-    if(pts.length>1)engine()?.fitBounds?.(MAP_ID,pts,{padding:42,maxZoom:16});
-    else engine()?.setView?.(MAP_ID,state()?.current?.()||{lat:44.4759,lon:-73.2121},14);
+    if(pts.length>1)fitPlanner(pts,16);
+    else if(anchors.length)fitPlanner(anchors,16);
+    else{
+      const here=state()?.current?.()||{lat:44.4759,lon:-73.2121};
+      ensurePlannerMap()?.setView([here.lat,here.lon],14);
+    }
   }
 
   function bboxFor(a,b){
@@ -286,7 +407,7 @@
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
         state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
-        engine()?.fitBounds?.(MAP_ID,direct,{padding:42,maxZoom:16});
+        fitPlanner(direct,16);
         status(`DIRECT ROUTE -- ${miles(direct[0],direct.at(-1)).toFixed(2)} MI END-TO-END`,'ready');
         return;
       }
@@ -305,7 +426,7 @@
       if(clean.length<2)throw new Error('The trail router returned an empty path.');
       state()?.setPoints?.(clean);
       state()?.setMeta?.({anchors,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
-      overlay(clean);engine()?.fitBounds?.(MAP_ID,clean,{padding:42,maxZoom:16});
+      overlay(clean);fitPlanner(clean,16);
       const dist=clean.reduce((sum,p,i)=>i?sum+miles(clean[i-1],p):0,0);
       status(`SNAPPED TO OSM TRAILS -- ${dist.toFixed(2)} MI * MAX SNAP ${Math.round(maxSnap)} M`,'ready');
       navigator.vibrate?.([20,35,20]);
