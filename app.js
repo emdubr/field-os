@@ -551,6 +551,7 @@ async function getFieldMapPack(id){if(!id)return null;return await fieldMapDb('r
 async function deleteFieldMapPack(id){if(!id)return;await fieldMapDb('readwrite',s=>s.delete(id));}
 async function saveFieldMapPackBlob(blob,name,source='import'){
   if(!blob||!blob.size)throw new Error('Map file is empty.');
+  try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
   if(blob.size>FIELD_MAP_MAX_BYTES)throw new Error('Map pack is larger than the 250 MB FIELD/OS browser safety limit.');
   if(typeof pmtiles==='undefined')throw new Error('PMTiles library unavailable.');
   const safeName=String(name||'offline-map.pmtiles').replace(/[^a-zA-Z0-9._ -]/g,'_');
