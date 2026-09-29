@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=2.9" />
-  <link rel="stylesheet" href="workstation.css?v=2.9">
+  <link rel="stylesheet" href="styles.css?v=3.0" />
+  <link rel="stylesheet" href="workstation.css?v=3.0">
 </head>
 <body data-theme="green">
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -298,17 +298,25 @@
 
       <section class="view" id="route" data-view="route">
         <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>ROUTE PLANNER</h2><button class="ghost" id="routeSaveTop">SAVE</button></div>
-        <article class="panel">
-          <div class="panel-title"><span>MANUAL FIELD ROUTE</span><span class="tiny">TAP MAP TO ADD POINTS</span></div>
-          <div id="routeMap" class="map-demo large route-edit-map" role="application" aria-label="Route planning map">
-            <div class="contour c1"></div><div class="contour c2"></div><div class="contour c3"></div>
-            <div class="trail t1"></div><div class="trail t2"></div>
-            <svg id="routeSvg" class="route-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true"><polyline id="routeLine" points=""/></svg>
-            <div id="routePointsLayer" class="route-points-layer"></div>
-            <div class="map-marker self route-current">▲<span>CURRENT</span></div>
-            <div class="map-scale">TAP TO PLOT • MANUAL ROUTE</div>
+        <article class="panel route-planner-panel">
+          <div class="panel-title"><span>TRAIL ROUTE PLANNER</span><span class="tiny">OSM SNAP</span></div>
+          <div class="route-planner-toolbar">
+            <label class="route-planner-mode"><span>ROUTING</span><select id="routeSnapMode" class="terminal-input"><option value="trail" selected>SNAP TO TRAILS</option><option value="direct">DIRECT / OFF-TRAIL</option></select></label>
+            <button class="action" type="button" data-route-plan-action="current">+ CURRENT POSITION</button>
+            <button class="action" type="button" data-route-plan-action="recenter">FIT ROUTE</button>
+            <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div class="button-row"><button id="undoRoutePoint" class="action">UNDO POINT</button><button id="reverseRoute" class="action">REVERSE</button><button id="clearRoute" class="action">CLEAR</button><label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label><button id="exportGpx" class="action">EXPORT GPX</button></div>
+          <div id="routePlannerStatus" class="route-planner-status ready">SNAP TO TRAILS READY</div>
+          <div id="routePlannerMap" class="field-real-map route-planner-real-map" role="application" aria-label="Interactive trail route planner map"></div>
+          <div class="route-planner-helpbar"><span id="routePlannerHelp">Tap the map to set a start point.</span><span>TRAIL DATA: OPENSTREETMAP</span></div>
+          <div class="button-row route-planner-actions">
+            <button id="undoRoutePoint" class="action" type="button" data-route-plan-action="undo">UNDO POINT</button>
+            <button id="reverseRoute" class="action" type="button" data-route-plan-action="reverse">REVERSE</button>
+            <button id="clearRoute" class="action" type="button" data-route-plan-action="clear">CLEAR</button>
+            <label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label>
+            <button id="exportGpx" class="action" type="button">EXPORT GPX</button>
+          </div>
+          <p class="muted route-planner-note">In SNAP TO TRAILS mode, FIELD/OS downloads nearby OpenStreetMap walking/trail geometry when online and routes between your control points. Use DIRECT / OFF-TRAIL for intentional cross-country legs. Always verify trail status, access, terrain and closures before relying on a planned route.</p>
         </article>
         <div class="grid two-col">
           <article class="panel">
@@ -514,8 +522,9 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="app.js?v=2.9"></script>
-  <script src="workstation.js?v=2.9"></script>
-  <script src="map-engine.js?v=2.9"></script>
+  <script src="app.js?v=3.0"></script>
+  <script src="workstation.js?v=3.0"></script>
+  <script src="map-engine.js?v=3.0"></script>
+  <script src="route-planner.js?v=3.0"></script>
 </body>
 </html>
