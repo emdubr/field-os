@@ -364,7 +364,7 @@ document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoin
 document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.2" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.3" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -469,7 +469,7 @@ function updateTrackUI(){
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.2" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v2.3" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${p.alt}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
 setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
@@ -554,7 +554,7 @@ document.getElementById('toggleWakeLock')?.addEventListener('click',()=>setField
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&fieldWakeLock)setFieldWakeLock(true)});
 
 
-// v2.2 — stable SVG/device compass and isolated Home map controls
+// v2.3 — native slippy-map engine, stable SVG/device compass, no fake map fallback
 let fieldLiveSpeed=null;
 let fieldLiveHeading=null;
 let fieldDeviceHeading=null;
@@ -1067,3 +1067,237 @@ updateTrackUI=function(){fieldOriginalUpdateTrackUI();updateFieldMaps(false);};
 refreshFieldMapPackUI().then(()=>{paintMapSourceButtons();return updateFieldMaps(false)}).catch(()=>{});
 
 setTimeout(()=>{updateLiveNavigationUI();updateFieldMaps(false);},80);
+
+
+/* v2.3 native online map engine
+   Normal topo/street/hiking maps no longer depend on Leaflet or a map-library CDN.
+   The existing Leaflet/PMTiles path is retained only for saved offline PMTiles packs. */
+const fieldLegacyUpdateFieldMaps=updateFieldMaps;
+const fieldLegacyRunMapControl=runMapControl;
+const fieldNativeMaps=new Map();
+
+function fieldClampMapLat(lat){return Math.max(-85.05112878,Math.min(85.05112878,Number(lat)||0))}
+function fieldWorldPoint(lat,lon,z){
+  const size=256*Math.pow(2,z),clat=fieldClampMapLat(lat),sin=Math.sin(clat*Math.PI/180);
+  return {x:(Number(lon)+180)/360*size,y:(.5-Math.log((1+sin)/(1-sin))/(4*Math.PI))*size};
+}
+function fieldLatLonFromWorld(x,y,z){
+  const size=256*Math.pow(2,z),lon=x/size*360-180,n=Math.PI-2*Math.PI*y/size;
+  return {lat:180/Math.PI*Math.atan(Math.sinh(n)),lon};
+}
+function fieldNativeCenterCandidate(){
+  if(hasTrustedMapPosition())return {lat:currentNavPosition.lat,lon:currentNavPosition.lon};
+  const rp=routePoints.find(validLatLon);if(rp)return {lat:rp.lat,lon:rp.lon};
+  const wp=waypoints.find(validLatLon);if(wp)return {lat:wp.lat,lon:wp.lon};
+  return {lat:currentNavPosition.lat,lon:currentNavPosition.lon};
+}
+function fieldNativeTileUrl(kind,z,x,y){
+  const n=Math.pow(2,z),xx=((x%n)+n)%n;
+  if(y<0||y>=n)return '';
+  if(kind==='osm')return `https://tile.openstreetmap.org/${z}/${xx}/${y}.png`;
+  const sub=['a','b','c'][Math.abs(x+y)%3];
+  return `https://${sub}.tile.opentopomap.org/${z}/${xx}/${y}.png`;
+}
+function fieldNativeTrailUrl(z,x,y){
+  const n=Math.pow(2,z),xx=((x%n)+n)%n;
+  if(y<0||y>=n)return '';
+  return `https://tile.waymarkedtrails.org/hiking/${z}/${xx}/${y}.png`;
+}
+function fieldNativeScreenPoint(st,lat,lon,w,h){
+  const p=fieldWorldPoint(lat,lon,st.zoom),c=fieldWorldPoint(st.center.lat,st.center.lon,st.zoom);
+  return {x:p.x-c.x+w/2,y:p.y-c.y+h/2};
+}
+function fieldNativeResetDrag(st){
+  st.base.style.transform='';st.trails.style.transform='';st.overlay.style.transform='';
+}
+function fieldNativeDestroyAll(){
+  for(const st of fieldNativeMaps.values()){
+    st.active=false;
+    st.el.removeEventListener('pointerdown',st.onDown);
+    st.el.removeEventListener('pointermove',st.onMove);
+    st.el.removeEventListener('pointerup',st.onUp);
+    st.el.removeEventListener('pointercancel',st.onUp);
+    st.el.removeEventListener('wheel',st.onWheel);
+    st.el.removeEventListener('dblclick',st.onDbl);
+    try{st.el.releasePointerCapture(st.drag?.id)}catch{}
+    st.el.innerHTML='';
+  }
+  fieldNativeMaps.clear();
+}
+function fieldLegacyDestroyAll(){
+  for(const st of fieldMaps.values()){try{st.map.remove()}catch{}}
+  fieldMaps.clear();
+}
+function fieldNativeEnsure(id,fallbackId,labelId){
+  if(fieldNativeMaps.has(id))return fieldNativeMaps.get(id);
+  const el=document.getElementById(id),fallback=document.getElementById(fallbackId),label=document.getElementById(labelId);
+  if(!el)return null;
+  el.innerHTML='<div class="native-map-base"></div><div class="native-map-trails"></div><svg class="native-map-overlay" xmlns="http://www.w3.org/2000/svg"></svg><div class="native-map-corner">FIELD/OS MAP</div>';
+  const st={
+    id,el,fallback,label,
+    base:el.querySelector('.native-map-base'),
+    trails:el.querySelector('.native-map-trails'),
+    overlay:el.querySelector('.native-map-overlay'),
+    center:fieldNativeCenterCandidate(),zoom:14,active:true,initialized:false,drag:null,tileErrors:0,failover:false
+  };
+  st.onDown=e=>{
+    if(!st.active||e.button>0)return;
+    e.preventDefault();st.drag={id:e.pointerId,x:e.clientX,y:e.clientY,startCenter:{...st.center}};
+    try{st.el.setPointerCapture(e.pointerId)}catch{}
+    st.el.classList.add('native-map-dragging');
+  };
+  st.onMove=e=>{
+    if(!st.active||!st.drag||e.pointerId!==st.drag.id)return;
+    const dx=e.clientX-st.drag.x,dy=e.clientY-st.drag.y,t=`translate(${dx}px,${dy}px)`;
+    st.base.style.transform=t;st.trails.style.transform=t;st.overlay.style.transform=t;
+  };
+  st.onUp=e=>{
+    if(!st.active||!st.drag||e.pointerId!==st.drag.id)return;
+    const dx=e.clientX-st.drag.x,dy=e.clientY-st.drag.y,c=fieldWorldPoint(st.drag.startCenter.lat,st.drag.startCenter.lon,st.zoom);
+    st.center=fieldLatLonFromWorld(c.x-dx,c.y-dy,st.zoom);
+    st.drag=null;st.el.classList.remove('native-map-dragging');fieldNativeResetDrag(st);fieldNativeRender(st);
+  };
+  st.onWheel=e=>{
+    if(!st.active)return;
+    e.preventDefault();
+    const max=fieldMapMode==='osm'?19:17,next=Math.max(2,Math.min(max,st.zoom+(e.deltaY<0?1:-1)));
+    if(next!==st.zoom){st.zoom=next;fieldNativeRender(st);}
+  };
+  st.onDbl=e=>{if(!st.active)return;e.preventDefault();const max=fieldMapMode==='osm'?19:17;st.zoom=Math.min(max,st.zoom+1);fieldNativeRender(st);};
+  el.addEventListener('pointerdown',st.onDown);
+  el.addEventListener('pointermove',st.onMove);
+  el.addEventListener('pointerup',st.onUp);
+  el.addEventListener('pointercancel',st.onUp);
+  el.addEventListener('wheel',st.onWheel,{passive:false});
+  el.addEventListener('dblclick',st.onDbl);
+  fieldNativeMaps.set(id,st);
+  return st;
+}
+function fieldNativeSvgCircle(cx,cy,r,cls){
+  return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" class="${cls}"/>`;
+}
+function fieldNativeRenderOverlay(st,w,h){
+  const svg=st.overlay,items=[];
+  const route=routePoints.filter(validLatLon);
+  if(route.length>=2){
+    const pts=route.map(p=>fieldNativeScreenPoint(st,p.lat,p.lon,w,h)).map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    items.push(`<polyline points="${pts}" class="native-route-line"/>`);
+  }
+  const step=Math.max(1,Math.ceil(recordedTrack.length/1500)),track=recordedTrack.filter((_,i)=>i%step===0).filter(validLatLon);
+  if(track.length>=2){
+    const pts=track.map(p=>fieldNativeScreenPoint(st,p.lat,p.lon,w,h)).map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    items.push(`<polyline points="${pts}" class="native-track-line"/>`);
+  }
+  if(hasTrustedMapPosition()){
+    const p=fieldNativeScreenPoint(st,currentNavPosition.lat,currentNavPosition.lon,w,h);
+    const acc=Math.max(4,Math.min(80,(Number(currentAccuracy)||4)/Math.max(1,156543.03*Math.cos(currentNavPosition.lat*Math.PI/180)/Math.pow(2,st.zoom))));
+    items.push(fieldNativeSvgCircle(p.x,p.y,acc,'native-accuracy-ring'));
+    items.push(fieldNativeSvgCircle(p.x,p.y,7,'native-self-marker'));
+    items.push(`<path d="M ${p.x.toFixed(1)} ${(p.y-13).toFixed(1)} l -5 9 h 10 z" class="native-self-arrow"/>`);
+  }
+  waypoints.filter(validLatLon).slice(0,200).forEach(wp=>{
+    const p=fieldNativeScreenPoint(st,wp.lat,wp.lon,w,h),isBase=wp.type==='BASE',label=escapeHTML(String(wp.name||wp.type||'WP').slice(0,18));
+    if(p.x<-50||p.x>w+50||p.y<-50||p.y>h+50)return;
+    items.push(fieldNativeSvgCircle(p.x,p.y,isBase?6:4,isBase?'native-base-marker':'native-waypoint-marker'));
+    items.push(`<text x="${(p.x+8).toFixed(1)}" y="${(p.y-7).toFixed(1)}" class="native-waypoint-label">${label}</text>`);
+  });
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.innerHTML=items.join('');
+}
+function fieldNativeRender(st){
+  if(!st||!st.active)return;
+  const w=Math.max(220,st.el.clientWidth||st.el.getBoundingClientRect().width||600),h=Math.max(200,st.el.clientHeight||st.el.getBoundingClientRect().height||360);
+  const kind=fieldMapMode==='osm'?'osm':'topo',max=kind==='osm'?19:17;
+  st.zoom=Math.max(2,Math.min(max,Math.round(st.zoom)));
+  const c=fieldWorldPoint(st.center.lat,st.center.lon,st.zoom),minX=Math.floor((c.x-w/2)/256)-1,maxX=Math.floor((c.x+w/2)/256)+1,minY=Math.floor((c.y-h/2)/256)-1,maxY=Math.floor((c.y+h/2)/256)+1;
+  const baseFrag=document.createDocumentFragment(),trailFrag=document.createDocumentFragment();
+  st.tileErrors=0;
+  for(let ty=minY;ty<=maxY;ty++)for(let tx=minX;tx<=maxX;tx++){
+    const src=fieldNativeTileUrl(kind,st.zoom,tx,ty);if(!src)continue;
+    const left=tx*256-c.x+w/2,top=ty*256-c.y+h/2,img=new Image();
+    img.className='native-map-tile';img.alt='';img.draggable=false;img.src=src;img.style.left=`${left}px`;img.style.top=`${top}px`;
+    img.onerror=()=>{
+      st.tileErrors++;
+      if(kind==='topo'&&st.tileErrors>=6&&!st.failover){
+        st.failover=true;fieldMapMode='osm';storageSet(STORE_PREFIX+'map-source','osm');paintMapSourceButtons();
+        const d=document.getElementById('mapSourceDiag');if(d)d.textContent='TOPO TILES FAILED — STREET OSM';
+        for(const m of fieldNativeMaps.values()){m.failover=true;fieldNativeRender(m);}
+      }
+    };
+    baseFrag.appendChild(img);
+    if(fieldTrailLayerEnabled){
+      const trailSrc=fieldNativeTrailUrl(Math.min(st.zoom,18),tx,ty);
+      if(trailSrc){
+        const ti=new Image();ti.className='native-map-tile native-trail-tile';ti.alt='';ti.draggable=false;ti.src=trailSrc;ti.style.left=`${left}px`;ti.style.top=`${top}px`;trailFrag.appendChild(ti);
+      }
+    }
+  }
+  st.base.replaceChildren(baseFrag);st.trails.replaceChildren(trailFrag);
+  fieldNativeRenderOverlay(st,w,h);
+  st.initialized=true;
+  const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`${kind==='topo'?'TOPO':'OSM'} Z${st.zoom} ${fieldTrailLayerEnabled?'// HIKING':''}`;
+}
+function fieldNativeShowFallback(st,msg){
+  if(!st)return;st.el.hidden=true;
+  if(st.fallback){st.fallback.hidden=false;const t=st.fallback.querySelector('span');if(t)t.textContent=msg;}
+  if(st.label)st.label.textContent='MAP UNAVAILABLE';
+}
+function fieldNativeShow(st,label){
+  st.el.hidden=false;if(st.fallback)st.fallback.hidden=true;if(st.label)st.label.textContent=label;
+}
+updateFieldMaps=async function(recenter=false){
+  const pack=await resolveActiveFieldPack();
+  const useOffline=(fieldMapMode==='offline'||navigator.onLine===false)&&!!pack;
+  if(useOffline){
+    fieldNativeDestroyAll();
+    return fieldLegacyUpdateFieldMaps(recenter);
+  }
+  if(navigator.onLine===false&&!pack){
+    fieldLegacyDestroyAll();
+    const specs=[['homeRealMap','homeMapFallback','homeMapModeLabel'],['realMap','mapFallback','mapModeLabel']];
+    for(const [id,f,l] of specs){
+      const st=fieldNativeEnsure(id,f,l);if(st)fieldNativeShowFallback(st,'NO NETWORK AND NO OFFLINE MAP PACK');
+    }
+    const d=document.getElementById('mapSourceDiag');if(d)d.textContent='NO NETWORK / NO OFFLINE PACK';
+    return;
+  }
+  fieldLegacyDestroyAll();
+  const target=fieldNativeCenterCandidate(),trusted=hasTrustedMapPosition(),kind=fieldMapMode==='osm'?'STREET OSM':'HIKING TOPO';
+  const specs=[['homeRealMap','homeMapFallback','homeMapModeLabel'],['realMap','mapFallback','mapModeLabel']];
+  for(const [id,f,l] of specs){
+    const st=fieldNativeEnsure(id,f,l);if(!st)continue;
+    st.active=true;
+    if(recenter||!st.initialized)st.center={...target};
+    fieldNativeShow(st,`${kind} / ${trusted?'GNSS':'AWAITING FIX'}`);
+    fieldNativeRender(st);
+  }
+  const d=document.getElementById('mapSourceDiag');if(d)d.textContent=`${kind} READY`;
+  const src=document.getElementById('offlineMapSource');if(src)src.textContent=kind;
+};
+toggleHikingRoutes=async function(){
+  fieldTrailLayerEnabled=!fieldTrailLayerEnabled;
+  storageSet(STORE_PREFIX+'hiking-routes',fieldTrailLayerEnabled?'on':'off');
+  paintMapSourceButtons();
+  await updateFieldMaps(false);
+};
+runMapControl=async function(action,target='realMap'){
+  const diag=document.getElementById('mapSourceDiag');
+  try{
+    if(action==='topo')return useTopoFieldMap();
+    if(action==='osm')return useOnlineFieldMap();
+    if(action==='trails')return toggleHikingRoutes();
+    if(action==='location')return requestFieldLiveLocation();
+    const pack=await resolveActiveFieldPack(),useOffline=(fieldMapMode==='offline'||navigator.onLine===false)&&!!pack;
+    if(useOffline)return fieldLegacyRunMapControl(action,target);
+    await updateFieldMaps(action==='center');
+    const st=fieldNativeMaps.get(target)||fieldNativeMaps.get('realMap');if(!st||st.el.hidden)return;
+    if(action==='zoom-in'){const max=fieldMapMode==='osm'?19:17;st.zoom=Math.min(max,st.zoom+1);fieldNativeRender(st);}
+    else if(action==='zoom-out'){st.zoom=Math.max(2,st.zoom-1);fieldNativeRender(st);}
+    else if(action==='center'){st.center=fieldNativeCenterCandidate();fieldNativeRender(st);}
+  }catch(err){
+    console.warn('FIELD/OS native map control failed',action,err);
+    if(diag)diag.textContent=`MAP CONTROL ERROR: ${String(err?.message||err).slice(0,42)}`;
+  }
+};
+window.addEventListener('resize',()=>{for(const st of fieldNativeMaps.values())if(st.active&&!st.el.hidden)fieldNativeRender(st)},{passive:true});
+setTimeout(()=>updateFieldMaps(false),120);
