@@ -38,7 +38,7 @@
   }
   function trailUrl(z,x,y){return validY(y,z)?`https://tile.waymarkedtrails.org/hiking/${z}/${wrapX(x,z)}/${y}.png`:''}
   function satelliteUrl(z,x,y){return validY(y,z)?`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${wrapX(x,z)}`:''}
-  function hillshadeUrl(z,x,y){return validY(y,z)?`https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/${z}/${y}/${wrapX(x,z)}`:''}
+  function hillshadeUrl(z,x,y){return validY(y,z)?`https://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/${z}/${y}/${wrapX(x,z)}`:''}
 
   function targetForButton(btn){return btn.dataset.mapTarget || (btn.closest('#home')?'homeRealMap':'realMap')}
   function centerCandidate(){return livePosition||DEFAULT_CENTER}
