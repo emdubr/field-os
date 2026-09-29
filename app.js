@@ -1222,11 +1222,14 @@ function fieldNativeRender(st){
         st.failover=true;fieldMapMode='osm';storageSet(STORE_PREFIX+'map-source','osm');paintMapSourceButtons();
         const d=document.getElementById('mapSourceDiag');if(d)d.textContent='TOPO TILES FAILED — STREET OSM';
         for(const m of fieldNativeMaps.values()){m.failover=true;fieldNativeRender(m);}
+      }else if(kind==='osm'&&st.tileErrors>=8){
+        fieldNativeShowFallback(st,'OSM TILE SERVER UNAVAILABLE — CHECK NETWORK');
+        const d=document.getElementById('mapSourceDiag');if(d)d.textContent='OSM TILE SERVER UNAVAILABLE';
       }
     };
     baseFrag.appendChild(img);
-    if(fieldTrailLayerEnabled){
-      const trailSrc=fieldNativeTrailUrl(Math.min(st.zoom,18),tx,ty);
+    if(fieldTrailLayerEnabled&&st.zoom<=18){
+      const trailSrc=fieldNativeTrailUrl(st.zoom,tx,ty);
       if(trailSrc){
         const ti=new Image();ti.className='native-map-tile native-trail-tile';ti.alt='';ti.draggable=false;ti.src=trailSrc;ti.style.left=`${left}px`;ti.style.top=`${top}px`;trailFrag.appendChild(ti);
       }
