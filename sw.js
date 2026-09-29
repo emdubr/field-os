@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-2';
-const ASSETS=['./','./index.html','./styles.css?v=3.2','./app.js?v=3.2','./workstation.css?v=3.2','./workstation.js?v=3.2','./survival-data.js','./map-engine.js?v=3.2','./route-planner.js?v=3.2','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-3';
+const ASSETS=['./','./index.html','./styles.css?v=3.3','./app.js?v=3.3','./workstation.css?v=3.3','./workstation.js?v=3.3','./survival-data.js','./map-engine.js?v=3.3','./route-planner.js?v=3.3','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -27,3 +27,5 @@ self.addEventListener('fetch',e=>{
   }
   e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,copy)));}return r;}).catch(()=>caches.match(e.request)));
 });
+
+self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting()});
