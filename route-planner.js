@@ -18,6 +18,7 @@
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerBaseFallbackActive=false;
+  let hasActivated=false;
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -38,9 +39,10 @@
   }
   function setBusy(on){
     busy=!!on;
-    document.querySelectorAll('[data-route-plan-action]').forEach(b=>b.disabled=busy);
+    document.querySelectorAll('[data-route-plan-action]').forEach(b=>b.disabled=busy&&!['clear','recenter'].includes(b.dataset.routePlanAction));
     const snap=$('routeSnapMode');if(snap)snap.disabled=busy;
     $('routePlannerMap')?.classList.toggle('routing-busy',busy);
+    updateControls();
   }
   function routeMode(){return $('routeSnapMode')?.value||'trail'}
   function planMeta(){return state()?.getPlan?.()||{}}
@@ -62,7 +64,7 @@
     if(help)help.textContent=count===0?'Tap the map to set a start point.':count===1?'Start set. Tap the map to set a destination.':'Tap the map to add another via point. The route will recalculate.';
     $('undoRoutePoint')?.toggleAttribute('disabled',count===0||busy);
     $('reverseRoute')?.toggleAttribute('disabled',count<2||busy);
-    $('clearRoute')?.toggleAttribute('disabled',count===0||busy);
+    $('clearRoute')?.toggleAttribute('disabled',count===0);
   }
 
   function plannerColors(){
@@ -90,7 +92,7 @@
       zoomControl:true,
       attributionControl:true,
       preferCanvas:true,
-      doubleClickZoom:true,
+      doubleClickZoom:false,
       tap:true
     }).setView([here.lat,here.lon],14);
 
@@ -194,14 +196,14 @@
 
       const st=state();
       if(st){
-        if(!anchors.length)loadAnchors();
+        loadAnchors();
         const pts=st.getPoints?.()||[];
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
           overlay(pts);
-          if(pts.length>1)fitPlanner(pts,16);
-          else if(anchors.length)fitPlanner(anchors,16);
-          else{
+          if(!hasActivated&&pts.length>1)fitPlanner(pts,16);
+          else if(!hasActivated&&anchors.length)fitPlanner(anchors,16);
+          else if(!hasActivated){
             const here=st.current?.()||{lat:44.4759,lon:-73.2121};
             plannerMap?.setView([here.lat,here.lon],14);
           }
@@ -216,8 +218,8 @@
         return true;
       }
 
-      status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
-      return true;
+      if(!hasActivated)status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
+      hasActivated=true;return true;
     }catch(err){
       console.error('FIELD/OS route planner startup failed',err);
       status(`ROUTE MAP STARTUP ERROR -- ${String(err?.message||err).toUpperCase()}`,'error');
@@ -280,7 +282,7 @@
   }
 
   function clearAll(){
-    aborter?.abort();
+    aborter?.abort();setBusy(false);
     anchors=[];snapped=[];
     state()?.setMeta?.({anchors:[],routingMode:routeMode()});
     state()?.setPoints?.([]);overlay([]);
@@ -289,8 +291,8 @@
 
   function recenter(){
     const pts=state()?.getPoints?.()||[];
-    if(pts.length>1)fitPlanner(pts,16);
-    else if(anchors.length)fitPlanner(anchors,16);
+    if(!hasActivated&&pts.length>1)fitPlanner(pts,16);
+    else if(!hasActivated&&anchors.length)fitPlanner(anchors,16);
     else{
       const here=state()?.current?.()||{lat:44.4759,lon:-73.2121};
       ensurePlannerMap()?.setView([here.lat,here.lon],14);
@@ -313,17 +315,17 @@
     if(graphCache.has(key))return graphCache.get(key);
     const q=queryFor(box);let lastErr=null;
     for(const endpoint of OVERPASS_ENDPOINTS){
-      for(const method of ['POST','GET']){
+      for(const method of ['POST']){
+        if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
+        const controller=new AbortController();
+        const relay=()=>controller.abort();signal?.addEventListener('abort',relay,{once:true});
+        const timer=setTimeout(()=>controller.abort(),12000);
         try{
-          const controller=new AbortController();
-          const relay=()=>controller.abort(); signal?.addEventListener('abort',relay,{once:true});
-          const timer=setTimeout(()=>controller.abort(),26000);
           const url=method==='GET'?endpoint+'?data='+encodeURIComponent(q):endpoint;
           const init=method==='GET'
             ?{method:'GET',signal:controller.signal,cache:'no-store'}
             :{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q),signal:controller.signal,cache:'no-store'};
           const res=await fetch(url,init);
-          clearTimeout(timer); signal?.removeEventListener('abort',relay);
           if(!res.ok)throw new Error(`trail server ${res.status}`);
           const json=await res.json();
           const graph=buildGraph(json.elements||[]);
@@ -333,7 +335,7 @@
         }catch(err){
           if(signal?.aborted)throw err;
           lastErr=err;
-        }
+        }finally{clearTimeout(timer);signal?.removeEventListener('abort',relay);}
       }
     }
     throw lastErr||new Error('trail network unavailable');
@@ -376,11 +378,26 @@
 
   function nearestNode(graph,p,maxMeters=1200){
     let best=null;
-    for(const node of graph.nodes.values()){
-      const d=meters(p,node);
-      if(d<=maxMeters&&(!best||d<best.d))best={id:node.id,node,d};
+    const cos=Math.max(.01,Math.cos(p.lat*Math.PI/180));
+    for(const seg of graph.segments){
+      const dx=(seg.pb.lon-seg.pa.lon)*cos,dy=seg.pb.lat-seg.pa.lat;
+      const t=clamp(((p.lon-seg.pa.lon)*cos*dx+(p.lat-seg.pa.lat)*dy)/(dx*dx+dy*dy||1),0,1);
+      const node={lat:seg.pa.lat+t*(seg.pb.lat-seg.pa.lat),lon:seg.pa.lon+t*(seg.pb.lon-seg.pa.lon)};
+      const d=meters(p,node);if(d<=maxMeters&&(!best||d<best.d))best={seg,node,d,t};
     }
-    return best;
+    if(!best)return null;
+    if(best.t<1e-8)return {id:best.seg.a,node:best.seg.pa,d:best.d};
+    if(best.t>1-1e-8)return {id:best.seg.b,node:best.seg.pb,d:best.d};
+    const {seg,node}=best,id=`snap:${graph.nodes.size}`;node.id=id;graph.nodes.set(id,node);graph.adj.set(id,[]);
+    // Split the selected edge so two points on the same segment connect directly.
+    graph.adj.set(seg.a,(graph.adj.get(seg.a)||[]).filter(e=>e.to!==seg.b));
+    graph.adj.set(seg.b,(graph.adj.get(seg.b)||[]).filter(e=>e.to!==seg.a));
+    for(const [to,point] of [[seg.a,seg.pa],[seg.b,seg.pb]]){
+      const w=meters(node,point)*wayFactor(seg.tags);
+      graph.adj.get(id).push({to,w,tags:seg.tags});graph.adj.get(to).push({to:id,w,tags:seg.tags});
+    }
+    graph.segments.splice(graph.segments.indexOf(seg),1,{...seg,b:id,pb:node},{...seg,a:id,pa:node});
+    return {id,node,d:best.d};
   }
 
   class MinHeap{
@@ -427,10 +444,12 @@
 
   async function routeLeg(a,b,signal){
     if(miles(a,b)>35)throw new Error('A single snapped leg is too long for the lightweight trail router. Add a via point closer to the trail corridor.');
-    const graph=await fetchTrailGraph(a,b,signal),sa=nearestNode(graph,a),sb=nearestNode(graph,b);
+    const source=await fetchTrailGraph(a,b,signal);
+    const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments:source.segments.slice()};
+    const sa=nearestNode(graph,a),sb=nearestNode(graph,b);
     if(!sa||!sb)throw new Error('No mapped hiking path was found close enough to one of the selected points. Zoom in and tap closer to a trail.');
     const path=shortestPath(graph,sa.id,sb.id);
-    if(!path||path.length<2)throw new Error('The nearby mapped trails are not connected. Add an intermediate point or use DIRECT mode for an off-trail leg.');
+    if(!path)throw new Error('The nearby mapped trails are not connected. Add an intermediate point or use DIRECT mode for an off-trail leg.');
     return {points:path.map(p=>({lat:p.lat,lon:p.lon})),startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d}};
   }
 
@@ -468,7 +487,7 @@
       const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
       const res=await fetch(url,{signal:controller.signal,cache:'no-store'});
       if(!res.ok)throw new Error(`elevation server ${res.status}`);
-      const json=await res.json(),raw=Array.isArray(json.elevation)?json.elevation.map(Number):[];
+      const json=await res.json(),raw=Array.isArray(json.elevation)?json.elevation.map(v=>v==null?NaN:Number(v)):[];
       if(raw.length!==samples.length||raw.some(v=>!Number.isFinite(v)))throw new Error('invalid elevation response');
       const ft=raw.map(v=>v*3.28084);
       const smooth=ft.map((v,i,arr)=>{
@@ -523,6 +542,7 @@
       gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
       drawElevationProfile(profile,dist);
     }else{
+      set('routeGainOut','N/A');
       set('routeLossOut','---');set('routeElevRange','---');
     }
     return dist;
@@ -533,6 +553,7 @@
     status(`${baseStatus} -- ${dist.toFixed(2)} MI // LOADING ELEVATION`,'loading');
     try{
       const profile=await fetchElevationProfile(points,signal);
+      if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
       if(!profile)return {dist,profile:null};
       applyRouteStats(points,profile);
       state()?.setMeta?.({
@@ -560,6 +581,7 @@
     if(anchors.length<2)return;
     aborter?.abort();aborter=new AbortController();
     const signal=aborter.signal;setBusy(true);snapped=[];
+    state()?.setPoints?.([]);
     try{
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
@@ -581,6 +603,7 @@
         snapped.push({lat:leg.endSnap.lat,lon:leg.endSnap.lon});
         full.push(...(i===1?leg.points:leg.points.slice(1)));
       }
+      if(signal.aborted)return;
       const clean=dedupe(full);
       if(clean.length<2)throw new Error('The trail router returned an empty path.');
       state()?.setPoints?.(clean);
@@ -595,7 +618,7 @@
       console.warn('FIELD/OS trail routing failed',err);
       status(`TRAIL ROUTE FAILED -- ${String(err.message||err).toUpperCase()}`,'error');
       overlay(state()?.getPoints?.()||[]);
-    }finally{if(!signal.aborted)setBusy(false)}
+    }finally{if(aborter?.signal===signal)setBusy(false)}
   }
 
   function routeVisible(){return !!document.querySelector('#route.active')}
@@ -608,7 +631,8 @@
   }
 
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
-  document.addEventListener('fieldos:routechange',()=>{if(initialized)overlay(state()?.getPoints?.()||[])});
+  document.addEventListener('fieldos:routechange',()=>{if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}});
+  document.addEventListener('fieldos:themechange',()=>{if(initialized)overlay()});
   document.addEventListener('click',e=>{
     if(e.target.closest?.('[data-open="route"]'))setTimeout(kickPlanner,60);
   },true);
@@ -631,3 +655,4 @@
 
   window.FIELD_ROUTE_PLANNER={activate,recalculate,get anchors(){return anchors.map(p=>({...p}))}};
 })();
+
