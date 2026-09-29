@@ -1253,16 +1253,35 @@ function fieldNativeRender(st){
   setTimeout(()=>{
     if(token!==st.renderToken||!st.active||st.el.hidden)return;
     if(st.tileLoads===0){
-      fieldNativeShowFallback(st,'MAP TILES DID NOT LOAD — CHECK INTERNET / CONTENT BLOCKING');
+      fieldNativeShowEmbedFallback(st,'Direct map tiles did not load. Using OpenStreetMap embedded fallback.');
       const d=document.getElementById('mapSourceDiag');if(d)d.textContent='0 MAP TILES LOADED';
     }else{
       const d=document.getElementById('mapSourceDiag');if(d)d.textContent=`${kind==='topo'?'TOPO/OSM':'OSM'} — ${st.tileLoads} TILES`;
     }
   },3500);
 }
+function fieldOsmEmbedUrl(st){
+  const w=Math.max(320,st.el.clientWidth||600),h=Math.max(220,st.el.clientHeight||360),c=fieldWorldPoint(st.center.lat,st.center.lon,st.zoom);
+  const nw=fieldLatLonFromWorld(c.x-w/2,c.y-h/2,st.zoom),se=fieldLatLonFromWorld(c.x+w/2,c.y+h/2,st.zoom);
+  const bbox=[nw.lon,se.lat,se.lon,nw.lat].map(v=>Number(v).toFixed(6)).join(',');
+  const marker=hasTrustedMapPosition()?'&marker='+currentNavPosition.lat.toFixed(6)+','+currentNavPosition.lon.toFixed(6):'';
+  return 'https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent(bbox)+'&layer=mapnik'+marker;
+}
+function fieldNativeShowEmbedFallback(st,msg){
+  if(!st||!navigator.onLine)return fieldNativeShowFallback(st,msg);
+  st.el.hidden=true;
+  if(st.fallback){
+    st.fallback.hidden=false;
+    st.fallback.innerHTML='<div class="field-embed-head"><b>OSM EMBED FALLBACK</b><span>'+escapeHTML(msg)+'</span></div><iframe class="field-map-embed" title="OpenStreetMap fallback" src="'+fieldOsmEmbedUrl(st)+'" loading="eager" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  }
+  if(st.label)st.label.textContent='OSM EMBED FALLBACK';
+}
 function fieldNativeShowFallback(st,msg){
   if(!st)return;st.el.hidden=true;
-  if(st.fallback){st.fallback.hidden=false;const t=st.fallback.querySelector('span');if(t)t.textContent=msg;}
+  if(st.fallback){
+    st.fallback.hidden=false;
+    st.fallback.innerHTML='<b>LIVE MAP UNAVAILABLE</b><span>'+escapeHTML(msg)+'</span>';
+  }
   if(st.label)st.label.textContent='MAP UNAVAILABLE';
 }
 function fieldNativeShow(st,label){
