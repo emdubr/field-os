@@ -544,11 +544,14 @@
         elevationMaxFt:Math.round(profile.maxFt),
         elevationProfile:profile.samples
       });
+      state()?.save?.();
       return {dist,profile};
     }catch(err){
       if(signal?.aborted)throw err;
       console.warn('FIELD/OS elevation lookup failed',err);
       applyRouteStats(points,null);
+      state()?.setMeta?.({distanceMiles:dist,elevationSource:'UNAVAILABLE'});
+      state()?.save?.();
       return {dist,profile:null,elevationError:String(err?.message||err)};
     }
   }
