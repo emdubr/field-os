@@ -858,3 +858,30 @@ body[data-theme] .route-planner-helpbar{
   .route-planner-real-map{height:350px;min-height:290px}
   .route-planner-helpbar{display:grid;gap:3px}
 }
+
+
+/* v3.1 terrain/hillshade rendering fix */
+.native-map-terrain{
+  position:absolute;inset:0;z-index:15;pointer-events:none;will-change:transform;
+  background:transparent!important;
+}
+.native-terrain-tile{
+  opacity:.34!important;
+  mix-blend-mode:multiply!important;
+  filter:grayscale(1) contrast(1.18) brightness(1.08)!important;
+}
+body[data-theme="amber"] .native-terrain-tile,
+body[data-theme="red"] .native-terrain-tile,
+body[data-theme="mono"] .native-terrain-tile{
+  opacity:.30!important;
+}
+.route-planner-real-map .native-map-base{
+  background:var(--panel2)!important;
+}
+.route-planner-real-map{
+  background:var(--panel2)!important;
+}
+.route-planner-real-map.standalone-map-error{
+  background:
+    linear-gradient(135deg,color-mix(in srgb,var(--danger) 5%,var(--panel2)),var(--panel2))!important;
+}
