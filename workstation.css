@@ -3634,3 +3634,23 @@ input,select,textarea{
     will-change:transform;
   }
 }
+
+
+/* v3.58 route desktop flow — the route map must not inherit generic 2-column hero sizing. */
+@media(min-width:1024px){
+  #route .module-grid>.route-planner-panel.module-hero{
+    grid-column:1 / -1!important;
+    grid-row:auto!important;
+    width:100%!important;
+    max-width:none!important;
+  }
+  #route .module-grid>.route-performance-panel{
+    grid-column:1 / -1!important;
+    position:static!important;
+    width:100%!important;
+    margin-top:0!important;
+  }
+  #route .route-performance-panel .route-performance-grid{
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  }
+}
