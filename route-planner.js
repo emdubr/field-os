@@ -87,7 +87,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.28',
+      'BUILD: v3.29',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -1019,20 +1019,30 @@
   async function fetchElevationProfile(points,signal){
     const samples=samplePolyline(points,140);
     if(samples.length<2)return null;
-    const lat=samples.map(p=>p.lat.toFixed(6)).join(',');
-    const lon=samples.map(p=>p.lon.toFixed(6)).join(',');
     const controller=new AbortController();
     const relay=()=>controller.abort();signal?.addEventListener('abort',relay,{once:true});
     let timedOut=false;
-    const timer=setTimeout(()=>{timedOut=true;controller.abort()},14000);
+    const timer=setTimeout(()=>{timedOut=true;controller.abort()},18000);
     try{
-      const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
-      const res=await fetch(url,{signal:controller.signal,cache:'no-store'});
-      if(!res.ok)throw rpError('RP-401',`Elevation server returned HTTP ${res.status}.`,{status:res.status});
-      let json;
-      try{json=await res.json()}catch{throw rpError('RP-402','Elevation server returned malformed data.')}
-      const raw=Array.isArray(json.elevation)?json.elevation.map(v=>v==null?NaN:Number(v)):[];
-      if(raw.length!==samples.length||raw.some(v=>!Number.isFinite(v)))throw rpError('RP-402','Elevation response did not contain valid samples.',{expected:samples.length,received:raw.length});
+      const raw=[];
+      const chunks=[];
+      for(let i=0;i<samples.length;i+=100)chunks.push(samples.slice(i,i+100));
+      for(let ci=0;ci<chunks.length;ci++){
+        const chunk=chunks[ci];
+        const lat=chunk.map(p=>p.lat.toFixed(6)).join(',');
+        const lon=chunk.map(p=>p.lon.toFixed(6)).join(',');
+        const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
+        const res=await fetch(url,{signal:controller.signal,cache:'no-store'});
+        if(!res.ok)throw rpError('RP-401',`Elevation server returned HTTP ${res.status}.`,{status:res.status,chunk:ci+1,chunks:chunks.length});
+        let json;
+        try{json=await res.json()}catch{throw rpError('RP-402','Elevation server returned malformed data.',{chunk:ci+1,chunks:chunks.length})}
+        const elevations=Array.isArray(json.elevation)?json.elevation.map(v=>v==null?NaN:Number(v)):[];
+        if(elevations.length!==chunk.length||elevations.some(v=>!Number.isFinite(v))){
+          throw rpError('RP-402','Elevation response did not contain valid samples.',{expected:chunk.length,received:elevations.length,chunk:ci+1,chunks:chunks.length});
+        }
+        raw.push(...elevations);
+      }
+      if(raw.length!==samples.length)throw rpError('RP-402','Elevation sample merge was incomplete.',{expected:samples.length,received:raw.length,chunks:chunks.length});
       const ft=raw.map(v=>v*3.28084);
       const smooth=ft.map((v,i,arr)=>{
         const vals=[arr[i-1],v,arr[i+1]].filter(Number.isFinite);
