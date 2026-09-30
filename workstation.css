@@ -358,7 +358,14 @@
 }
 .compass-svg-cardinal{font-size:13px}.compass-svg-cardinal.north{fill:var(--warn);font-size:15px}
 .compass-svg-intercardinal{font-size:7px;fill:var(--dim)}
-.compass-svg-rotor{transition:transform .28s cubic-bezier(.2,.8,.2,1);transform-box:view-box;transform-origin:100px 100px}
+.compass-svg-rotor{
+  --compass-heading:0deg;
+  transform-box:view-box;
+  transform-origin:50% 50%;
+  transform:rotate(var(--compass-heading));
+  transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  will-change:transform;
+}
 .compass-svg-rotor.no-course{opacity:.28}
 .compass-svg-north-needle{fill:var(--warn);stroke:var(--warn);stroke-width:.7;filter:drop-shadow(0 0 3px rgba(255,209,102,.55))}
 .compass-svg-south-needle{fill:var(--dim);stroke:var(--fg2);stroke-width:.7}
@@ -1412,4 +1419,11 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 }
 .route-planner-real-map.route-has-line{
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 45%,transparent);
+}
+
+
+/* v3.20 compass center rotation fix */
+#navCompassRotor,#homeCompassRotor{
+  transform-box:view-box!important;
+  transform-origin:50% 50%!important;
 }
