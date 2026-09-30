@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.27" />
-  <link rel="stylesheet" href="workstation.css?v=3.27">
+  <link rel="stylesheet" href="styles.css?v=3.28" />
+  <link rel="stylesheet" href="workstation.css?v=3.28">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.27</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.28</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.27</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.28</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.27</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.28</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -354,7 +354,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.27 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.28 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -414,11 +414,19 @@
               <div><span>STEEPEST DOWN SAMPLE</span><b id="elevMaxDown">---</b></div>
               <div><span>STEEPEST ¼ MI UP</span><b id="elevQuarterUp">---</b></div>
               <div><span>STEEPEST ¼ MI DOWN</span><b id="elevQuarterDown">---</b></div>
+              <div><span>EASY / FLAT DISTANCE</span><b id="elevEasyMiles">---</b></div>
+              <div class="slope-medium-summary"><span>MEDIUM SLOPE DISTANCE</span><b id="elevMediumMiles">---</b></div>
+              <div class="slope-hard-summary"><span>HARD SLOPE DISTANCE</span><b id="elevHardMiles">---</b></div>
+            </div>
+            <div class="slope-legend" aria-label="Slope difficulty legend">
+              <span><i class="slope-swatch easy"></i> FLAT / EASY &lt; 8%</span>
+              <span><i class="slope-swatch medium"></i> MEDIUM 8–15%</span>
+              <span><i class="slope-swatch hard"></i> HARD ≥ 15%</span>
             </div>
             <div class="elevation-band-head"><b>ELEVATION BY DISTANCE</b><span id="elevationBandSize">AUTO BANDS</span></div>
             <div class="elevation-table-wrap"><table class="elevation-breakdown-table">
-              <thead><tr><th>MILES</th><th>START FT</th><th>END FT</th><th>GAIN FT</th><th>LOSS FT</th><th>NET</th><th>AVG GRADE</th></tr></thead>
-              <tbody id="elevationSegmentRows"><tr><td colspan="7">PLOT ROUTE TO CALCULATE ELEVATION BREAKDOWN</td></tr></tbody>
+              <thead><tr><th>MILES</th><th>START FT</th><th>END FT</th><th>GAIN FT</th><th>LOSS FT</th><th>NET</th><th>AVG GRADE</th><th>MAX UP</th><th>MAX DOWN</th><th>SLOPE CLASS</th></tr></thead>
+              <tbody id="elevationSegmentRows"><tr><td colspan="10">PLOT ROUTE TO CALCULATE ELEVATION BREAKDOWN</td></tr></tbody>
             </table></div>
             <p class="muted">Difficulty is a FIELD/OS planning estimate from routed distance, ascent, grade and terrain. Elevation is sampled from the Copernicus GLO-90 DEM via Open-Meteo when online. Detailed bands are derived from the sampled DEM profile and remain estimates rather than surveyed trail elevations.</p>
           </article>
@@ -610,12 +618,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.27"></script>
-  <script src="app.js?v=3.27"></script>
-  <script src="workstation.js?v=3.27"></script>
-  <script src="map-engine.js?v=3.27"></script>
+  <script src="route-state.js?v=3.28"></script>
+  <script src="app.js?v=3.28"></script>
+  <script src="workstation.js?v=3.28"></script>
+  <script src="map-engine.js?v=3.28"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.27"></script>
+  <script src="route-planner.js?v=3.28"></script>
 </body>
 </html>
 
