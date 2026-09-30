@@ -1070,13 +1070,15 @@
     for(let i=1;i<path.length;i++){
       const a=path[i-1],b=path[i],tags=edgeTags[i-1]||{},distanceM=meters(a,b);
       const label=trailLabel(tags);
-      const key=[label,tags.highway||'',tags.surface||''].join('|');
+      const key=[label,tags.highway||'',tags.surface||'',tags.ford||'',tags.bridge||'',tags.sac_scale||'',tags.hazard||'',tags.natural||''].join('|');
       const last=sections.at(-1);
       if(last&&last.key===key)last.distanceM+=distanceM;
       else sections.push({
         key,label,name:tags.name||null,ref:tags.ref||null,
         highway:tags.highway||null,surface:tags.surface||null,smoothness:tags.smoothness||null,tracktype:tags.tracktype||null,
         sacScale:tags.sac_scale||null,trailVisibility:tags.trail_visibility||null,
+        ford:tags.ford||null,bridge:tags.bridge||null,waterway:tags.waterway||null,natural:tags.natural||null,
+        incline:tags.incline||null,hazard:tags.hazard||null,access:tags.access||null,foot:tags.foot||null,
         distanceM
       });
     }
@@ -1087,7 +1089,7 @@
     for(const leg of Array.isArray(legs)?legs:[]){
       for(const sec of leg?.result?.trailSections||[]){
         const last=out.at(-1);
-        const same=last&&last.label===sec.label&&last.highway===sec.highway&&last.surface===sec.surface&&last.smoothness===sec.smoothness&&last.tracktype===sec.tracktype&&last.sacScale===sec.sacScale&&last.trailVisibility===sec.trailVisibility;
+        const same=last&&last.label===sec.label&&last.highway===sec.highway&&last.surface===sec.surface&&last.smoothness===sec.smoothness&&last.tracktype===sec.tracktype&&last.sacScale===sec.sacScale&&last.trailVisibility===sec.trailVisibility&&last.ford===sec.ford&&last.bridge===sec.bridge&&last.waterway===sec.waterway&&last.natural===sec.natural&&last.hazard===sec.hazard;
         if(same)last.distanceM+=Number(sec.distanceM)||0;
         else out.push({...sec,distanceM:Number(sec.distanceM)||0});
       }

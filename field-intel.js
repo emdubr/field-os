@@ -70,6 +70,64 @@
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='mission')render(read('mission-pack',null))});
   if(read('mission-active',null))document.body.classList.add('mission-active');render(read('mission-pack',null));
 
+
+  // Feature 03 — Terrain-Risk Analyzer. It only reports risks supported by route DEM/OSM/local waypoint data.
+  const riskSeverityRank={info:0,watch:1,warn:2,high:3};
+  function maxSustainedGrades(profile=[]){
+    const s=(Array.isArray(profile)?profile:[]).filter(p=>Number.isFinite(Number(p.distanceM))&&Number.isFinite(Number(p.elevationFt))).sort((a,b)=>a.distanceM-b.distanceM);
+    let up=0,down=0,abs=0;
+    for(let i=0;i<s.length;i++){
+      let j=i+1;
+      while(j<s.length&&Number(s[j].distanceM)-Number(s[i].distanceM)<50)j++;
+      if(j>=s.length)continue;
+      const run=Math.max(1,Number(s[j].distanceM)-Number(s[i].distanceM)),grade=(Number(s[j].elevationFt)-Number(s[i].elevationFt))/(run*3.28084)*100;
+      up=Math.max(up,grade);down=Math.min(down,grade);abs=Math.max(abs,Math.abs(grade));
+    }
+    return {up,down,abs};
+  }
+  function analyzeTerrainRisk(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},savedWaypoints=read('waypoints',[])){
+    const points=cleanPoints(plan.points||[]),sections=Array.isArray(plan.trailSections)?plan.trailSections:[],profile=Array.isArray(plan.elevationProfile)?plan.elevationProfile:[],grades=maxSustainedGrades(profile);
+    const distanceMi=Number(plan.distanceMiles)||routeMeters(points)/1609.344,gainFt=Number(plan.elevationGainFt??plan.elevationProfile?.gainFt??plan.gain??0)||0,lossFt=Number(plan.elevationLossFt??0)||0;
+    const flags=[],push=(id,severity,title,detail,evidence='')=>flags.push({id,severity,title,detail,evidence});
+    if(grades.abs>=20)push('steep','high','VERY STEEP SUSTAINED GRADE',`DEM shows about ${grades.abs.toFixed(0)}% sustained grade over a 50 m+ window.`,'DEM');
+    else if(grades.abs>=14)push('steep','warn','STEEP SUSTAINED GRADE',`DEM shows about ${grades.abs.toFixed(0)}% sustained grade over a 50 m+ window.`,'DEM');
+    if(gainFt>=3000)push('climb','warn','MAJOR ASCENT',`Approximately ${Math.round(gainFt).toLocaleString()} ft of climbing is recorded for this route.`,'DEM');
+    if(lossFt>=3000)push('descent','warn','MAJOR DESCENT',`Approximately ${Math.round(lossFt).toLocaleString()} ft of descent is recorded for this route.`,'DEM');
+    const technical=sections.filter(s=>/alpine|demanding_mountain/i.test(String(s.sacScale||''))||/scree|boulder|rock/i.test(String(s.surface||''))||/very_bad|horrible|impassable/i.test(String(s.smoothness||'')));
+    if(technical.length)push('technical','warn','ROUGH / TECHNICAL TRAIL TAGS',`${technical.length} route section${technical.length===1?'':'s'} include alpine, rocky, scree or poor-smoothness tags.`,'OSM');
+    const crossings=sections.filter(s=>/^(yes|stepping_stones)$/i.test(String(s.ford||''))||String(s.highway||'').toLowerCase()==='ford'||(/stream|river/i.test(String(s.waterway||''))&&!/yes/i.test(String(s.bridge||''))));
+    if(crossings.length)push('water','warn','TAGGED WATER CROSSING',`${crossings.length} route section${crossings.length===1?'':'s'} indicate a ford or unbridged water crossing. Verify current conditions.`,'OSM');
+    const cliffs=sections.filter(s=>/cliff/i.test(String(s.natural||''))||/cliff|falling_rocks/i.test(String(s.hazard||'')));
+    if(cliffs.length)push('cliff','high','CLIFF / FALLING-ROCK TAG',`${cliffs.length} section${cliffs.length===1?'':'s'} carry an explicit cliff or falling-rock tag.`,'OSM');
+    const poorVis=sections.filter(s=>/^(bad|horrible|no|intermediate)$/i.test(String(s.trailVisibility||'')));
+    if(poorVis.length)push('visibility','watch','POOR TRAIL VISIBILITY TAGS',`${poorVis.length} section${poorVis.length===1?'':'s'} have reduced trail-visibility metadata.`,'OSM');
+    const bail=(Array.isArray(savedWaypoints)?savedWaypoints:[]).filter(w=>validPoint(w)&&/BASE|JUNCTION|CAMP|BAILOUT|TRAILHEAD/i.test(String(w.type||'')+' '+String(w.name||'')));
+    if(distanceMi>=8&&bail.length<2)push('bailout',distanceMi>=12&&bail.length===0?'high':'warn','LIMITED SAVED BAILOUT REFERENCES',`Route is ${distanceMi.toFixed(1)} mi with ${bail.length} saved base/junction/camp/bailout reference${bail.length===1?'':'s'}.`,'LOCAL WAYPOINTS');
+    if(crossings.length&&grades.down<=-15)push('trap','watch','TERRAIN-TRAP SCREENING NEEDED','A steep sustained descent and a tagged water crossing occur on this route. Inspect topo/drainage before travel; FIELD/OS cannot confirm a terrain trap from these data alone.','DEM + OSM');
+    const taggedM=sections.filter(s=>s.surface||s.smoothness||s.sacScale||s.trailVisibility||s.ford||s.bridge||s.hazard).reduce((sum,s)=>sum+(Number(s.distanceM)||0),0),allM=sections.reduce((sum,s)=>sum+(Number(s.distanceM)||0),0);
+    const metadataPct=Number(plan.trailIntelligence?.metadataCoveragePct)|| (allM?taggedM/allM*100:0),elevationReady=profile.length>=2;
+    let confidence=(elevationReady?45:0)+(sections.length?25:0)+Math.min(25,metadataPct*.25)+(bail.length?5:0);confidence=Math.max(0,Math.min(100,confidence));
+    if(!elevationReady)push('data-elevation','info','ELEVATION RISK DATA UNAVAILABLE','No usable DEM profile is stored; steep-grade screening is unavailable.','DATA GAP');
+    if(!sections.length)push('data-osm','info','TRAIL-TAG RISK DATA UNAVAILABLE','No snapped OSM trail sections are stored; crossing/technical-tag screening is unavailable.','DATA GAP');
+    if(!cliffs.length)push('cliff-note','info','CLIFF CHECK LIMITED','No explicit cliff tag was found on routed ways. Absence of a tag does not mean cliffs are absent.','LIMITATION');
+    if(!flags.length)push('none','info','NO AUTOMATED FLAGS','No supported risk thresholds were triggered. This is not a declaration that terrain is safe.','SCREENING ONLY');
+    flags.sort((a,b)=>(riskSeverityRank[b.severity]||0)-(riskSeverityRank[a.severity]||0));
+    return {generatedAt:new Date().toISOString(),distanceMi,gainFt,lossFt,grades,metadataPct,confidence,flags};
+  }
+  function renderTerrainRisk(result=analyzeTerrainRisk()){
+    const list=document.getElementById('terrainRiskList'),status=document.getElementById('terrainRiskStatus'),summary=document.getElementById('terrainRiskSummary'),conf=document.getElementById('terrainRiskConfidence');
+    if(!list)return result;
+    const actionable=result.flags.filter(f=>f.severity!=='info'),high=actionable.filter(f=>f.severity==='high').length,warn=actionable.filter(f=>f.severity==='warn').length;
+    if(status)status.textContent=!result.distanceMi?'WAITING FOR ROUTE':high?`${high} HIGH FLAG${high===1?'':'S'}`:warn?`${warn} WARNING${warn===1?'':'S'}`:'SCREENED';
+    if(summary)summary.textContent=!result.distanceMi?'NO ROUTE ANALYSIS YET':`${result.distanceMi.toFixed(2)} MI // MAX SUSTAINED ${result.grades.abs.toFixed(0)}% // ${actionable.length} ACTIONABLE FLAG${actionable.length===1?'':'S'}`;
+    list.innerHTML=result.flags.map(f=>`<div class="terrain-risk-item risk-${f.severity}"><span>${esc(f.severity.toUpperCase())}</span><b>${esc(f.title)}</b><p>${esc(f.detail)}</p><small>${esc(f.evidence)}</small></div>`).join('');
+    if(conf)conf.textContent=`DATA CONFIDENCE // ${Math.round(result.confidence)}% // OSM METADATA ${Math.round(result.metadataPct)}%`;
+    return result;
+  }
+  document.addEventListener('fieldos:routechange',()=>setTimeout(()=>renderTerrainRisk(),0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')renderTerrainRisk()});
+  setTimeout(()=>renderTerrainRisk(),100);
+  window.FIELD_TERRAIN_RISK={analyze:analyzeTerrainRisk,render:renderTerrainRisk,maxSustainedGrades};
+
   // Feature 02 — contextual "What Matters Now" home priority.
   const contextState={pressure:[]};
   function daylightMinutes(){

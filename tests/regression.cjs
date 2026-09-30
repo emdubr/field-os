@@ -49,6 +49,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'route');assert.match(d.getElementById('priorityTitle').textContent,/ROUTE DEVIATION/);
  devBanner.textContent='ON ROUTE';devBanner.className='deviation-banner good-banner';w.FIELD_CONTEXT.refresh();
  console.log('PASS feature 02 What Matters Now reprioritizes GNSS, battery, and route hazards with one-tap navigation');
+ const syntheticRisk=w.FIELD_TERRAIN_RISK.analyze({
+   points:[{lat:44,lon:-73},{lat:44.01,lon:-73}],distanceMiles:10,elevationGainFt:3200,elevationLossFt:3400,
+   elevationProfile:[{distanceM:0,elevationFt:500},{distanceM:100,elevationFt:620},{distanceM:200,elevationFt:500}],
+   trailSections:[{label:'Test Trail',distanceM:1000,surface:'scree',sacScale:'alpine_hiking',ford:'yes',bridge:null,trailVisibility:'bad'}],
+   trailIntelligence:{metadataCoveragePct:80}
+ },[]);
+ assert.ok(syntheticRisk.flags.some(x=>x.id==='steep'));assert.ok(syntheticRisk.flags.some(x=>x.id==='technical'));assert.ok(syntheticRisk.flags.some(x=>x.id==='water'));assert.ok(syntheticRisk.flags.some(x=>x.id==='bailout'));
+ w.FIELD_TERRAIN_RISK.render(syntheticRisk);assert.match(d.getElementById('terrainRiskSummary').textContent,/ACTIONABLE FLAG/);
+ console.log('PASS feature 03 Terrain-Risk Analyzer flags sustained grade, technical tags, water crossings, major vertical, and bailout gaps');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
