@@ -87,7 +87,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.27',
+      'BUILD: v3.28',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -998,14 +998,14 @@
     return (Array.isArray(points)?points:[]).reduce((sum,p,i,arr)=>i?sum+miles(arr[i-1],p):0,0);
   }
 
-  function samplePolyline(points,maxSamples=80){
+  function samplePolyline(points,maxSamples=140){
     const pts=(Array.isArray(points)?points:[]).filter(valid);
     if(pts.length<2)return pts;
     const seg=[],cum=[0];let total=0;
     for(let i=1;i<pts.length;i++){
       const d=meters(pts[i-1],pts[i]);seg.push(d);total+=d;cum.push(total);
     }
-    const count=Math.min(maxSamples,Math.max(2,Math.ceil(total/120)+1));
+    const count=Math.min(maxSamples,Math.max(2,Math.ceil(total/75)+1));
     const out=[];let si=0;
     for(let k=0;k<count;k++){
       const target=total*(k/(count-1));
@@ -1017,7 +1017,7 @@
   }
 
   async function fetchElevationProfile(points,signal){
-    const samples=samplePolyline(points,80);
+    const samples=samplePolyline(points,140);
     if(samples.length<2)return null;
     const lat=samples.map(p=>p.lat.toFixed(6)).join(',');
     const lon=samples.map(p=>p.lon.toFixed(6)).join(',');
@@ -1067,6 +1067,17 @@
     return a.elevationFt+(b.elevationFt-a.elevationFt)*t;
   }
 
+  function slopeClass(grade){
+    const g=Math.abs(Number(grade)||0);
+    if(g>=15)return {key:'hard',label:'HARD',rank:2};
+    if(g>=8)return {key:'medium',label:'MEDIUM',rank:1};
+    return {key:'easy',label:g<3?'FLAT':'EASY',rank:0};
+  }
+  function sampleGrade(a,b){
+    const runFt=Math.max(1,(b.distanceM-a.distanceM)*3.28084);
+    return (b.elevationFt-a.elevationFt)/runFt*100;
+  }
+
   function elevationDetail(profile,distMi){
     const samples=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
     if(samples.length<2)return null;
@@ -1090,29 +1101,40 @@
         if(grade<qDown){qDown=grade;qDownAt=d}
       }
     }
-    const binMi=distMi<=4?.5:distMi<=10?1:distMi<=20?2:5;
+    const binMi=distMi<=3?.25:distMi<=8?.5:distMi<=15?1:distMi<=30?2:5;
     const binM=binMi*1609.344,bins=[];
     for(let start=0;start<totalM-1;start+=binM){
       const end=Math.min(totalM,start+binM);
       const startFtBin=profileElevationAt(samples,start),endFtBin=profileElevationAt(samples,end);
-      let gain=0,loss=0,prev=startFtBin;
-      const inside=samples.filter(x=>x.distanceM>start&&x.distanceM<end);
-      for(const p of [...inside,{distanceM:end,elevationFt:endFtBin}]){
-        const de=p.elevationFt-prev;
+      let gain=0,loss=0,prev=startFtBin,maxLocalGrade=0,maxUpGrade=0,maxDownGrade=0;
+      const segmentSamples=[{distanceM:start,elevationFt:startFtBin},...samples.filter(x=>x.distanceM>start&&x.distanceM<end),{distanceM:end,elevationFt:endFtBin}];
+      for(let j=1;j<segmentSamples.length;j++){
+        const p=segmentSamples[j],prior=segmentSamples[j-1],de=p.elevationFt-prev;
         if(de>5)gain+=de;else if(de<-5)loss+=-de;
+        const local=sampleGrade(prior,p);
+        maxLocalGrade=Math.max(maxLocalGrade,Math.abs(local));
+        maxUpGrade=Math.max(maxUpGrade,local);
+        maxDownGrade=Math.min(maxDownGrade,local);
         prev=p.elevationFt;
       }
-      const net=endFtBin-startFtBin,runFt=Math.max(1,(end-start)*3.28084);
+      const net=endFtBin-startFtBin,runFt=Math.max(1,(end-start)*3.28084),avgGrade=net/runFt*100;
+      const difficulty=slopeClass(maxLocalGrade);
       bins.push({
         startMi:start/1609.344,endMi:end/1609.344,startFt:startFtBin,endFt:endFtBin,
-        gainFt:gain,lossFt:loss,netFt:net,avgGrade:net/runFt*100
+        gainFt:gain,lossFt:loss,netFt:net,avgGrade,maxLocalGrade,maxUpGrade,maxDownGrade,difficulty
       });
+    }
+    const exposure={easyMi:0,mediumMi:0,hardMi:0};
+    for(let i=1;i<samples.length;i++){
+      const mi=(samples[i].distanceM-samples[i-1].distanceM)/1609.344;
+      const cls=slopeClass(sampleGrade(samples[i-1],samples[i])).key;
+      exposure[cls+'Mi']+=mi;
     }
     return {
       startFt,endFt,netFt:endFt-startFt,highFt:high.elevationFt,highMi:high.distanceM/1609.344,
       lowFt:low.elevationFt,lowMi:low.distanceM/1609.344,maxUp,maxDown,
       quarterUp:Number.isFinite(qUp)?qUp:null,quarterDown:Number.isFinite(qDown)?qDown:null,
-      quarterUpMi:qUpAt/1609.344,quarterDownMi:qDownAt/1609.344,binMi,bins
+      quarterUpMi:qUpAt/1609.344,quarterDownMi:qDownAt/1609.344,binMi,bins,exposure
     };
   }
 
@@ -1120,8 +1142,8 @@
     const detail=elevationDetail(profile,distMi);
     const set=(id,val)=>{const el=$(id);if(el)el.textContent=val};
     if(!detail){
-      ['elevStart','elevFinish','elevHigh','elevLow','elevNet','elevMaxUp','elevMaxDown','elevQuarterUp','elevQuarterDown'].forEach(id=>set(id,'---'));
-      const body=$('elevationSegmentRows');if(body)body.innerHTML='<tr><td colspan="7">PLOT ROUTE TO CALCULATE ELEVATION BREAKDOWN</td></tr>';
+      ['elevStart','elevFinish','elevHigh','elevLow','elevNet','elevMaxUp','elevMaxDown','elevQuarterUp','elevQuarterDown','elevEasyMiles','elevMediumMiles','elevHardMiles'].forEach(id=>set(id,'---'));
+      const body=$('elevationSegmentRows');if(body)body.innerHTML='<tr><td colspan="10">PLOT ROUTE TO CALCULATE ELEVATION BREAKDOWN</td></tr>';
       return;
     }
     const ft=v=>`${Math.round(v).toLocaleString()} ft`;
@@ -1133,9 +1155,12 @@
     set('elevNet',signed(detail.netFt));set('elevMaxUp',grade(detail.maxUp));set('elevMaxDown',grade(detail.maxDown));
     set('elevQuarterUp',detail.quarterUp==null?'ROUTE < 0.25 MI':`${grade(detail.quarterUp)} @ ${detail.quarterUpMi.toFixed(2)} mi`);
     set('elevQuarterDown',detail.quarterDown==null?'ROUTE < 0.25 MI':`${grade(detail.quarterDown)} @ ${detail.quarterDownMi.toFixed(2)} mi`);
-    set('elevationBandSize',`${detail.binMi.toFixed(detail.binMi<1?1:0)} MI BANDS`);
+    set('elevEasyMiles',`${detail.exposure.easyMi.toFixed(2)} mi`);
+    set('elevMediumMiles',`${detail.exposure.mediumMi.toFixed(2)} mi`);
+    set('elevHardMiles',`${detail.exposure.hardMi.toFixed(2)} mi`);
+    set('elevationBandSize',`${detail.binMi.toFixed(detail.binMi<1?2:0)} MI BANDS // CLASS BY MAX LOCAL GRADE`);
     const body=$('elevationSegmentRows');
-    if(body)body.innerHTML=detail.bins.map(b=>`<tr>
+    if(body)body.innerHTML=detail.bins.map(b=>`<tr class="slope-${b.difficulty.key}">
       <td>${b.startMi.toFixed(2)}–${b.endMi.toFixed(2)}</td>
       <td>${Math.round(b.startFt).toLocaleString()}</td>
       <td>${Math.round(b.endFt).toLocaleString()}</td>
@@ -1143,6 +1168,9 @@
       <td>−${Math.round(b.lossFt).toLocaleString()}</td>
       <td>${signed(b.netFt)}</td>
       <td>${grade(b.avgGrade)}</td>
+      <td>${grade(b.maxUpGrade)}</td>
+      <td>${grade(b.maxDownGrade)}</td>
+      <td><b class="slope-badge slope-${b.difficulty.key}">${b.difficulty.label} · ${b.maxLocalGrade.toFixed(1)}%</b></td>
     </tr>`).join('');
   }
 
@@ -1172,8 +1200,17 @@
     ctx.beginPath();xy.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
     ctx.lineTo(xy.at(-1).x,h-bottom);ctx.lineTo(xy[0].x,h-bottom);ctx.closePath();
     ctx.globalAlpha=.12;ctx.fillStyle=warn;ctx.fill();ctx.globalAlpha=1;
-    ctx.strokeStyle=warn;ctx.lineWidth=4;ctx.beginPath();
+    // Base profile stays neutral; only medium/hard slope segments receive warning colors.
+    ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();
     xy.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+    for(let i=1;i<xy.length;i++){
+      const gradeValue=sampleGrade(profile.samples[i-1],profile.samples[i]);
+      const cls=slopeClass(gradeValue);
+      if(cls.key==='easy')continue;
+      ctx.strokeStyle=cls.key==='hard'?'#e5484d':'#f28c28';
+      ctx.lineWidth=cls.key==='hard'?6:5;
+      ctx.beginPath();ctx.moveTo(xy[i-1].x,xy[i-1].y);ctx.lineTo(xy[i].x,xy[i].y);ctx.stroke();
+    }
     ctx.fillStyle=fg;ctx.font='18px monospace';
     ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,left,22);
     renderElevationBreakdown(profile,distMi);
