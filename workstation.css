@@ -2998,3 +2998,34 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
     user-select:none;
   }
 }
+
+
+@media(max-width:600px){
+  #nav .nav-live-strip{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    min-height:0!important;
+    gap:1px!important;
+    padding:4px!important;
+    font-size:8.5px!important;
+    line-height:1.25!important;
+  }
+  #nav .nav-live-strip span{
+    min-height:34px!important;
+    padding:6px!important;
+    align-items:center!important;
+  }
+  #nav .nav-live-strip b{
+    font-size:10px!important;
+  }
+  #nav #coordDD,
+  #nav #coordDMS{
+    font-size:10px!important;
+    line-height:1.35!important;
+  }
+  #nav .nav-primary-compass .big-readout{
+    font-size:24px!important;
+  }
+  #nav .nav-primary-compass .big-readout small{
+    font-size:11px!important;
+  }
+}
