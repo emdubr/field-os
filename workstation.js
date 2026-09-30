@@ -92,7 +92,11 @@
   };
   // Use the existing controls and their original DOM nodes, preserving their listeners.
   for(const view of views.filter(v=>v.id!=='home')){
-    const head=view.querySelector('.view-head');const grid=document.createElement('div');grid.className='module-grid';
+    const head=view.querySelector('.view-head');
+    // Minimal/specialized modes (for example Breadcrumb Nav) intentionally
+    // omit the workstation header and must keep their stripped layout intact.
+    if(!head)continue;
+    const grid=document.createElement('div');grid.className='module-grid';
     [...view.children].filter(c=>c!==head).forEach(child=>{
       if(child.matches('.grid.two-col')&&!child.id){[...child.children].forEach(c=>grid.append(c));child.remove();}
       else grid.append(child);
