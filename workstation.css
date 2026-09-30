@@ -2987,3 +2987,14 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
     min-height:270px!important;
   }
 }
+
+
+@media(max-width:1000px){
+  .field-real-map,
+  .route-planner-real-map{
+    touch-action:none!important;
+    overscroll-behavior:contain!important;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+}
