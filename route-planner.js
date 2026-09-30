@@ -375,14 +375,16 @@
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
       maxZoom:19,
       attribution:'© OpenStreetMap contributors'
-    }).addTo(plannerMap);
+    });
+    if(navigator.onLine!==false)osm.addTo(plannerMap);
 
     const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
       subdomains:'abc',
       maxZoom:17,
       opacity:.93,
       attribution:'OpenTopoMap'
-    }).addTo(plannerMap);
+    });
+    if(navigator.onLine!==false)topo.addTo(plannerMap);
 
     if(navigator.onLine===false&&window.FIELD_OFFLINE_MAPS){
       Promise.resolve(window.FIELD_OFFLINE_MAPS.leafletLayer()).then(result=>{
@@ -409,7 +411,7 @@
       attribution:'Waymarked Trails'
     });
     hiking.on('tileerror',()=>{});
-    hiking.addTo(plannerMap);
+    if(navigator.onLine!==false)hiking.addTo(plannerMap);
 
     // Keep route geometry above all raster/trail tiles like Gaia GPS.
     const routePane=plannerMap.createPane('fieldRoutePane');
