@@ -1035,12 +1035,27 @@ async function refreshFieldMapPackUI(){
     try{const e=await navigator.storage.estimate(),st=document.getElementById('offlineMapStorage');if(st)st.textContent=`${fmtBytes(e.usage||0)} / ${fmtBytes(e.quota||0)}`;}catch{}
   }
 }
+function installContinuousWheelZoom(map){
+  if(!map||map._fieldContinuousWheel)return;
+  map._fieldContinuousWheel=true;
+  try{map.scrollWheelZoom.disable()}catch{}
+  const el=map.getContainer();let target=map.getZoom(),raf=0,anchor=null;
+  const tick=()=>{raf=0;const z=map.getZoom(),d=target-z;if(Math.abs(d)<.003){if(Math.abs(d)>0)map.setZoom(target,{animate:false});return;}map.setZoomAround(anchor||map.getCenter(),z+d*.34,{animate:false});raf=requestAnimationFrame(tick)};
+  el.addEventListener('wheel',e=>{
+    if(e.ctrlKey&&Math.abs(e.deltaY)<1)return;
+    e.preventDefault();anchor=map.mouseEventToLatLng(e);const unit=e.deltaMode===1?16:e.deltaMode===2?120:1;
+    const dy=Math.max(-240,Math.min(240,e.deltaY*unit));target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/520));
+    if(!raf)raf=requestAnimationFrame(tick);
+  },{passive:false});
+  map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
+}
 function ensureFieldMap(id,fallbackId,labelId){
   if(fieldMaps.has(id))return fieldMaps.get(id);
   const el=document.getElementById(id),fallback=document.getElementById(fallbackId),label=document.getElementById(labelId);
   if(!el||typeof L==='undefined')return null;
   const map=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true,minZoom:2,maxZoom:19,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,zoomSnap:.125,zoomDelta:.25,wheelDebounceTime:12,wheelPxPerZoomLevel:180});
   map.attributionControl.setPrefix(false);
+  installContinuousWheelZoom(map);
   const overlay=L.layerGroup().addTo(map);
   const state={id,el,fallback,label,map,overlay,base:null,trails:null,baseKind:'',attr:'',centered:false,tileErrors:0};
   fieldMaps.set(id,state);
