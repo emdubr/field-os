@@ -88,7 +88,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.35',
+      'BUILD: v3.36',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -531,6 +531,52 @@
       }
       return false;
     }
+  }
+
+  function bindElevationProfileHover(){
+    const canvas=$('routeProfile'),tip=$('routeProfileHover'),line=$('routeProfileHoverLine');
+    if(!canvas||canvas.dataset.hoverBound==='1')return;
+    canvas.dataset.hoverBound='1';
+
+    const clear=()=>{
+      tip?.classList.remove('active');
+      line?.classList.remove('active');
+    };
+    const update=e=>{
+      const profile=activeElevationProfile,samples=profile?.samples||[];
+      if(samples.length<2||!tip)return;
+
+      const rect=canvas.getBoundingClientRect();
+      const left=(52/canvas.width)*rect.width;
+      const right=(14/canvas.width)*rect.width;
+      const plotW=Math.max(1,rect.width-left-right);
+      const clientX=Number.isFinite(e.clientX)?e.clientX:(e.touches?.[0]?.clientX??rect.left+left);
+      const x=clamp(clientX-rect.left,left,rect.width-right);
+      const ratio=clamp((x-left)/plotW,0,1);
+      const totalM=samples.at(-1)?.distanceM||0;
+      const target=ratio*totalM;
+
+      let idx=0,best=Infinity;
+      for(let n=0;n<samples.length;n++){
+        const d=Math.abs((samples[n].distanceM||0)-target);
+        if(d<best){best=d;idx=n}
+      }
+      const p=samples[idx],a=samples[Math.max(0,idx-1)],b=samples[Math.min(samples.length-1,idx+1)];
+      const gradeValue=a===b?0:sampleGrade(a,b);
+      const cls=slopeClass(gradeValue);
+      const done=(p.distanceM||0)/1609.344;
+      const remaining=Math.max(0,(totalM-(p.distanceM||0))/1609.344);
+
+      tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(p.elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
+      tip.className=`route-profile-hover slope-${cls.key} active`;
+      tip.style.left=`${x}px`;
+      if(line){line.classList.add('active');line.style.left=`${x}px`}
+    };
+
+    canvas.addEventListener('pointermove',update,{passive:true});
+    canvas.addEventListener('pointerdown',update,{passive:true});
+    canvas.addEventListener('pointerleave',clear);
+    canvas.addEventListener('pointercancel',clear);
   }
 
   function bindControls(){
