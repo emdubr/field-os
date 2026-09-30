@@ -396,12 +396,23 @@ sendDemo?.addEventListener('click', ()=>{
 
 let sosTimer;
 const sos=document.getElementById('meshSos');
-function startSos(){
+function startSos(e){
+  e?.preventDefault?.();
+  clearTimeout(sosTimer);
   sos.textContent='HOLD...';
-  sosTimer=setTimeout(()=>{sos.textContent='MESH SOS ARMED — DEMO'; navigator.vibrate?.([120,80,120]);},1600);
+  sosTimer=setTimeout(()=>{sosTimer=null;sos.textContent='MESH SOS ARMED — DEMO'; navigator.vibrate?.([120,80,120]);},1600);
 }
-function cancelSos(){clearTimeout(sosTimer); if(sos?.textContent==='HOLD...') sos.textContent='HOLD TO ARM MESH SOS';}
-sos?.addEventListener('pointerdown',startSos); sos?.addEventListener('pointerup',cancelSos); sos?.addEventListener('pointerleave',cancelSos);
+function cancelSos(){
+  if(sosTimer){clearTimeout(sosTimer);sosTimer=null}
+  if(sos?.textContent==='HOLD...') sos.textContent='HOLD TO ARM MESH SOS';
+}
+sos?.addEventListener('pointerdown',startSos);
+sos?.addEventListener('pointerup',cancelSos);
+sos?.addEventListener('pointerleave',cancelSos);
+sos?.addEventListener('pointercancel',cancelSos);
+sos?.addEventListener('lostpointercapture',cancelSos);
+window.addEventListener('blur',cancelSos);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelSos()});
 
 document.getElementById('centerBtn')?.addEventListener('click',()=>navigator.vibrate?.(30));
 
@@ -744,9 +755,12 @@ document.getElementById('saveCurrentAsBase')?.addEventListener('click',()=>{cons
 function fitReferenceConsole(){
   const shell=document.querySelector('#home .detail-console'), vp=document.querySelector('#home .console-viewport');
   if(!shell||!vp)return;
-  const landscape=window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
+  // Phones now use the responsive mobile layout in landscape. The old
+  // reference-fit scaled a 1500px desktop console down to ~0.5x on iPhone,
+  // making controls and readouts microscopic.
+  const landscape=window.matchMedia('(orientation: landscape) and (max-height: 600px) and (min-width: 1001px)').matches;
   if(!landscape){shell.style.transform='';shell.style.marginLeft='';vp.style.height='';return;}
-  const baseW=1500, availW=Math.max(280,window.innerWidth-8);
+  const baseW=1500, availW=Math.max(1001,window.innerWidth-8);
   const scale=availW/baseW;
   shell.style.transform=`translateX(-50%) scale(${scale})`;
   const actualH=Math.max(930,shell.scrollHeight);
