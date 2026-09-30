@@ -20,7 +20,19 @@
   const fmtTime=h=>!Number.isFinite(h)||h<0?'—':h<1?Math.round(h*60)+' min':Math.floor(h)+'h '+Math.round((h%1)*60)+'m';
   const weatherCache=()=>window.FIELD_WEATHER?.state?.cache||null;
   const nearestRouteIndex=(pts,pos)=>{if(!validPoint(pos)||!pts.length)return 0;let best=Infinity,idx=0;for(let i=0;i<pts.length;i++){const d=meters(pos,pts[i]);if(d<best){best=d;idx=i}}return idx};
-  const routeProgressFraction=(plan=getPlan(),pos=getPosition())=>{const pts=cleanPoints(plan.points||[]);if(pts.length<2||!validPoint(pos))return 0;const cum=[0];for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+meters(pts[i-1],pts[i]);const idx=nearestRouteIndex(pts,pos);return cum.at(-1)?clamp(cum[idx]/cum.at(-1),0,1):0};
+  const routeProgressFraction=(plan=getPlan(),pos=getPosition())=>{
+    const pts=cleanPoints(plan.points||[]);if(pts.length<2||!validPoint(pos))return 0;
+    const cum=[0];for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+meters(pts[i-1],pts[i]);
+    const total=cum.at(-1)||0;if(!total)return 0;
+    let bestDist=Infinity,bestAlong=0;
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i],b=pts[i+1],latScale=111320,lonScale=111320*Math.cos(rad((a.lat+b.lat+pos.lat)/3));
+      const abx=(b.lon-a.lon)*lonScale,aby=(b.lat-a.lat)*latScale,apx=(pos.lon-a.lon)*lonScale,apy=(pos.lat-a.lat)*latScale,len2=abx*abx+aby*aby;
+      const t=len2?clamp((apx*abx+apy*aby)/len2,0,1):0,dx=apx-t*abx,dy=apy-t*aby,d=Math.hypot(dx,dy);
+      if(d<bestDist){bestDist=d;bestAlong=cum[i]+t*(cum[i+1]-cum[i])}
+    }
+    return clamp(bestAlong/total,0,1);
+  };
 
   // Feature 19 — Barometric Storm Detection.
   const pressureState={samples:(read('pressure-history',[])||[]).filter(x=>Number.isFinite(x?.v)&&Number.isFinite(x?.t)).slice(-720),lastAlert:null};
