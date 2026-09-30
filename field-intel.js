@@ -76,6 +76,62 @@
 
 
 
+
+  // Feature 09 — Mesh Network Map / topology cache.
+  const meshState={nodes:[]};
+  function normalizeMeshNode(raw={}){
+    const id=String(raw.id??raw.num??raw.nodeId??raw.name??'').trim();if(!id)return null;
+    const lat=Number(raw.lat??raw.latitude),lon=Number(raw.lon??raw.longitude),battery=Number(raw.battery??raw.batteryPercent),rssi=Number(raw.rssi),snr=Number(raw.snr),hops=Number(raw.hops??raw.hopCount);
+    const lastRaw=raw.lastHeard??raw.lastSeen??raw.time??Date.now(),lastHeard=typeof lastRaw==='number'?(lastRaw<1e12?lastRaw*1000:lastRaw):Date.parse(lastRaw)||Date.now();
+    return {id,name:String(raw.name??raw.shortName??id),role:String(raw.role??'CLIENT'),lat:Number.isFinite(lat)?lat:null,lon:Number.isFinite(lon)?lon:null,battery:Number.isFinite(battery)?battery:null,rssi:Number.isFinite(rssi)?rssi:null,snr:Number.isFinite(snr)?snr:null,hops:Number.isFinite(hops)?hops:null,lastHeard,via:raw.via==null?null:String(raw.via),source:String(raw.source||'MESH')};
+  }
+  function mergeMeshNodes(list=[]){
+    const map=new Map(meshState.nodes.map(n=>[n.id,n]));
+    for(const raw of Array.isArray(list)?list:[]){const n=normalizeMeshNode(raw);if(!n)continue;map.set(n.id,{...(map.get(n.id)||{}),...n})}
+    meshState.nodes=[...map.values()].sort((a,b)=>b.lastHeard-a.lastHeard).slice(0,250);
+    write('mesh-roster',{savedAt:new Date().toISOString(),nodes:meshState.nodes});
+    return meshState.nodes;
+  }
+  function meshAgeLabel(ms){
+    const s=Math.max(0,Math.floor((Date.now()-ms)/1000));if(s<60)return `${s}s`;if(s<3600)return `${Math.floor(s/60)}m`;if(s<86400)return `${Math.floor(s/3600)}h`;return `${Math.floor(s/86400)}d`;
+  }
+  function meshQuality(node){
+    if(Date.now()-node.lastHeard>30*60*1000)return 'bad';
+    if(Number.isFinite(node.rssi)&&node.rssi<-110)return 'bad';
+    if(Number.isFinite(node.rssi)&&node.rssi<-95)return 'weak';
+    if(Number.isFinite(node.snr)&&node.snr<0)return 'weak';
+    return 'good';
+  }
+  function meshPoint(node,origin){
+    if(!validPoint(origin)||!Number.isFinite(node.lat)||!Number.isFinite(node.lon))return null;
+    const dy=(node.lat-origin.lat)*111320,dx=(node.lon-origin.lon)*111320*Math.cos(origin.lat*Math.PI/180);
+    return {x:dx,y:dy,distanceM:Math.hypot(dx,dy)};
+  }
+  function renderMeshNetwork(){
+    const svg=document.getElementById('meshNetworkMap'),roster=document.getElementById('meshNodeRoster'),state=document.getElementById('meshNetworkState'),fresh=document.getElementById('meshNetworkFreshness'),cov=document.getElementById('meshNetworkCoverage');if(!svg||!roster)return meshState.nodes;
+    const origin=getPosition(),nodes=meshState.nodes.slice(0,40),positioned=nodes.map(n=>({n,p:meshPoint(n,origin)})).filter(x=>x.p),maxD=Math.max(300,...positioned.map(x=>x.p.distanceM)),scale=165/maxD,cx=400,cy=210;
+    const byId=new Map(nodes.map(n=>[n.id,n])),parts=[];
+    parts.push('<g class="mesh-grid"><circle cx="400" cy="210" r="55" fill="none" stroke="currentColor" opacity=".08"/><circle cx="400" cy="210" r="110" fill="none" stroke="currentColor" opacity=".08"/><circle cx="400" cy="210" r="165" fill="none" stroke="currentColor" opacity=".08"/><path d="M400 20V400M20 210H780" stroke="currentColor" opacity=".06"/></g>');
+    const coords=new Map();
+    for(const {n,p} of positioned){coords.set(n.id,{x:cx+p.x*scale,y:cy-p.y*scale})}
+    for(const {n} of positioned){
+      const a=coords.get(n.id),parent=n.via&&coords.get(n.via),q=meshQuality(n),from=parent||{x:cx,y:cy};
+      parts.push(`<line x1="${from.x.toFixed(1)}" y1="${from.y.toFixed(1)}" x2="${a.x.toFixed(1)}" y2="${a.y.toFixed(1)}" class="mesh-link ${q}"><title>${esc(n.name)} / ${Number.isFinite(n.hops)?n.hops+' hops':'link'}</title></line>`);
+    }
+    parts.push(`<g class="mesh-you"><circle cx="${cx}" cy="${cy}" r="9"/><text x="${cx+13}" y="${cy-2}">YOU</text><text class="sub" x="${cx+13}" y="${cy+11}">${esc(origin.source||'POSITION')}</text></g>`);
+    for(const {n} of positioned){const a=coords.get(n.id),q=meshQuality(n);parts.push(`<g class="mesh-node ${q}"><circle cx="${a.x.toFixed(1)}" cy="${a.y.toFixed(1)}" r="7"/><text x="${(a.x+11).toFixed(1)}" y="${(a.y-2).toFixed(1)}">${esc(n.name)}</text><text class="sub" x="${(a.x+11).toFixed(1)}" y="${(a.y+10).toFixed(1)}">${Number.isFinite(n.rssi)?Math.round(n.rssi)+'dBm':'RSSI —'} · ${meshAgeLabel(n.lastHeard)}</text></g>`)}
+    svg.innerHTML=parts.join('');
+    roster.innerHTML=nodes.length?nodes.map(n=>{const q=meshQuality(n),p=meshPoint(n,origin);return `<div class="mesh-node-row ${q}"><b>${esc(n.name)} <small>${esc(n.role)}</small></b><span>${meshAgeLabel(n.lastHeard)} AGO</span><small>ID ${esc(n.id)} // ${Number.isFinite(n.rssi)?'RSSI '+Math.round(n.rssi)+' dBm':'RSSI —'} // ${Number.isFinite(n.snr)?'SNR '+n.snr.toFixed(1)+' dB':'SNR —'} // ${Number.isFinite(n.battery)?'BAT '+Math.round(n.battery)+'%':'BAT —'} // ${Number.isFinite(n.hops)?n.hops+' HOP'+(n.hops===1?'':'S'):'HOPS —'}${p?' // '+(p.distanceM/1609.344).toFixed(2)+' mi':''}${n.via?' // VIA '+esc(n.via):''}</small></div>`}).join(''):'<p class="muted">Waiting for Meshtastic node telemetry.</p>';
+    if(state)state.textContent=`${nodes.length} NODE${nodes.length===1?'':'S'} // ${positioned.length} POSITIONED`;
+    const cache=read('mesh-roster',null);if(fresh)fresh.textContent=`CACHE // ${cache?.savedAt?new Date(cache.savedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'EMPTY'}`;if(cov)cov.textContent=`POSITIONED ${positioned.length} / ${nodes.length}`;
+    return nodes;
+  }
+  function ingestMeshNodes(list=[]){mergeMeshNodes(list);renderMeshNetwork();document.dispatchEvent(new CustomEvent('fieldos:meshroster',{detail:{count:meshState.nodes.length}}));return meshState.nodes}
+  const savedMesh=read('mesh-roster',null);if(Array.isArray(savedMesh?.nodes))meshState.nodes=savedMesh.nodes.map(normalizeMeshNode).filter(Boolean);
+  document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},nodes=Array.isArray(d.mesh?.nodeList)?d.mesh.nodeList:Array.isArray(d.mesh?.nodes)?d.mesh.nodes:Array.isArray(d.nodes)?d.nodes:null;if(nodes)ingestMeshNodes(nodes)});
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()},5000);setTimeout(renderMeshNetwork,220);
+  window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
+
   // Feature 08 — Position Confidence.
   function numericFromText(id){
     const raw=text(id),m=raw.match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):null;

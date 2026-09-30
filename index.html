@@ -268,6 +268,17 @@
           <div class="message"><b>RELAY-A</b><span>00:12</span><p>Telemetry nominal. Battery 82%.</p></div>
           <div class="message unread"><b>NODE-05</b><span>00:04</span><p>Weather moving in from west.</p></div>
         </article>
+        <article class="panel mesh-network-panel">
+          <div class="panel-title"><span>MESH NETWORK MAP</span><span class="tiny" id="meshNetworkState">NO NODE DATA</span></div>
+          <div class="mesh-network-layout">
+            <div class="mesh-network-map-wrap">
+              <svg id="meshNetworkMap" class="mesh-network-map" viewBox="0 0 800 420" role="img" aria-label="Schematic Meshtastic node network map"></svg>
+              <div class="mesh-network-legend"><span>● YOU</span><span>○ NODE</span><span>— LINK / HOPS</span></div>
+            </div>
+            <div id="meshNodeRoster" class="mesh-node-roster"><p class="muted">Waiting for Meshtastic node telemetry.</p></div>
+          </div>
+          <div class="mesh-network-foot"><span id="meshNetworkFreshness">CACHE // EMPTY</span><span id="meshNetworkCoverage">POSITIONED 0 / 0</span></div>
+        </article>
         <article class="panel compose">
           <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
           <label for="messageInput">MESSAGE</label>

@@ -91,6 +91,13 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('mobileFixState').textContent='STALE';w.FIELD_DR.arm();w.FIELD_DR.state.active=true;w.FIELD_DR.state.uncertaintyM=420;conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'estimated');assert.equal(conf.authority,'DEAD RECKONING');assert.ok(conf.score<70);
  w.FIELD_DR.reset();d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';
  console.log('PASS feature 08 Position Confidence distinguishes trusted, degraded, stale, and DR-estimated authority with uncertainty visualization');
+ const nowMesh=Date.now();w.FIELD_MESH.ingest([
+   {id:'ridge-1',name:'RIDGE-1',role:'ROUTER',lat:44.48,lon:-73.21,rssi:-78,snr:9,battery:81,hops:1,lastHeard:nowMesh},
+   {id:'valley-2',name:'VALLEY-2',role:'CLIENT',lat:44.46,lon:-73.23,rssi:-104,snr:-1,battery:52,hops:2,lastHeard:nowMesh-120000,via:'ridge-1'}
+ ]);
+ assert.equal(w.FIELD_MESH.state.nodes.length,2);assert.equal(w.FIELD_MESH.quality(w.FIELD_MESH.state.nodes.find(n=>n.id==='ridge-1')),'good');assert.equal(w.FIELD_MESH.quality(w.FIELD_MESH.state.nodes.find(n=>n.id==='valley-2')),'weak');
+ w.FIELD_MESH.render();assert.match(d.getElementById('meshNetworkState').textContent,/2 NODES/);assert.equal(d.querySelectorAll('#meshNodeRoster .mesh-node-row').length,2);assert.ok(d.querySelectorAll('#meshNetworkMap .mesh-link').length>=2);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-mesh-roster')).nodes.length===2);
+ console.log('PASS feature 09 Mesh Network Map ingests, caches, positions, quality-rates, and renders Meshtastic nodes with topology metadata');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
