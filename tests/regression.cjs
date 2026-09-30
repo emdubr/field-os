@@ -527,7 +527,7 @@ console.log('PASS v3.61 route planner and ETA reclaim full desktop width without
 
 assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
-assert.ok(workstationCss.includes('v3.59 QA/UI hardening'));
+assert.ok(workstationCss.includes('v3.62 QA/UI hardening'));
 assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
 assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
 console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
@@ -570,3 +570,10 @@ console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime b
  console.log('PASS concurrent storage-health requests share one scan and ignore unrelated app caches');
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
+
+assert.ok(workstationCss.includes('v3.62 UI COHERENCE LAYER'));
+assert.ok(workstationCss.includes('body .module-grid>*{grid-column:1!important;min-width:0!important}'));
+assert.ok(workstationCss.includes('height:auto!important'));
+assert.ok(workstationCss.includes('v3.62 chrome cleanup'));
+assert.ok(workstationCss.includes('.status-strip{overflow-x:auto'));
+console.log('PASS v3.62 coherent panel flow, mobile layout, and chrome overflow handling');
