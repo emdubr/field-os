@@ -84,6 +84,34 @@
 
 
 
+
+  // Backfill original Feature 03 — Route Data Confidence Meter.
+  function computeRouteConfidence(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{}){
+    const points=cleanPoints(plan.points||[]),sections=Array.isArray(plan.trailSections)?plan.trailSections:[],profile=Array.isArray(plan.elevationProfile)?plan.elevationProfile:[],mode=String(plan.routingMode||plan.mode||'').toLowerCase(),build=String(plan.routeBuildState||'').toUpperCase();
+    const totalSectionM=sections.reduce((sum,s)=>sum+(Number(s.distanceM)||0),0),namedM=sections.filter(s=>String(s.name||s.ref||'').trim()).reduce((sum,s)=>sum+(Number(s.distanceM)||0),0),metadataPct=Math.max(0,Math.min(100,Number(plan.trailIntelligence?.metadataCoveragePct)||(totalSectionM?sections.filter(s=>s.surface||s.smoothness||s.sacScale||s.trailVisibility||s.name||s.ref).reduce((sum,s)=>sum+(Number(s.distanceM)||0),0)/totalSectionM*100:0))),namedPct=totalSectionM?namedM/totalSectionM*100:0;
+    const factors=[];let score=0;
+    const add=(id,label,pointsValue,max,detail,state='ok')=>{const pts=Math.max(0,Math.min(max,pointsValue));score+=pts;factors.push({id,label,points:pts,max,detail,state})};
+    add('geometry','ROUTE GEOMETRY',points.length>=2?25:0,25,points.length>=2?`${points.length} stored route points`:'No usable route geometry',points.length>=2?'ok':'bad');
+    add('build','BUILD STATE',build==='COMPLETE'?10:build?5:0,10,build||'UNKNOWN',build==='COMPLETE'?'ok':'warn');
+    const snapped=/trail|snap|osm/.test(mode)||sections.length>0;add('routing','TRAIL TOPOLOGY',snapped?15:points.length>=2?5:0,15,snapped?'Snapped/mapped trail topology present':'Direct/off-trail geometry only',snapped?'ok':'warn');
+    add('sections','OSM SECTIONS',sections.length?10:0,10,sections.length?`${sections.length} trail section${sections.length===1?'':'s'} stored`:'No OSM section metadata',sections.length?'ok':'warn');
+    add('metadata','OSM METADATA',metadataPct*.15/100,15,`${Math.round(metadataPct)}% route metadata coverage`,metadataPct>=70?'ok':metadataPct>=35?'warn':'bad');
+    add('elevation','ELEVATION PROFILE',profile.length>=2?15:0,15,profile.length>=2?`${profile.length} DEM samples stored`:'No usable elevation profile',profile.length>=2?'ok':'bad');
+    add('names','NAMED TRAIL COVERAGE',namedPct*.10/100,10,sections.length?`${Math.round(namedPct)}% of routed section distance named/ref'd`:'No named-section data',namedPct>=70?'ok':namedPct>=30?'warn':'bad');
+    score=Math.round(Math.max(0,Math.min(100,score)));
+    const level=score>=85?'high':score>=65?'moderate':score>=45?'limited':'low',label=level==='high'?'HIGH DATA CONFIDENCE':level==='moderate'?'MODERATE DATA CONFIDENCE':level==='limited'?'LIMITED DATA CONFIDENCE':'LOW DATA CONFIDENCE';
+    const gaps=[];if(points.length<2)gaps.push('route geometry missing');if(!snapped)gaps.push('not snapped to mapped trails');if(!sections.length)gaps.push('OSM trail-section metadata missing');if(profile.length<2)gaps.push('elevation profile missing');if(metadataPct<50&&sections.length)gaps.push('sparse trail metadata');if(namedPct<50&&sections.length)gaps.push('large unnamed/ref-less share');
+    const summary=gaps.length?`Main confidence limits: ${gaps.join('; ')}.`:'Geometry, trail topology, OSM metadata, elevation and named-section coverage are all well represented.';
+    return {score,level,label,summary,factors,metadataPct,namedPct,points:points.length,sections:sections.length,elevationSamples:profile.length};
+  }
+  function renderRouteConfidence(result=computeRouteConfidence()){
+    const panel=document.querySelector('.route-confidence-panel'),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v},bar=document.getElementById('routeConfidenceBar'),factors=document.getElementById('routeConfidenceFactors');if(!panel)return result;
+    panel.classList.remove('conf-high','conf-moderate','conf-limited','conf-low');panel.classList.add(`conf-${result.level}`);set('routeConfidenceScore',String(result.score));set('routeConfidenceState',result.points>=2?`${result.level.toUpperCase()} // ${result.score}/100`:'WAITING FOR ROUTE');set('routeConfidenceLabel',result.points>=2?result.label:'NO ROUTE DATA');set('routeConfidenceSummary',result.points>=2?result.summary:'Confidence measures data completeness, not terrain safety or route validity.');if(bar)bar.style.width=`${result.score}%`;
+    if(factors)factors.innerHTML=result.factors.map(f=>`<div class="route-confidence-factor ${f.state}"><b>${esc(f.label)}</b><span>${Math.round(f.points)}/${f.max}</span><small>${esc(f.detail)}</small></div>`).join('');return result;
+  }
+  document.addEventListener('fieldos:routechange',()=>setTimeout(()=>renderRouteConfidence(),0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')renderRouteConfidence()});setTimeout(()=>renderRouteConfidence(),120);
+  window.FIELD_ROUTE_CONFIDENCE={compute:computeRouteConfidence,render:renderRouteConfidence};
+
   // Feature 16 — Separated-Person Recovery.
   const recoveryState={active:false,target:null,frozenAt:0,targetLastHeard:0,breadcrumbs:[],...(read('recovery-active',{})||{})};
   function persistRecovery(){if(recoveryState.active&&recoveryState.target)write('recovery-active',{active:true,target:recoveryState.target,frozenAt:recoveryState.frozenAt,targetLastHeard:recoveryState.targetLastHeard,breadcrumbs:recoveryState.breadcrumbs.slice(-500)});else try{localStorage.removeItem(key('recovery-active'))}catch{}}

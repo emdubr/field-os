@@ -152,6 +152,16 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  w.FIELD_RECOVERY.addBreadcrumb({lat:44.472,lon:-73.212},recoveryNow+60000);const recoveryGuide=w.FIELD_RECOVERY.guidance({lat:44.472,lon:-73.212});assert.ok(recoveryGuide.distanceM>0);assert.ok(Number.isFinite(recoveryGuide.bearing));w.FIELD_RECOVERY.render();assert.ok(d.querySelectorAll('#recoveryRelativeMap .recovery-map-target').length===1);assert.ok(w.FIELD_RECOVERY.state.breadcrumbs.length>=2);
  const frozenStorage=JSON.parse(w.localStorage.getItem('fieldos-v12-recovery-active'));assert.equal(frozenStorage.target.lat,44.48);w.FIELD_RECOVERY.clear();assert.equal(w.localStorage.getItem('fieldos-v12-recovery-active'),null);
  console.log('PASS feature 16 Separated-Person Recovery freezes last-known coordinates, keeps search breadcrumbs, renders group context, and ignores later target movement');
+ const highConfidence=w.FIELD_ROUTE_CONFIDENCE.compute({
+   points:[{lat:44,lon:-73},{lat:44.01,lon:-73}],routingMode:'trail',routeBuildState:'COMPLETE',
+   trailSections:[{name:'Long Trail',distanceM:900,surface:'rock'},{name:'Long Trail',distanceM:100,surface:'wood'}],
+   trailIntelligence:{metadataCoveragePct:100},elevationProfile:[{distanceM:0,elevationFt:500},{distanceM:1000,elevationFt:800}]
+ });
+ assert.ok(highConfidence.score>=85);assert.equal(highConfidence.level,'high');
+ const lowConfidence=w.FIELD_ROUTE_CONFIDENCE.compute({points:[{lat:44,lon:-73},{lat:44.01,lon:-73}],routingMode:'direct',routeBuildState:'COMPLETE',trailSections:[],elevationProfile:[]});
+ assert.ok(lowConfidence.score<65);assert.ok(['limited','low'].includes(lowConfidence.level));w.FIELD_ROUTE_CONFIDENCE.render(lowConfidence);assert.match(d.getElementById('routeConfidenceSummary').textContent,/not snapped|OSM|elevation/i);
+ console.log('PASS original feature 03 Route Confidence Meter scores data completeness and exposes confidence gaps without treating score as safety');
+
 
 
 
