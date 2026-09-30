@@ -44,6 +44,58 @@
   const meters=(a,b)=>miles(a,b)*1609.344;
   const state=()=>window.FIELD_ROUTE_STATE;
 
+  class RoutePlannerError extends Error{
+    constructor(code,message,meta={}){
+      super(message);
+      this.name='RoutePlannerError';
+      this.code=code;
+      this.meta=meta||{};
+    }
+  }
+  const rpError=(code,message,meta={})=>new RoutePlannerError(code,message,meta);
+  let lastDiagnostic={code:'RP-000',stage:'READY',detail:'NO ERROR',meta:{},time:new Date().toISOString()};
+
+  function diagnostic(code='RP-000',stage='READY',detail='',meta={}){
+    lastDiagnostic={code,stage,detail:String(detail||''),meta:meta||{},time:new Date().toISOString()};
+    const el=$('routePlannerDiag');
+    if(el){
+      el.textContent=[code,stage,String(detail||'')].filter(Boolean).join(' // ');
+      el.classList.toggle('error',code!=='RP-000');
+    }
+  }
+  function normalizeRouteError(err,fallback='RP-900'){
+    if(err instanceof RoutePlannerError)return err;
+    if(err?.name==='AbortError')return rpError('RP-099','Route calculation cancelled');
+    return rpError(fallback,String(err?.message||err||'Unknown route planner error'));
+  }
+  function showRouteError(err,stage='ROUTING',suffix=''){
+    const e=normalizeRouteError(err);
+    diagnostic(e.code,stage,e.message,e.meta);
+    status(`${e.code} // ${e.message.toUpperCase()}${suffix}`,'error');
+    console.warn('FIELD/OS route error',e.code,stage,e.message,e.meta);
+    return e;
+  }
+  async function copyRouteDiagnostic(){
+    const payload=[
+      'FIELD/OS ROUTE DIAGNOSTIC',
+      'BUILD: v3.16',
+      `CODE: ${lastDiagnostic.code}`,
+      `STAGE: ${lastDiagnostic.stage}`,
+      `DETAIL: ${lastDiagnostic.detail}`,
+      `META: ${JSON.stringify(lastDiagnostic.meta||{})}`,
+      `MODE: ${routeMode()}`,
+      `ANCHORS: ${anchors.length}`,
+      `ONLINE: ${navigator.onLine}`,
+      `TIME: ${lastDiagnostic.time}`
+    ].join('\n');
+    try{
+      await navigator.clipboard.writeText(payload);
+      const btn=$('copyRouteDiag');if(btn){const old=btn.textContent;btn.textContent='COPIED';setTimeout(()=>btn.textContent=old,1200)}
+    }catch{
+      diagnostic('RP-701','DIAGNOSTICS','Clipboard unavailable. Select the code text manually.');
+    }
+  }
+
   function status(text,kind=''){
     const el=$('routePlannerStatus');
     if(!el)return;
@@ -98,8 +150,8 @@
     const el=$(MAP_ID);
     if(!el)return null;
     if(!window.L){
-      status('ROUTE MAP LIBRARY FAILED TO LOAD -- CHECK CONNECTION AND REFRESH','error');
-      el.innerHTML='<div class="route-map-load-error"><b>MAP ENGINE UNAVAILABLE</b><span>Leaflet did not load. Refresh FIELD/OS while online once so the planner map can be cached.</span></div>';
+      showRouteError(rpError('RP-002','Map library failed to load. Refresh FIELD/OS while online.'),'STARTUP');
+      el.innerHTML='<div class="route-map-load-error"><b>RP-002 // MAP ENGINE UNAVAILABLE</b><span>Leaflet did not load. Refresh FIELD/OS while online once so the planner map can be cached.</span></div>';
       return null;
     }
     const here=state()?.current?.()||{lat:44.4759,lon:-73.2121};
@@ -234,16 +286,13 @@
   function activate(){
     const el=$(MAP_ID);
     if(!el){
-      console.warn('FIELD/OS route planner: map container missing');
+      showRouteError(rpError('RP-003','Route planner map container is missing.'),'STARTUP');
       return false;
     }
     try{
       if(!initialized){
         const map=ensurePlannerMap();
-        if(!map){
-          status('ROUTE MAP STARTUP FAILED -- MAP ENGINE NOT AVAILABLE','error');
-          return false;
-        }
+        if(!map)return false;
         bindControls();
         initialized=true;
       }
@@ -280,7 +329,8 @@
           plannerMap?.invalidateSize(false);
           plannerMap?.setView([fallback.lat,fallback.lon],14);
         });
-        status('MAP READY -- WAITING FOR ROUTE DATA BRIDGE','loading');
+        diagnostic('RP-001','STARTUP','Route data bridge not ready.');
+        status('RP-001 // MAP READY -- WAITING FOR ROUTE DATA BRIDGE','loading');
         return true;
       }
 
@@ -288,10 +338,10 @@
       hasActivated=true;return true;
     }catch(err){
       console.error('FIELD/OS route planner startup failed',err);
-      status(`ROUTE MAP STARTUP ERROR -- ${String(err?.message||err).toUpperCase()}`,'error');
+      const startupError=showRouteError(err,'STARTUP');
       const box=$(MAP_ID);
       if(box&&!box.querySelector('.route-map-load-error')){
-        box.insertAdjacentHTML('beforeend',`<div class="route-map-load-error"><b>ROUTE MAP STARTUP ERROR</b><span>${String(err?.message||err)}</span></div>`);
+        box.insertAdjacentHTML('beforeend',`<div class="route-map-load-error"><b>${startupError.code} // ROUTE MAP STARTUP ERROR</b><span>${startupError.message}</span></div>`);
       }
       return false;
     }
@@ -314,12 +364,13 @@
       else status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
     });
     $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
+    $('copyRouteDiag')?.addEventListener('click',copyRouteDiagnostic);
     renderSavedRoutes();
   }
 
   function addAnchor(p){
-    if(!valid(p))return;
-    if(anchors.length>=30)return status('Waypoint limit reached. Save this route before adding more.','error');
+    if(!valid(p))return showRouteError(rpError('RP-101','Invalid route control point.'),'CONTROL POINT');
+    if(anchors.length>=30)return showRouteError(rpError('RP-102','Waypoint limit reached. Save this route before adding more.'),'CONTROL POINT');
     hoverPoint=null;
     anchors=[...anchors,{lat:+p.lat,lon:+p.lon}];
     navigator.vibrate?.(18);
@@ -423,7 +474,7 @@
 
   function startFollow(){
     if(!navigator.geolocation){
-      status('GPS FOLLOW UNAVAILABLE -- GEOLOCATION NOT SUPPORTED','error');
+      showRouteError(rpError('RP-501','GPS follow is unavailable in this browser.'),'GPS');
       return;
     }
     if(followWatchId!=null){followEnabled=true;updateFollowButton();drawPlannerPosition();return;}
@@ -437,7 +488,9 @@
         if(!busy)status(pts.length>1?'FOLLOWING ROUTE -- LIVE GPS':'LIVE GPS FOLLOW -- PLAN OR LOAD A ROUTE','ready');
       },
       err=>{
-        status(`GPS FOLLOW ERROR -- ${String(err.message||err).toUpperCase()}`,'error');
+        const code=err?.code===1?'RP-502':err?.code===3?'RP-503':'RP-504';
+        const msg=err?.code===1?'GPS permission denied.':err?.code===3?'GPS request timed out.':'GPS position unavailable.';
+        showRouteError(rpError(code,msg,{browserMessage:String(err?.message||'')}),'GPS');
         stopFollow();
       },
       {enableHighAccuracy:true,maximumAge:2000,timeout:15000}
@@ -471,7 +524,7 @@
   }
   function saveCurrentRoute(){
     const st=state(),points=st?.getPoints?.()||[];
-    if(points.length<2){status('SAVE FAILED -- PLOT OR LOAD A ROUTE FIRST','error');return}
+    if(points.length<2){showRouteError(rpError('RP-601','Plot or load a route before saving.'),'SAVE');return}
     const plan=st.getPlan?.()||{},name=$('routeName')?.value.trim()||plan.name||'FIELD ROUTE';
     const snapshot={
       id:'route-'+Date.now(),name,savedAt:new Date().toISOString(),
@@ -493,7 +546,7 @@
     const routes=readSavedRoutes();
     routes.unshift(snapshot);
     if(routes.length>10)routes.length=10;
-    if(!writeSavedRoutes(routes)){status('SAVE FAILED -- LOCAL STORAGE UNAVAILABLE','error');return}
+    if(!writeSavedRoutes(routes)){showRouteError(rpError('RP-602','Local route storage is unavailable.'),'SAVE');return}
     st.setMeta?.({...plan,name,savedAt:snapshot.savedAt});st.save?.();
     renderSavedRoutes();
     if($('savedRouteSelect'))$('savedRouteSelect').value=snapshot.id;
@@ -501,10 +554,10 @@
     navigator.vibrate?.(25);
   }
   function loadSelectedRoute(){
-    const id=$('savedRouteSelect')?.value;if(!id)return status('SELECT A SAVED ROUTE FIRST','error');
-    const saved=readSavedRoutes().find(x=>x.id===id);if(!saved)return status('SAVED ROUTE NOT FOUND','error');
+    const id=$('savedRouteSelect')?.value;if(!id)return showRouteError(rpError('RP-603','Select a saved route first.'),'LOAD');
+    const saved=readSavedRoutes().find(x=>x.id===id);if(!saved)return showRouteError(rpError('RP-603','Saved route was not found.'),'LOAD');
     const st=state(),points=(saved.points||[]).filter(valid);
-    if(points.length<2)return status('SAVED ROUTE HAS NO USABLE GEOMETRY','error');
+    if(points.length<2)return showRouteError(rpError('RP-604','Saved route has no usable geometry.'),'LOAD');
     anchors=sanitizeAnchors(saved.anchors);
     if(!anchors.length)anchors=[points[0],points.at(-1)];
     lastSuccessfulAnchors=anchors.map(p=>({...p}));routingResolvedAnchors=anchors.length;snapped=[];
@@ -532,7 +585,7 @@
   }
   function bboxKey(b){return [b.s,b.w,b.n,b.e].map(x=>(Math.round(x*200)/200).toFixed(3)).join(',')}
   function queryFor(b){
-    return `[out:json][timeout:20];\nway["highway"~"^(path|footway|track|bridleway|steps|pedestrian|unclassified|service|residential)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s.toFixed(6)},${b.w.toFixed(6)},${b.n.toFixed(6)},${b.e.toFixed(6)});\nout body geom;`;
+    return `[out:json][timeout:22];\nway["highway"~"^(path|footway|track|bridleway|steps|pedestrian|cycleway|unclassified|living_street|service|residential)$"]["access"!~"^(private|no)$"]["foot"!~"^no$"](${b.s.toFixed(6)},${b.w.toFixed(6)},${b.n.toFixed(6)},${b.e.toFixed(6)});\nout body geom;`;
   }
 
   function covers(box,a,b){
@@ -556,35 +609,56 @@
     }
     for(const entry of pendingGraphs.values())if(covers(entry.box,a,b))return waitForGraph(entry.promise,signal);
     const box=bboxFor(a,b);
-    if(force){box.s-=.02;box.n+=.02;box.w-=.03;box.e+=.03;}
+    if(force){box.s-=.035;box.n+=.035;box.w-=.05;box.e+=.05;}
     const key=bboxKey(box),q=queryFor(box);
     if(pendingGraphs.has(key))return waitForGraph(pendingGraphs.get(key).promise,signal);
-    // Start a backup only if the preferred server is still slow. First valid
-    // response wins; cancel the other requests rather than waiting serially.
+
     const controllers=OVERPASS_ENDPOINTS.map(()=>new AbortController());
+    const failures=[];
+    const cancelAll=()=>controllers.forEach(c=>c.abort());
+    signal?.addEventListener('abort',cancelAll,{once:true});
+
     const requests=OVERPASS_ENDPOINTS.map((endpoint,i)=>new Promise((resolve,reject)=>{
-      const controller=controllers[i];let deadline,start;
+      const controller=controllers[i];let deadline,start,timedOut=false;
       const stop=()=>{clearTimeout(start);clearTimeout(deadline);reject(new DOMException('Cancelled','AbortError'));};
       controller.signal.addEventListener('abort',stop,{once:true});
       start=setTimeout(async()=>{
-        deadline=setTimeout(()=>controller.abort(),24000);
+        deadline=setTimeout(()=>{timedOut=true;controller.abort()},24000);
         try{
           const res=await fetch(endpoint+'?data='+encodeURIComponent(q),{signal:controller.signal,cache:'no-store'});
-          if(!res.ok)throw new Error(`Trail server ${res.status}`);
-          const json=await res.json(),graph=buildGraph(json.elements||[]);
-          if(graph.nodes.size<2||graph.segments.length<1)throw new Error('No mapped trails in this area');
+          if(!res.ok)throw rpError('RP-202',`Trail-data server returned HTTP ${res.status}.`,{endpoint,status:res.status});
+          let json;
+          try{json=await res.json()}catch{throw rpError('RP-205','Trail-data server returned malformed JSON.',{endpoint})}
+          const graph=buildGraph(json.elements||[]);
+          if(graph.nodes.size<2||graph.segments.length<1)throw rpError('RP-204','No mapped walkable trails were returned for this area.',{endpoint,expanded:force});
           graph.rawElements=json.elements;resolve(graph);
-        }catch(err){if(err?.name!=='AbortError')console.warn('Trail lookup',endpoint,err.message);reject(err)}finally{clearTimeout(deadline);controller.signal.removeEventListener('abort',stop)}
+        }catch(err){
+          let e=normalizeRouteError(err,'RP-201');
+          if(err?.name==='AbortError'&&timedOut)e=rpError('RP-203','Trail-data request timed out.',{endpoint});
+          if(e.code!=='RP-099')failures.push({endpoint,code:e.code,message:e.message});
+          reject(e);
+        }finally{
+          clearTimeout(deadline);controller.signal.removeEventListener('abort',stop);
+        }
       },[0,1200,3000][i]);
     }));
+
     const promise=Promise.any(requests).then(graph=>{
       graphCache.set(key,{box,graph,created:Date.now()});
       try{const raw=JSON.stringify({box,elements:graph.rawElements,created:Date.now()});if(raw.length<2500000)sessionStorage.setItem('fieldos-trail-network',raw)}catch{}
       delete graph.rawElements;
       if(graphCache.size>8)graphCache.delete(graphCache.keys().next().value);
       return graph;
-    }).catch(()=>{throw new Error('Trail servers unavailable. Try again, or choose DIRECT / OFF-TRAIL.');})
-      .finally(()=>{controllers.forEach(c=>c.abort());pendingGraphs.delete(key)});
+    }).catch(()=>{
+      const codes=failures.map(x=>x.code);
+      if(codes.length&&codes.every(x=>x==='RP-204'))throw rpError('RP-204','No mapped walkable trails were found in the search area.',{failures,expanded:force});
+      if(codes.length&&codes.every(x=>x==='RP-203'))throw rpError('RP-203','All trail-data requests timed out.',{failures});
+      if(codes.length&&codes.every(x=>x==='RP-202'))throw rpError('RP-202','All trail-data servers returned HTTP errors.',{failures});
+      throw rpError('RP-201','Trail-data servers are unavailable or returned mixed failures.',{failures});
+    }).finally(()=>{
+      cancelAll();signal?.removeEventListener('abort',cancelAll);pendingGraphs.delete(key);
+    });
+
     pendingGraphs.set(key,{box,promise});
     return waitForGraph(promise,signal);
   }
@@ -604,7 +678,9 @@
     if(h==='bridleway')return 1.03;
     if(h==='steps')return 1.12;
     if(h==='pedestrian')return 1.0;
+    if(h==='cycleway')return 1.15;
     if(h==='unclassified')return 1.55;
+    if(h==='living_street')return 1.65;
     if(h==='service')return 1.85;
     if(h==='residential')return 2.25;
     return 1.4;
@@ -663,16 +739,17 @@
   }
 
   function shortestPath(graph,startId,endId){
-    if(startId===endId)return [graph.nodes.get(startId)];
+    if(startId===endId)return {path:[graph.nodes.get(startId)],visits:0,limitHit:false};
     const goal=graph.nodes.get(endId),open=new MinHeap(),g=new Map([[startId,0]]),came=new Map(),closed=new Set();
     open.push({id:startId,f:meters(graph.nodes.get(startId),goal)});
     let visits=0;
-    while(open.size&&visits<100000){
+    const VISIT_LIMIT=120000;
+    while(open.size&&visits<VISIT_LIMIT){
       const cur=open.pop();if(closed.has(cur.id))continue;closed.add(cur.id);visits++;
       if(cur.id===endId){
         const ids=[endId];let x=endId;
         while(came.has(x)){x=came.get(x);ids.push(x)}
-        ids.reverse();return ids.map(id=>graph.nodes.get(id));
+        ids.reverse();return {path:ids.map(id=>graph.nodes.get(id)),visits,limitHit:false};
       }
       for(const edge of graph.adj.get(cur.id)||[]){
         if(closed.has(edge.to))continue;
@@ -684,7 +761,7 @@
         }
       }
     }
-    return null;
+    return {path:null,visits,limitHit:visits>=VISIT_LIMIT};
   }
 
   function dedupe(points){
@@ -698,19 +775,54 @@
   }
 
   async function routeLeg(a,b,signal,retry=false){
-    const cached=legCache.get(legKey(a,b));if(cached)return cached;
+    const cached=legCache.get(legKey(a,b));if(cached)return {...cached,cached:true};
     const back=legCache.get(legKey(b,a));
-    if(back)return {points:[...back.points].reverse(),startSnap:back.endSnap,endSnap:back.startSnap};
-    if(miles(a,b)>35)throw new Error('A single snapped leg is too long for the lightweight trail router. Add a via point closer to the trail corridor.');
-    const source=await fetchTrailGraph(a,b,signal,retry);
+    if(back)return {...back,points:[...back.points].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
+    const legMi=miles(a,b);
+    if(legMi>35)throw rpError('RP-301','Snapped leg is over 35 miles. Add an intermediate point.',{legMiles:+legMi.toFixed(2)});
+
+    let source;
+    try{
+      source=await fetchTrailGraph(a,b,signal,retry);
+    }catch(err){
+      const e=normalizeRouteError(err,'RP-201');
+      if(!retry&&e.code==='RP-204')return routeLeg(a,b,signal,true);
+      throw e;
+    }
+
     const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments:source.segments.slice()};
-    const sa=nearestNode(graph,a),sb=nearestNode(graph,b);
-    if(!sa||!sb)throw new Error('No mapped hiking path was found close enough to one of the selected points. Zoom in and tap closer to a trail.');
-    const path=shortestPath(graph,sa.id,sb.id);
-    if(!path&&!retry)return routeLeg(a,b,signal,true);
-    if(!path)throw new Error('The nearby mapped trails are not connected. Add an intermediate point or use DIRECT mode for an off-trail leg.');
-    const result={points:path.map(p=>({lat:p.lat,lon:p.lon})),startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d}};
-    legCache.set(legKey(a,b),result);if(legCache.size>100)legCache.delete(legCache.keys().next().value);return result;
+    const snapRadius=retry?1200:550;
+
+    const sa=nearestNode(graph,a,snapRadius);
+    if(!sa){
+      if(!retry)return routeLeg(a,b,signal,true);
+      throw rpError('RP-302','Start point is too far from mapped walkable trail geometry.',{snapLimitM:snapRadius,nodes:graph.nodes.size,segments:graph.segments.length});
+    }
+
+    const sb=nearestNode(graph,b,snapRadius);
+    if(!sb){
+      if(!retry)return routeLeg(a,b,signal,true);
+      throw rpError('RP-303','End point is too far from mapped walkable trail geometry.',{snapLimitM:snapRadius,startSnapM:Math.round(sa.d),nodes:graph.nodes.size,segments:graph.segments.length});
+    }
+
+    const search=shortestPath(graph,sa.id,sb.id);
+    if(!search.path&&!retry)return routeLeg(a,b,signal,true);
+    if(!search.path){
+      if(search.limitHit)throw rpError('RP-305','Trail path search exceeded the graph complexity limit. Add an intermediate point.',{visits:search.visits,nodes:graph.nodes.size,segments:graph.segments.length});
+      throw rpError('RP-304','Nearby mapped trails are not connected. Add an intermediate point or use DIRECT mode.',{visits:search.visits,startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d),nodes:graph.nodes.size,segments:graph.segments.length});
+    }
+
+    if(search.path.length<2&&legMi>.03)throw rpError('RP-306','Both control points snapped to the same trail location. Move one point farther along the trail.',{legMiles:+legMi.toFixed(3),startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d)});
+
+    const result={
+      points:search.path.map(p=>({lat:p.lat,lon:p.lon})),
+      startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},
+      endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d},
+      diagnostics:{retry,snapRadius,startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d),nodes:graph.nodes.size,segments:graph.segments.length,visits:search.visits}
+    };
+    legCache.set(legKey(a,b),result);
+    if(legCache.size>100)legCache.delete(legCache.keys().next().value);
+    return result;
   }
 
   function routeDistanceMiles(points){
@@ -742,13 +854,16 @@
     const lon=samples.map(p=>p.lon.toFixed(6)).join(',');
     const controller=new AbortController();
     const relay=()=>controller.abort();signal?.addEventListener('abort',relay,{once:true});
-    const timer=setTimeout(()=>controller.abort(),14000);
+    let timedOut=false;
+    const timer=setTimeout(()=>{timedOut=true;controller.abort()},14000);
     try{
       const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
       const res=await fetch(url,{signal:controller.signal,cache:'no-store'});
-      if(!res.ok)throw new Error(`elevation server ${res.status}`);
-      const json=await res.json(),raw=Array.isArray(json.elevation)?json.elevation.map(v=>v==null?NaN:Number(v)):[];
-      if(raw.length!==samples.length||raw.some(v=>!Number.isFinite(v)))throw new Error('invalid elevation response');
+      if(!res.ok)throw rpError('RP-401',`Elevation server returned HTTP ${res.status}.`,{status:res.status});
+      let json;
+      try{json=await res.json()}catch{throw rpError('RP-402','Elevation server returned malformed data.')}
+      const raw=Array.isArray(json.elevation)?json.elevation.map(v=>v==null?NaN:Number(v)):[];
+      if(raw.length!==samples.length||raw.some(v=>!Number.isFinite(v)))throw rpError('RP-402','Elevation response did not contain valid samples.',{expected:samples.length,received:raw.length});
       const ft=raw.map(v=>v*3.28084);
       const smooth=ft.map((v,i,arr)=>{
         const vals=[arr[i-1],v,arr[i+1]].filter(Number.isFinite);
@@ -765,6 +880,9 @@
         samples:samples.map((p,i)=>({lat:p.lat,lon:p.lon,distanceM:p.distanceM,elevationFt:smooth[i]})),
         gainFt:gain,lossFt:loss,minFt:Math.min(...smooth),maxFt:Math.max(...smooth),maxGrade
       };
+    }catch(err){
+      if(err?.name==='AbortError'&&timedOut&&!signal?.aborted)throw rpError('RP-403','Elevation request timed out.');
+      throw err;
     }finally{
       clearTimeout(timer);signal?.removeEventListener('abort',relay);
     }
@@ -839,6 +957,8 @@
     }catch(err){
       if(signal?.aborted)throw err;
       console.warn('FIELD/OS elevation lookup failed',err);
+      const elevationError=normalizeRouteError(err,'RP-400');
+      diagnostic(elevationError.code,'ELEVATION',elevationError.message,elevationError.meta);
       applyRouteStats(points,null,'unavailable');
       state()?.setMeta?.({distanceMiles:dist,elevationSource:'UNAVAILABLE'});
       state()?.save?.();
@@ -848,6 +968,8 @@
 
   async function recalculate(){
     if(anchors.length<2)return;
+    if(!state())return showRouteError(rpError('RP-001','Route data bridge is unavailable.'),'ROUTING');
+    diagnostic('RP-000','ROUTING','Starting snapped route calculation.');
     aborter?.abort();aborter=new AbortController();
     const signal=aborter.signal;setBusy(true);snapped=[];hoverPoint=null;
     const previousPoints=state()?.getPoints?.()||[],previousAnchors=lastSuccessfulAnchors.map(p=>({...p}));
@@ -873,6 +995,9 @@
         const leg=await routeLeg(anchors[i-1],anchors[i],signal);
         if(signal.aborted)return;
         legs.push({a:{...anchors[i-1]},b:{...anchors[i]},result:leg});
+        if(leg.diagnostics){
+          diagnostic('RP-000',`LEG ${i} OK`,`SNAP ${leg.diagnostics.startSnapM}m → ${leg.diagnostics.endSnapM}m | GRAPH ${leg.diagnostics.nodes}N/${leg.diagnostics.segments}S`,leg.diagnostics);
+        }
         maxSnap=Math.max(maxSnap,leg.startSnap.d,leg.endSnap.d);
         if(i===1)snapped.push({lat:leg.startSnap.lat,lon:leg.startSnap.lon});
         snapped.push({lat:leg.endSnap.lat,lon:leg.endSnap.lon});
@@ -886,7 +1011,7 @@
       }
       if(signal.aborted)return;
       const clean=dedupe(full);
-      if(clean.length<2)throw new Error('The trail router returned an empty path.');
+      if(clean.length<2)throw rpError('RP-307','Trail router returned empty route geometry.',{rawPoints:full.length});
       state()?.setPoints?.(clean);
       state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
       lastSuccessfulAnchors=anchors.map(p=>({...p}));
@@ -894,6 +1019,7 @@
       overlay(clean);fitPlanner(clean,16);setBusy(false);
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
+      diagnostic('RP-000','ROUTE READY',`${enriched.dist.toFixed(2)} MI | MAX SNAP ${Math.round(maxSnap)} M`,{distanceMiles:enriched.dist,maxSnapM:Math.round(maxSnap),legs:anchors.length-1});
       status(`SNAPPED TO OSM TRAILS -- ${enriched.dist.toFixed(2)} MI${elev} // MAX SNAP ${Math.round(maxSnap)} M`,'ready');
       navigator.vibrate?.([20,35,20]);
     }catch(err){
@@ -901,7 +1027,7 @@
       console.warn('FIELD/OS trail routing failed',err);
       if(previousPoints.length>1){anchors=previousAnchors;state()?.setMeta?.({anchors});}
       routingResolvedAnchors=lastSuccessfulAnchors.length;
-      status(`TRAIL ROUTE FAILED -- ${String(err.message||err).toUpperCase()}${previousPoints.length>1?' LAST WORKING ROUTE KEPT.':''}`,'error');
+      showRouteError(err,'TRAIL SNAP',previousPoints.length>1?' // LAST WORKING ROUTE KEPT':'');
       overlay(previousPoints);
     }finally{if(aborter?.signal===signal)setBusy(false)}
   }
