@@ -48,3 +48,16 @@ and 1440 pixels, with no horizontal overflow or uncaught page exceptions. POI se
 map centering, persisted imports, and 56-pixel glove controls were exercised.
 External network resources were blocked for those browser checks; live providers,
 real iPhone/Safari behavior, and physical TAP hardware were not validated.
+
+
+## Web feature registry through 70
+
+FIELD/OS now treats 70 as the browser/PWA feature target. Historical source comments preserve Features 01–27. The September 30 QA batch separately records original-list 30/31, 36, 38 and 39. Some original labels for 28/29 and 32–37 were not preserved; equivalent capabilities should be tracked by behavior rather than silently inventing old labels.
+
+Features 40–49 are the Browser Field Reliability toolkit: PWA install diagnostics, persistent-storage protection, online/offline state, effective connection type, data-saver awareness, page visibility state, browser battery status when exposed, fullscreen field mode, orientation-lock attempt, Web Share/coordinate copy, and capability audit.
+
+Features 50–59 are the Offline Field Utility console: decimal-to-DMS conversion, point distance/bearing, local scratchpad, timestamped position marks, location card, clipboard location sharing, storage-use meter, offline-readiness scoring, persistent utility state, and route/position-aware refresh.
+
+Features 60–70 are Browser Data Resilience and Preflight: recovery snapshots, snapshot restore, permission audit, service-worker health, Cache Storage health, stale-data watchdog, local diagnostic event log, captured JS/unhandled-promise errors, safe field-UI reset, automatic route-state recovery snapshot, and a consolidated field-launch preflight.
+
+Native Apple-only APIs and physical TAP/Meshtastic transport are intentionally outside this web feature registry and will be handled by the separate Apple version.
