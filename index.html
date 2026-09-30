@@ -701,6 +701,17 @@
           <div class="button-row"><button id="saveTrip" class="action">SAVE PLAN</button><button id="checkinNow" class="action">CHECK IN NOW</button><button class="action" data-open="mission">BUILD MISSION PACK</button></div>
         </article>
         <article class="panel checkin-panel"><div class="panel-title"><span>CHECK-IN TIMER</span><span class="tiny">LOCAL REMINDER</span></div><div class="checkin-clock" id="checkinCountdown">MANUAL</div><p id="checkinDetail" class="muted">Set an interval and press CHECK IN NOW to start the countdown.</p><div class="button-row"><button id="resetCheckin" class="action">RESET TIMER</button><button id="copyCheckin" class="action">COPY CHECK-IN</button></div></article>
+        <article class="panel auto-checkin-panel">
+          <div class="panel-title"><span>AUTOMATIC CHECK-INS</span><span class="tiny" id="autoCheckinState">DISABLED</span></div>
+          <div class="auto-checkin-grid">
+            <label class="auto-checkin-toggle"><input id="autoCheckinEnabled" type="checkbox"><span>ENABLE ACTIVE-APP AUTO CHECK-INS</span></label>
+            <label><span class="field-label">MESSAGE FORMAT</span><select id="autoCheckinTemplate" class="terminal-input"><option value="OK">OK + LOCATION</option><option value="STATUS">STATUS + LOCATION + BATTERY</option><option value="MISSION">MISSION + LOCATION + ROUTE</option></select></label>
+            <label><span class="field-label">DELIVERY GRACE</span><select id="autoCheckinGrace" class="terminal-input"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></label>
+          </div>
+          <dl class="readouts"><div><dt>NEXT DUE</dt><dd id="autoCheckinNext">—</dd></div><div><dt>LAST GENERATED</dt><dd id="autoCheckinGenerated">—</dd></div><div><dt>LAST DELIVERED</dt><dd id="autoCheckinDelivered">—</dd></div><div><dt>QUEUE</dt><dd id="autoCheckinQueue">CLEAR</dd></div></dl>
+          <div class="button-row"><button id="autoCheckinSendNow" class="action" type="button">GENERATE NOW</button><button id="autoCheckinArm" class="action" type="button">RE-ARM SCHEDULE</button></div>
+          <p class="muted">Web/iPhone limitation: FIELD/OS cannot guarantee timers or transmissions while the PWA is suspended. On resume it checks for a missed window, creates one catch-up packet, and records an alert.</p>
+        </article>
         <article class="panel"><div class="panel-title"><span>EMERGENCY PLAN</span><span class="tiny">PRE-TRIP</span></div><textarea id="tripEmergency" class="terminal-area" placeholder="Who has your route? Satellite device? Turnaround time? Medical notes?"></textarea></article>
         <article class="panel"><div class="panel-title"><span>TEN ESSENTIALS</span><span class="tiny">PACK CHECK</span></div><div id="essentialsChecklist" class="checklist"></div></article>
       </section>

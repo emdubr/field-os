@@ -81,6 +81,78 @@
 
 
 
+
+  // Feature 14 — Automatic Check-ins.
+  const autoCheckinConfig={enabled:false,template:'OK',graceMin:10,...(read('auto-checkin-config',{})||{})};
+  const autoCheckinState={armedAt:0,nextDue:0,lastGenerated:0,lastDelivered:0,pendingMessageId:null,lastMissedAlertFor:null,...(read('auto-checkin-state',{})||{})};
+  function checkinIntervalMinutes(){
+    const trip=read('trip',{}),raw=trip.checkinInterval??document.getElementById('checkinInterval')?.value??0;
+    return Math.max(0,Number(raw)||0);
+  }
+  function persistAutoCheckin(){
+    write('auto-checkin-config',autoCheckinConfig);write('auto-checkin-state',autoCheckinState);
+  }
+  function formatAutoCheckin(now=Date.now()){
+    const p=getPosition(),battery=parseBattery(),plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},mission=read('mission-active',null)||read('mission-pack',null),stamp=new Date(now).toISOString();
+    const pos=validPoint(p)?`${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`:'NO VALID POSITION';
+    if(autoCheckinConfig.template==='STATUS')return `FIELD/OS AUTO CHECK-IN // ${stamp} // STATUS OK // POS ${pos} // SOURCE ${p.source||'UNKNOWN'} // BAT ${battery==null?'—':battery+'%'}`;
+    if(autoCheckinConfig.template==='MISSION')return `FIELD/OS MISSION CHECK-IN // ${stamp} // ${mission?.name||'FIELD MISSION'} // POS ${pos} // ROUTE ${plan.name||'FIELD ROUTE'} // STATUS OK`;
+    return `FIELD/OS AUTO CHECK-IN // ${stamp} // OK // POS ${pos} // SOURCE ${p.source||'UNKNOWN'}`;
+  }
+  function armAutoCheckin(now=Date.now()){
+    const interval=checkinIntervalMinutes();autoCheckinState.armedAt=now;autoCheckinState.nextDue=interval?now+interval*60000:0;autoCheckinState.lastMissedAlertFor=null;persistAutoCheckin();renderAutoCheckin();return autoCheckinState.nextDue;
+  }
+  function generateAutoCheckin(now=Date.now(),reason='scheduled'){
+    const message=formatAutoCheckin(now),item=window.FIELD_TRANSPORT?.queue?.(message,{channel:'CHECK-IN',meta:{kind:'auto-checkin',reason,generatedAt:now}});
+    autoCheckinState.lastGenerated=now;autoCheckinState.pendingMessageId=item?.id||null;
+    const interval=checkinIntervalMinutes();autoCheckinState.nextDue=interval?now+interval*60000:0;persistAutoCheckin();
+    document.dispatchEvent(new CustomEvent('fieldos:checkin',{detail:{text:message,position:getPosition(),source:getPosition().source||'POSITION',createdAt:now,auto:true,reason,transportQueued:true,messageId:item?.id||null}}));
+    renderAutoCheckin();return item;
+  }
+  function autoCheckinTick(now=Date.now()){
+    const interval=checkinIntervalMinutes();if(!autoCheckinConfig.enabled||!interval){renderAutoCheckin();return {action:'disabled'}};
+    if(!autoCheckinState.nextDue){armAutoCheckin(now);return {action:'armed'}};
+    const lateness=now-autoCheckinState.nextDue,grace=autoCheckinConfig.graceMin*60000;
+    if(lateness>=0){
+      const missed=lateness>grace;
+      if(missed&&autoCheckinState.lastMissedAlertFor!==autoCheckinState.nextDue){
+        autoCheckinState.lastMissedAlertFor=autoCheckinState.nextDue;
+        document.dispatchEvent(new CustomEvent('fieldos:devicealert',{detail:{id:`auto-checkin-missed-${autoCheckinState.nextDue}`,createdAt:now,source:'CHECK-IN SCHEDULER',title:'CHECK-IN WINDOW MISSED',text:`FIELD/OS resumed ${Math.round(lateness/60000)} min after the scheduled check-in. A catch-up packet was generated; background timers are not guaranteed.`,severity:'warn'}}));
+      }
+      const item=generateAutoCheckin(now,missed?'catch-up':'scheduled');return {action:missed?'catch-up':'generated',item};
+    }
+    if(autoCheckinState.pendingMessageId&&autoCheckinState.lastGenerated&&now-autoCheckinState.lastGenerated>grace&&autoCheckinState.lastMissedAlertFor!==autoCheckinState.pendingMessageId){
+      autoCheckinState.lastMissedAlertFor=autoCheckinState.pendingMessageId;
+      document.dispatchEvent(new CustomEvent('fieldos:devicealert',{detail:{id:`auto-checkin-undelivered-${autoCheckinState.pendingMessageId}`,createdAt:now,source:'CHECK-IN SCHEDULER',title:'CHECK-IN NOT DELIVERED',text:`The last automatic check-in has remained queued for more than ${autoCheckinConfig.graceMin} minutes. Verify a communications link.`,severity:'warn'}}));
+      persistAutoCheckin();
+    }
+    renderAutoCheckin();return {action:'waiting'};
+  }
+  function setAutoCheckinConfig(patch={}){
+    if('enabled' in patch)autoCheckinConfig.enabled=!!patch.enabled;
+    if('template' in patch&&['OK','STATUS','MISSION'].includes(String(patch.template)))autoCheckinConfig.template=String(patch.template);
+    if('graceMin' in patch)autoCheckinConfig.graceMin=Math.max(1,Math.min(120,Number(patch.graceMin)||10));
+    persistAutoCheckin();if(autoCheckinConfig.enabled&&!autoCheckinState.nextDue)armAutoCheckin();renderAutoCheckin();return {...autoCheckinConfig};
+  }
+  function renderAutoCheckin(){
+    const panel=document.querySelector('.auto-checkin-panel'),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v},enabled=document.getElementById('autoCheckinEnabled'),templ=document.getElementById('autoCheckinTemplate'),grace=document.getElementById('autoCheckinGrace');
+    if(enabled)enabled.checked=!!autoCheckinConfig.enabled;if(templ)templ.value=autoCheckinConfig.template;if(grace)grace.value=String(autoCheckinConfig.graceMin);
+    const pending=autoCheckinState.pendingMessageId&&window.FIELD_TRANSPORT?.state?.items?.find(x=>x.id===autoCheckinState.pendingMessageId),interval=checkinIntervalMinutes(),now=Date.now();
+    let status=!autoCheckinConfig.enabled?'DISABLED':!interval?'MANUAL INTERVAL':pending&&pending.status!=='sent'?'QUEUED / WAITING LINK':'ARMED';
+    if(autoCheckinConfig.enabled&&autoCheckinState.nextDue&&now>autoCheckinState.nextDue+autoCheckinConfig.graceMin*60000)status='OVERDUE / CATCH-UP';
+    set('autoCheckinState',status);set('autoCheckinNext',autoCheckinState.nextDue?new Date(autoCheckinState.nextDue).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—');set('autoCheckinGenerated',autoCheckinState.lastGenerated?new Date(autoCheckinState.lastGenerated).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—');set('autoCheckinDelivered',autoCheckinState.lastDelivered?new Date(autoCheckinState.lastDelivered).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—');set('autoCheckinQueue',pending?`${pending.status.toUpperCase()} // ${pending.transport||'NO LINK'}`:'CLEAR');
+    panel?.classList.toggle('status-overdue',status.startsWith('OVERDUE'));panel?.classList.toggle('status-pending',status.startsWith('QUEUED'));return status;
+  }
+  document.getElementById('autoCheckinEnabled')?.addEventListener('change',e=>{setAutoCheckinConfig({enabled:e.currentTarget.checked});if(e.currentTarget.checked)armAutoCheckin()});
+  document.getElementById('autoCheckinTemplate')?.addEventListener('change',e=>setAutoCheckinConfig({template:e.currentTarget.value}));
+  document.getElementById('autoCheckinGrace')?.addEventListener('change',e=>setAutoCheckinConfig({graceMin:e.currentTarget.value}));
+  document.getElementById('autoCheckinSendNow')?.addEventListener('click',()=>generateAutoCheckin(Date.now(),'manual-generate'));document.getElementById('autoCheckinArm')?.addEventListener('click',()=>armAutoCheckin());
+  document.addEventListener('fieldos:messagesent',e=>{if(e.detail?.id&&e.detail.id===autoCheckinState.pendingMessageId){autoCheckinState.lastDelivered=Date.now();autoCheckinState.pendingMessageId=null;persistAutoCheckin();renderAutoCheckin()}});
+  document.addEventListener('fieldos:checkin',e=>{const d=e.detail||{};if(d.auto)return;const interval=checkinIntervalMinutes();autoCheckinState.lastGenerated=Number(d.createdAt)||Date.now();autoCheckinState.nextDue=interval?autoCheckinState.lastGenerated+interval*60000:0;if(!d.transportQueued&&window.FIELD_TRANSPORT?.queue){const item=window.FIELD_TRANSPORT.queue(d.text||'FIELD/OS CHECK-IN',{channel:'CHECK-IN',meta:{kind:'manual-checkin'}});autoCheckinState.pendingMessageId=item?.id||null}persistAutoCheckin();renderAutoCheckin()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())});document.getElementById('checkinInterval')?.addEventListener('change',()=>{if(autoCheckinConfig.enabled)armAutoCheckin()});
+  setInterval(()=>autoCheckinTick(Date.now()),15000);setTimeout(()=>renderAutoCheckin(),320);
+  window.FIELD_AUTO_CHECKIN={config:autoCheckinConfig,state:autoCheckinState,setConfig:setAutoCheckinConfig,arm:armAutoCheckin,tick:autoCheckinTick,generate:generateAutoCheckin,format:formatAutoCheckin,render:renderAutoCheckin};
+
   // Feature 13 — Unified Communications Inbox.
   const inboxState={items:[],filter:'ALL'};
   function normalizeInboxItem(raw={}){

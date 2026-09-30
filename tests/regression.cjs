@@ -129,6 +129,13 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  w.FIELD_INBOX.state.filter='SATELLITE';w.FIELD_INBOX.render();assert.equal(d.querySelectorAll('#unifiedInboxTimeline .unified-inbox-event').length,1);assert.match(d.getElementById('unifiedInboxTimeline').textContent,/Weather update/);
  w.FIELD_INBOX.state.filter='ALL';w.FIELD_INBOX.markRead();assert.equal(w.FIELD_INBOX.state.items.filter(x=>!x.read).length,0);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-comms-inbox')).items.length>=4);
  console.log('PASS feature 13 Unified Communications Inbox merges mesh, satellite, check-in, outgoing, and alert events into one persistent filtered timeline');
+ w.FIELD_TRANSPORT.state.items.length=0;w.FIELD_AUTO_CHECKIN.setConfig({enabled:true,template:'STATUS',graceMin:5});
+ const baseAuto=Date.now();w.FIELD_AUTO_CHECKIN.state.nextDue=baseAuto-6*60000;w.FIELD_AUTO_CHECKIN.state.pendingMessageId=null;w.FIELD_AUTO_CHECKIN.state.lastMissedAlertFor=null;
+ const tickResult=w.FIELD_AUTO_CHECKIN.tick(baseAuto);assert.equal(tickResult.action,'catch-up');assert.ok(w.FIELD_AUTO_CHECKIN.state.pendingMessageId);assert.ok(w.FIELD_TRANSPORT.state.items.some(x=>x.meta?.kind==='auto-checkin'));assert.ok(w.FIELD_INBOX.state.items.some(x=>/CHECK-IN WINDOW MISSED/.test(x.title)));
+ const autoMsg=w.FIELD_TRANSPORT.state.items.find(x=>x.id===w.FIELD_AUTO_CHECKIN.state.pendingMessageId);assert.match(autoMsg.text,/STATUS OK/);assert.match(autoMsg.text,/POS/);
+ let autoDelivered=[];const unregAuto=w.FIELD_TRANSPORT.register('auto-test',{priority:200,available:true,send:async m=>{autoDelivered.push(m.id);return {ok:true,receipt:'auto-rx'}}});await waitFor(()=>w.FIELD_AUTO_CHECKIN.state.pendingMessageId===null);assert.ok(w.FIELD_AUTO_CHECKIN.state.lastDelivered>0);assert.ok(autoDelivered.length>=1);unregAuto();w.FIELD_AUTO_CHECKIN.setConfig({enabled:false});
+ console.log('PASS feature 14 Automatic Check-ins schedules, catches up after suspension, queues location packets, warns on missed windows, and confirms real transport delivery');
+
 
 
 

@@ -3137,3 +3137,8 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .unified-inbox-badge{font-size:7px;border:1px solid var(--line);padding:3px 5px;color:var(--dim);white-space:nowrap}.unified-inbox-event.alert .unified-inbox-badge,.unified-inbox-event.high .unified-inbox-badge{color:var(--danger);border-color:var(--danger)}.unified-inbox-event.warn .unified-inbox-badge{color:var(--warn);border-color:var(--warn)}
 .unified-inbox-copy{min-width:0}.unified-inbox-copy b{display:block;font-size:9px;overflow-wrap:anywhere}.unified-inbox-copy p{margin:3px 0 0;font-size:8px;line-height:1.4;color:var(--dim);overflow-wrap:anywhere}.unified-inbox-meta{text-align:right;color:var(--dim);font-size:7px;white-space:nowrap}
 @media(max-width:600px){.unified-inbox-controls{grid-template-columns:1fr 1fr}.unified-inbox-controls select{grid-column:1/-1}.unified-inbox-event{grid-template-columns:auto minmax(0,1fr)}.unified-inbox-meta{grid-column:2;text-align:left}.unified-inbox-copy b{font-size:10px}.unified-inbox-copy p{font-size:9px}}
+
+
+/* feature 14 — automatic check-ins */
+.auto-checkin-grid{display:grid;grid-template-columns:minmax(220px,1.2fr) 1fr 1fr;gap:7px;align-items:end;margin-bottom:8px}.auto-checkin-toggle{display:flex;align-items:center;gap:8px;min-height:44px;border:1px solid var(--line);background:var(--panel2);padding:8px;font-size:9px}.auto-checkin-toggle input{width:auto!important;min-height:0!important}.auto-checkin-panel.status-overdue{border-color:var(--danger)}.auto-checkin-panel.status-pending{border-color:var(--warn)}
+@media(max-width:760px){.auto-checkin-grid{grid-template-columns:1fr}.auto-checkin-toggle{font-size:10px}}
