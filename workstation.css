@@ -1662,3 +1662,30 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .route-planner-real-map .planner-dom-route-layer.route-zooming{
   opacity:.18!important;
 }
+
+
+/* v3.28 slope difficulty elevation detail */
+.slope-legend{
+  display:flex;flex-wrap:wrap;gap:8px 14px;
+  margin-top:8px;padding:7px 9px;
+  border:1px solid var(--line);background:var(--panel2);
+  color:var(--dim);font:700 10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.slope-legend span{display:inline-flex;align-items:center;gap:6px}
+.slope-swatch{display:inline-block;width:16px;height:5px;background:var(--fg)}
+.slope-swatch.easy{background:transparent;border:1px solid var(--dim)}
+.slope-swatch.medium{background:#f28c28}
+.slope-swatch.hard{background:#e5484d}
+.elevation-detail-grid .slope-medium-summary b{color:#f28c28!important}
+.elevation-detail-grid .slope-hard-summary b{color:#e5484d!important}
+.elevation-breakdown-table tr.slope-easy td{background:var(--panel)!important;color:var(--fg)}
+.elevation-breakdown-table tr.slope-medium td{background:rgba(242,140,40,.10)!important}
+.elevation-breakdown-table tr.slope-hard td{background:rgba(229,72,77,.12)!important}
+.slope-badge{
+  display:inline-block;padding:2px 5px;border:1px solid var(--line);
+  color:var(--fg);background:transparent;font-size:10px;white-space:nowrap;
+}
+.slope-badge.slope-easy{color:var(--fg);background:transparent}
+.slope-badge.slope-medium{color:#f28c28;border-color:#f28c28;background:rgba(242,140,40,.06)}
+.slope-badge.slope-hard{color:#e5484d;border-color:#e5484d;background:rgba(229,72,77,.08)}
+.elevation-breakdown-table th,.elevation-breakdown-table td{font-variant-numeric:tabular-nums}
