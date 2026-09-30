@@ -8,7 +8,7 @@ const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.g
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){},invalidateSize(){},bindTooltip(){return this},setOpacity(){}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});
 (async()=>{
  await tick();
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
@@ -35,8 +35,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  console.log('PASS trail-edge projection, same-segment route, distance, no-nearby-trail detection');
  w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}:{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
  d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await tick();await tick();
- assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);
- console.log('PASS snapped route with elevation success and saved profile');
+ assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
+ console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
+ const merged=r.displayTrailSections([{result:{trailSections:[
+   {label:'Long Trail',name:'Long Trail',surface:'wood',distanceM:1000},
+   {label:'Long Trail',name:'Long Trail',surface:'grass',distanceM:500},
+   {label:'Long Trail',name:'Long Trail',surface:'rock',distanceM:250}
+ ]}}]);
+ assert.equal(merged.length,1);assert.equal(merged[0].distanceM,1750);
+ console.log('PASS named trail display merges surface changes into one total-distance row');
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
