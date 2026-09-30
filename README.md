@@ -1,4 +1,4 @@
-# FIELD/OS 3.60
+# FIELD/OS 3.61
 
 TAP V2 companion interface. GitHub Pages deploys from main / root.
 
@@ -81,3 +81,24 @@ navigation modules at 390, 768, 1024, 1280, 1440, and 1920 pixels, card sizing,
 full-width elevation, and stable schematic updates. Both run in GitHub Actions.
 Browser checks block external services; they do not validate live map providers
 or physical TAP hardware.
+
+## v3.61 workspace search and local-processing improvements
+
+Use **Find a module** in the desktop sidebar or **Ctrl/Cmd+K** to open the offline
+workspace switcher. Search module names or task words (GPS, notes, offline maps,
+elevation), use Up/Down and Enter to open a result, or Escape to return to the
+previous control. Opening Emergency only navigates to its existing screen.
+
+Local place search now retains a sorted index between queries, returns the first
+50 matching results, and rebuilds when imported places, waypoints, or cached
+water sources change. Typing updates are batched per frame; hidden-page renders
+pause. Imports from another tab invalidate the local index.
+
+Storage health scans start when System is first viewed or when explicitly
+requested. Concurrent checks share one scan, scoped to FIELD/OS caches.
+Timestamp marks preserve latitude/longitude zero, recover malformed saved
+records, render labels as text, and report write failures without crashing.
+
+Validation covers the switcher's keyboard/pointer/empty-result/focus behavior,
+all 18 modules at six viewport widths, 5,000-place search and invalidation,
+malformed mark storage, storage-quota failure, and concurrent cache checks.

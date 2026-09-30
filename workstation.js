@@ -1,4 +1,4 @@
-/* FIELD/OS v3.60: home-style workspaces with density parity across modules. */
+/* FIELD/OS v3.61: home-style workspaces with density parity across modules. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['mission','MISSION MODE'],['survival','FIELD MANUAL'],['weather','WEATHER INTELLIGENCE'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +10,7 @@
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
   const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.60</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.61</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -19,6 +19,65 @@
     <span class="ws-clock"></span>
   </footer>`;
   document.getElementById('app').prepend(nav);
+  // Offline keyboard launcher; native dialog supplies focus trapping and Escape.
+  const launcher=document.createElement('button');
+  launcher.type='button';launcher.className='ws-launcher';launcher.id='workspaceSearch';
+  launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-controls','workspaceSwitcher');
+  launcher.innerHTML='<span>FIND A MODULE</span><kbd>Ctrl / ⌘ K</kbd>';
+  nav.querySelector('.ws-brand').after(launcher);
+  const switcher=document.createElement('dialog');switcher.id='workspaceSwitcher';switcher.className='workspace-switcher';
+  switcher.setAttribute('aria-labelledby','workspaceSwitcherTitle');
+  switcher.innerHTML='<div class="switcher-heading"><h2 id="workspaceSwitcherTitle">Go to workspace</h2><button type="button" class="switcher-close" aria-label="Close workspace search">ESC</button></div><label for="workspaceQuery">Find a module or task</label><input id="workspaceQuery" type="search" autocomplete="off" placeholder="Try route, weather, GPS, notes…" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="workspaceResults"><p id="workspaceResultStatus" role="status"></p><div id="workspaceResults" role="listbox" aria-label="Matching workspaces"></div><p class="switcher-hint">↑ ↓ to select · Enter to open · Esc to close</p>';
+  document.body.append(switcher);
+  const query=switcher.querySelector('input'),resultList=switcher.querySelector('#workspaceResults');
+  const aliases={home:'dashboard overview',map:'offline maps places search satellite layers',nav:'gps location compass coordinates',route:'planner elevation distance trail eta',trailreturn:'return trail intercept',waypoints:'marks base camp water',track:'recorder gpx recording',trip:'plan checklist packing check in',mission:'pack readiness expedition',survival:'manual guides reference',weather:'forecast rain wind snow avalanche',comms:'mesh messages radio inbox',sensors:'pressure temperature signal',log:'journal notes events',power:'battery energy display',system:'settings theme storage recovery diagnostics',lost:'recovery lost return',sos:'emergency help'};
+  let matches=[],selected=0,returnFocus=null;
+  function selectMatch(index){
+    selected=matches.length?(index+matches.length)%matches.length:0;
+    [...resultList.children].forEach((el,i)=>el.setAttribute('aria-selected',String(i===selected)));
+    const active=resultList.children[selected];
+    if(active){query.setAttribute('aria-activedescendant',active.id);active.scrollIntoView({block:'nearest'});}
+    else query.removeAttribute('aria-activedescendant');
+  }
+  function findModules(){
+    const terms=query.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    matches=modules.filter(([id,label])=>terms.every(t=>(label+' '+(aliases[id]||'')).toLowerCase().includes(t)));
+    resultList.replaceChildren(...matches.map(([id,label],i)=>{
+      const option=document.createElement('div');option.id='workspace-option-'+id;
+      option.setAttribute('role','option');option.dataset.resultIndex=i;
+      const name=document.createElement('strong');name.textContent=label;
+      const description=document.createElement('span');description.textContent=id===document.querySelector('.view.active')?.id?'CURRENT WORKSPACE':'OPEN WORKSPACE';
+      option.append(name,description);return option;
+    }));
+    switcher.querySelector('#workspaceResultStatus').textContent=matches.length?matches.length+' workspaces':'No matches. Try a module name such as map or route.';
+    selectMatch(0);
+  }
+  function showSwitcher(){
+    if(switcher.open)return;
+    returnFocus=document.activeElement;query.value='';switcher.showModal();findModules();query.focus();
+  }
+  function activateMatch(index){
+    const item=matches[index];if(!item)return;
+    returnFocus=document.getElementById('screen');switcher.close();openView(item[0]);
+  }
+  launcher.addEventListener('click',showSwitcher);
+  switcher.querySelector('.switcher-close').addEventListener('click',()=>switcher.close());
+  switcher.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+  switcher.addEventListener('click',e=>{
+    const option=e.target.closest('[data-result-index]');
+    if(option)activateMatch(Number(option.dataset.resultIndex));
+    else if(e.target===switcher){const r=switcher.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)switcher.close();}
+  });
+  switcher.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();switcher.close();}});
+  query.addEventListener('input',findModules);
+  query.addEventListener('keydown',e=>{
+    if(e.isComposing)return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selectMatch(selected+(e.key==='ArrowDown'?1:-1));}
+    else if(e.key==='Enter'){e.preventDefault();activateMatch(selected);}
+  });
+  document.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!e.altKey&&!e.isComposing){e.preventDefault();if(switcher.open)switcher.close();else showSwitcher();}
+  });
   const specs={
     map:[['Route geometry','SCHEMATIC','plot'],['Position solution','SOURCE / AGE','position'],['Active route','PLANNER DATA','route'],['Saved marks','LOCAL DATABASE','marks'],['Map coverage','AVAILABILITY','coverage'],['Recording summary','BREADCRUMBS','record'],['Navigation shortcuts','FIELD TOOLS','navtools']],
     comms:[['Radio connection','TRANSPORT','radio'],['Node roster','ILLUSTRATIVE / DEMO','mesh'],['Packet delivery','CURRENT SESSION','delivery'],['Location payload','CURRENT SOURCE','position'],['Channel configuration','NOT CONNECTED','channel'],['Communications workflow','LOCAL TOOLS','commtools']],
@@ -87,7 +146,7 @@
     events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
     batteries:()=>rows([['PHONE / COMPUTER',val('mobileBattery')],['TAP V2','UNAVAILABLE'],['SENSOR-2','UNAVAILABLE'],['HARDWARE RESERVE','NOT MEASURED'],['CHARGING',val('mobilePowerState')]])+note('The browser battery reading may be unavailable on some devices.'),
     display:()=>rows([['THEME',document.body.dataset.theme||'green'],['POWER MODE',storageGet(STORE_PREFIX+'power')||'normal'],['WAKE LOCK',fieldWakeLock?'ACTIVE':'OFF'],['SCREEN',`${innerWidth} × ${innerHeight}`],['VISIBILITY',document.visibilityState]])+actions([['system','DISPLAY THEME']]),
-    runtime:()=>rows([['RELEASE','FIELD/OS 3.60'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
+    runtime:()=>rows([['RELEASE','FIELD/OS 3.61'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
     plot,
     navtools:()=>actions([['map','TERRAIN MAP'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','SAVED WAYPOINTS'],['track','TRACK RECORDER'],['lost','LOST MODE']])+note('Use your route, saved base, and position source together when reviewing a return path.'),
     commtools:()=>actions([['trip','CHECK-IN PLAN'],['nav','COORDINATES'],['log','EVENT JOURNAL'],['system','DEVICE STATUS']])+note('Prepare a check-in locally and review the position source before copying it.'),
@@ -115,7 +174,7 @@
     }
     const consoleBar=document.createElement('div');
     consoleBar.className='module-console-header';
-    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.60</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.61</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}

@@ -3705,3 +3705,23 @@ input,select,textarea{
   #system .field-tools-panel .button-row>*{min-width:0;width:100%}
   body .workstation-nav{overscroll-behavior:contain;scrollbar-gutter:stable}
 }
+
+/* v3.61 quick workspace switcher */
+.workstation-nav .ws-launcher{display:flex;justify-content:space-between;gap:6px;border:1px solid var(--line);margin:10px 0 2px;padding:9px 7px;min-height:42px}
+.workstation-nav .ws-launcher span{font-size:10px;color:var(--fg)}
+.ws-launcher kbd{font:9px monospace;color:var(--dim);white-space:nowrap}
+.workspace-switcher{box-sizing:border-box;width:min(580px,calc(100vw - 32px));max-height:calc(100dvh - 48px);margin:auto;padding:22px;border:1px solid var(--fg);border-radius:8px;background:var(--bg);color:var(--fg);font-family:inherit;box-shadow:0 18px 80px #000b;overflow:auto}
+.workspace-switcher::backdrop{background:rgba(0,0,0,.76)}
+.workspace-switcher .switcher-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+.workspace-switcher h2{font-size:20px;margin:0;letter-spacing:.02em}
+.workspace-switcher label{display:block;font-size:12px;margin-bottom:8px;color:var(--dim)}
+.workspace-switcher input{box-sizing:border-box;display:block;width:100%;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-family:inherit;padding:14px;border-radius:4px;font-size:16px}
+.workspace-switcher input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.workspace-switcher .switcher-close{border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:9px;cursor:pointer;min-height:38px}
+#workspaceResults{max-height:min(48dvh,420px);overflow-y:auto;overscroll-behavior:contain}
+#workspaceResults [role=option]{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 10px;min-height:24px;cursor:pointer;border-radius:4px}
+#workspaceResults [role=option][aria-selected=true]{background:var(--fg);color:var(--bg)}
+#workspaceResults strong{font-size:13px;overflow-wrap:anywhere}
+#workspaceResults span{font-size:9px;text-align:right}
+.workspace-switcher .switcher-hint,#workspaceResultStatus{font-size:11px;line-height:1.5;color:var(--dim)}
+@media(max-width:600px){.workspace-switcher{padding:16px}.workspace-switcher h2{font-size:18px}}

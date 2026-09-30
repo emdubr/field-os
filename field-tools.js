@@ -15,12 +15,27 @@
     const all=[...places,...(Array.isArray(waypoints)?waypoints:[]).map(p=>({...p,source:'WAYPOINT'})),...(Array.isArray(water)?water:[])];
     const seen=new Set();return all.map(normalize).filter(p=>{if(!p)return false;const id=identity(p);if(seen.has(id))return false;seen.add(id);return true});
   }
+  // Rebuild the sorted search index only when one of its sources changes.
+  let index=null,indexPlaces=null,indexWaypoints=null,indexWater=null;
+  function searchIndex(){
+    let waypointKey='';try{waypointKey=localStorage.getItem(prefix+'waypoints')||''}catch{}
+    const waterKey=JSON.stringify(window.FIELD_WATER?.state?.cache?.items||[]);
+    if(!index||indexPlaces!==places||indexWaypoints!==waypointKey||indexWater!==waterKey){
+      index=collect().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>({point:p,text:`${p.name} ${p.type} ${p.source}`.toLowerCase()}));
+      indexPlaces=places;indexWaypoints=waypointKey;indexWater=waterKey;
+    }
+    return index;
+  }
   function search(query){
     const q=String(query||'').trim().toLowerCase();
     const coord=q.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
     if(coord){const p=normalize({name:'Coordinates',lat:coord[1],lon:coord[2],source:'ENTERED COORDINATES'});return p?[p]:[]}
-    const terms=q.split(/\s+/).filter(Boolean);
-    return collect().filter(p=>terms.every(t=>`${p.name} ${p.type} ${p.source}`.toLowerCase().includes(t))).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,50);
+    const terms=q.split(/\s+/).filter(Boolean),matches=[];
+    for(const entry of searchIndex()){
+      if(terms.every(t=>entry.text.includes(t)))matches.push({...entry.point});
+      if(matches.length===50)break;
+    }
+    return matches;
   }
   function importPlaces(data){
     const rows=Array.isArray(data)?data:data?.type==='FeatureCollection'&&Array.isArray(data.features)?data.features.filter(f=>f?.geometry?.type==='Point').map(f=>({...f.properties,lat:f.geometry.coordinates?.[1],lon:f.geometry.coordinates?.[0]})):null;
@@ -33,8 +48,23 @@
   }
   function exportPlaces(){return {type:'FeatureCollection',features:places.map(p=>({type:'Feature',properties:{name:p.name,type:p.type,source:p.source},geometry:{type:'Point',coordinates:[p.lon,p.lat]}}))}}
   let results=[];
-  function renderSearch(){results=search(document.getElementById('offlinePlaceQuery')?.value||'');text('offlinePlaceCount',`${places.length} IMPORTED // ${collect().length} TOTAL LOCAL PLACES`);const list=document.getElementById('offlinePlaceResults');if(list)list.innerHTML=results.map((p,i)=>`<button type="button" class="offline-place-result" data-place-index="${i}"><b>${esc(p.name)}</b><span>${esc(p.type)} · ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span><small>${esc(p.source)} · SHOW ON MAP</small></button>`).join('')||'<p class="muted">No local matches. Import places, save waypoints, or enter latitude, longitude.</p>'}
-  document.getElementById('offlinePlaceQuery')?.addEventListener('input',renderSearch);
+  function renderSearch(){results=search(document.getElementById('offlinePlaceQuery')?.value||'');text('offlinePlaceCount',`${places.length} IMPORTED // ${searchIndex().length} TOTAL LOCAL PLACES`);const list=document.getElementById('offlinePlaceResults');if(list)list.innerHTML=results.map((p,i)=>`<button type="button" class="offline-place-result" data-place-index="${i}"><b>${esc(p.name)}</b><span>${esc(p.type)} · ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span><small>${esc(p.source)} · SHOW ON MAP</small></button>`).join('')||'<p class="muted">No local matches. Import places, save waypoints, or enter latitude, longitude.</p>'}
+  let searchFrame=0;
+  function scheduleSearch(){
+    if(searchFrame||document.hidden)return;
+    searchFrame=requestAnimationFrame(()=>{searchFrame=0;renderSearch();});
+  }
+  document.getElementById('offlinePlaceQuery')?.addEventListener('input',scheduleSearch);
+  window.addEventListener('storage',e=>{
+    if(e.key===prefix+'places'||e.key===null){const next=read('places',[]);places=Array.isArray(next)?next.map(normalize).filter(Boolean).slice(0,maxPlaces):[];}
+    if(e.key===null||e.key===prefix+'places'||e.key===prefix+'waypoints'){
+      index=null;if(document.querySelector('#map.active'))scheduleSearch();
+    }
+  });
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(searchFrame);searchFrame=0;}
+    else if(document.querySelector('#map.active'))scheduleSearch();
+  });
   document.getElementById('offlinePlaceResults')?.addEventListener('click',e=>{const button=e.target.closest('[data-place-index]'),p=results[Number(button?.dataset.placeIndex)];if(!button||!p)return;window.FIELD_MAP_ENGINE?.setView('realMap',p,15);document.getElementById('realMap')?.scrollIntoView({block:'center',behavior:'smooth'});text('offlinePlaceStatus',`${p.name} — ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`)});
   document.getElementById('offlinePlaceFile')?.addEventListener('change',async e=>{const input=e.currentTarget,file=input.files?.[0];if(!file)return;try{if(file.size>5*1024*1024)throw new Error('Use a file smaller than 5 MB.');const r=importPlaces(JSON.parse(await file.text()));text('offlinePlaceStatus',`IMPORTED ${r.accepted} VALID POINTS // ${r.total} SAVED`)}catch(err){text('offlinePlaceStatus',err.message)}finally{input.value=''}});
   document.getElementById('offlinePlaceExport')?.addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(exportPlaces(),null,2)],{type:'application/geo+json'}));const a=document.createElement('a');a.href=url;a.download='field-os-places.geojson';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
@@ -77,8 +107,28 @@
  function convert(){const p=parseCoord($('fieldCoordInput')?.value);if(!p)return set('fieldCoordOutput','ENTER DECIMAL LAT, LON');set('fieldCoordOutput',dms(p.lat,'N','S')+' // '+dms(p.lon,'E','W'))}
  function navcalc(){const a=parseCoord($('fieldPointA')?.value),b=parseCoord($('fieldPointB')?.value);if(!a||!b)return set('fieldNavCalc','ENTER TWO VALID POINTS');const R=6371000,dla=rad(b.lat-a.lat),dlo=rad(b.lon-a.lon),la1=rad(a.lat),la2=rad(b.lat),h=Math.sin(dla/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2,d=2*R*Math.asin(Math.min(1,Math.sqrt(h))),y=Math.sin(dlo)*Math.cos(la2),x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dlo),br=(deg(Math.atan2(y,x))+360)%360;set('fieldNavCalc',(d/1609.344).toFixed(2)+' MI // '+Math.round(br)+'° TRUE')}
  function saveNote(){try{localStorage.setItem(K+'note',$('fieldScratch')?.value||'');set('fieldUtilityState','NOTE SAVED LOCALLY')}catch{set('fieldUtilityState','NOTE SAVE FAILED')}}
- function mark(){const p=window.FIELD_ROUTE_STATE?.current?.()||window.FIELD_CURRENT_POSITION,items=JSON.parse(localStorage.getItem(K+'marks')||'[]');items.unshift({time:new Date().toISOString(),lat:Number(p?.lat)||null,lon:Number(p?.lon)||null,label:String($('fieldMarkLabel')?.value||'FIELD MARK').slice(0,80)});localStorage.setItem(K+'marks',JSON.stringify(items.slice(0,100)));renderMarks()}
- function renderMarks(){let items=[];try{items=JSON.parse(localStorage.getItem(K+'marks')||'[]')}catch{}const e=$('fieldMarks');if(e)e.innerHTML=items.slice(0,8).map(x=>'<div class="condition-row"><b>'+x.label.replace(/[<>]/g,'')+'</b><span>'+new Date(x.time).toLocaleString()+'</span><em>'+(x.lat==null?'NO FIX':x.lat.toFixed(4)+', '+x.lon.toFixed(4))+'</em></div>').join('')||'<p class="muted">No timestamp marks.</p>'}
+ function readMarks(){
+   try{const raw=JSON.parse(localStorage.getItem(K+'marks')||'[]');return Array.isArray(raw)?raw.filter(x=>x&&typeof x==='object').slice(0,100):[]}catch{return []}
+ }
+ const validMarkCoord=(v,max)=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))&&Math.abs(Number(v))<=max;
+ function mark(){
+   const p=window.FIELD_ROUTE_STATE?.current?.()||window.FIELD_CURRENT_POSITION,items=readMarks();
+   const valid=validMarkCoord(p?.lat,90)&&validMarkCoord(p?.lon,180);
+   items.unshift({time:new Date().toISOString(),lat:valid?Number(p.lat):null,lon:valid?Number(p.lon):null,label:String($('fieldMarkLabel')?.value||'FIELD MARK').slice(0,80)});
+   try{localStorage.setItem(K+'marks',JSON.stringify(items.slice(0,100)));renderMarks();set('fieldUtilityState','TIMESTAMP MARK SAVED')}catch{set('fieldUtilityState','MARK SAVE FAILED — STORAGE UNAVAILABLE')}
+ }
+ function renderMarks(){
+   const e=$('fieldMarks');if(!e)return;
+   const items=readMarks().slice(0,8);e.replaceChildren();
+   for(const x of items){
+     const row=document.createElement('div');row.className='condition-row';
+     const label=document.createElement('b');label.textContent=String(x.label||'FIELD MARK');
+     const time=document.createElement('span');const date=new Date(x.time);time.textContent=Number.isFinite(date.getTime())?date.toLocaleString():'UNKNOWN TIME';
+     const coords=document.createElement('em');coords.textContent=validMarkCoord(x.lat,90)&&validMarkCoord(x.lon,180)?Number(x.lat).toFixed(4)+', '+Number(x.lon).toFixed(4):'NO FIX';
+     row.append(label,time,coords);e.append(row);
+   }
+   if(!items.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='No timestamp marks.';e.append(empty);}
+ }
  async function storage(){try{const q=await navigator.storage?.estimate?.();if(!q)return set('fieldStorageUsage','UNAVAILABLE');const u=Number(q.usage||0),m=Number(q.quota||0);set('fieldStorageUsage',(u/1048576).toFixed(1)+' / '+(m/1048576).toFixed(0)+' MB // '+(m?Math.round(u/m*100):0)+'%')}catch{set('fieldStorageUsage','UNAVAILABLE')}}
  function readiness(){const checks=[navigator.onLine,!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length,!!localStorage.getItem('fieldos-v12-map-pack'),!!localStorage.getItem('fieldos-v12-weather-cache'),!!localStorage.getItem('fieldos-v12-environment-intel-cache'),!!navigator.serviceWorker?.controller];const n=checks.filter(Boolean).length;set('fieldOfflineReadiness',n+'/6 // '+(n>=5?'FIELD READY':n>=3?'PARTIAL':'PREP NEEDED'));return n}
  function locationCard(){const p=window.FIELD_ROUTE_STATE?.current?.()||window.FIELD_CURRENT_POSITION,plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{};const value=['FIELD/OS LOCATION CARD','TIME '+new Date().toISOString(),p&&Number.isFinite(Number(p.lat))?'POSITION '+Number(p.lat).toFixed(6)+', '+Number(p.lon).toFixed(6):'POSITION NO FIX','ROUTE '+(plan.name||'NONE')].join('\n');set('fieldLocationCard',value);return value}
@@ -97,12 +147,26 @@
  function restore(){let s;try{s=JSON.parse(localStorage.getItem(SK)||'null')}catch{}if(!s?.items)return set('recoverySnapshotState','NO SNAPSHOT');for(const [k,v] of Object.entries(s.items))try{if(v==null)localStorage.removeItem(P+k);else localStorage.setItem(P+k,v)}catch{}set('recoverySnapshotState','RESTORED // RELOAD APP');diag('RESTORE','Recovery snapshot restored')}
  async function permissions(){const names=['geolocation','notifications'];const out=[];for(const name of names){try{const r=await navigator.permissions?.query?.({name});out.push(name.toUpperCase()+': '+String(r?.state||'UNKNOWN').toUpperCase())}catch{out.push(name.toUpperCase()+': BROWSER MANAGED')}}set('browserPermissionAudit',out.join(' // '));return out}
  async function swHealth(){let state='UNAVAILABLE';try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();state=reg?(navigator.serviceWorker.controller?'CONTROLLED':'REGISTERED / RELOAD NEEDED'):'NOT REGISTERED'}}catch{state='ERROR'}set('browserSwHealth',state);return state}
- async function cacheHealth(){let count=0,names=[];try{if('caches' in window){names=await caches.keys();for(const n of names){const cache=await caches.open(n);count+=(await cache.keys()).length}}}catch{}set('browserCacheHealth',names.length+' CACHES // '+count+' RESPONSES');return {names,count}}
+ let cacheScan=null;
+ function cacheHealth(){
+   if(cacheScan)return cacheScan;
+   cacheScan=(async()=>{
+     let count=0,names=[];
+     try{if('caches' in window){names=(await caches.keys()).filter(n=>n.startsWith('field-os-'));for(const n of names){const cache=await caches.open(n);count+=(await cache.keys()).length}}}catch{}
+     set('browserCacheHealth',names.length+' APP CACHES // '+count+' RESPONSES');return {names,count};
+   })().finally(()=>{cacheScan=null});
+   return cacheScan;
+ }
  function stale(){const rows=[];for(const [key,label,maxH] of [['weather-cache','WEATHER',12],['environment-intel-cache','ENVIRONMENT',24]]){let d=null;try{d=JSON.parse(localStorage.getItem(P+key)||'null')}catch{}const t=Date.parse(d?.downloadedAt||d?.fetchedAt||'');const h=Number.isFinite(t)?(Date.now()-t)/3600000:Infinity;rows.push(label+': '+(h<=maxH?'FRESH':h<Infinity?Math.floor(h)+'H OLD':'MISSING'))}set('browserStaleData',rows.join(' // '));return rows}
  async function launch(){const results=[];results.push(['ONLINE',navigator.onLine]);results.push(['SERVICE WORKER',(await swHealth())!=='UNAVAILABLE']);results.push(['ROUTE',!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length]);results.push(['POSITION',!!window.FIELD_ROUTE_STATE?.current?.()]);results.push(['OFFLINE MAP',!!localStorage.getItem(P+'map-pack')]);results.push(['WEATHER',!!localStorage.getItem(P+'weather-cache')]);results.push(['ENVIRONMENT',!!localStorage.getItem(P+'environment-intel-cache')]);const ok=results.filter(x=>x[1]).length;set('browserLaunchCheck',ok+'/'+results.length+' READY // '+(ok>=6?'GO':ok>=4?'PARTIAL':'PREP'));const e=$('browserLaunchList');if(e)e.innerHTML=results.map(x=>'<div class="condition-row"><b>'+x[0]+'</b><span>'+(x[1]?'READY':'MISSING')+'</span></div>').join('');diag('PREFLIGHT',ok+'/'+results.length+' ready');return results}
  function softReset(){for(const k of ['touch-glove','touch-onehand'])try{localStorage.removeItem(P+k)}catch{}document.body.classList.remove('field-glove','field-onehand');set('browserRecoveryState','UI FIELD MODES RESET');diag('SAFE UI RESET','Touch modes reset only')}
  $('recoverySnapshot')?.addEventListener('click',snapshot);$('recoveryRestore')?.addEventListener('click',restore);$('browserRunAudit')?.addEventListener('click',async()=>{await permissions();await swHealth();await cacheHealth();stale();diag('AUDIT','Browser health audit complete')});$('browserLaunchPreflight')?.addEventListener('click',launch);$('browserSoftReset')?.addEventListener('click',softReset);
  window.addEventListener('error',e=>diag('JS ERROR',e.message||'Unknown error'));window.addEventListener('unhandledrejection',e=>diag('PROMISE ERROR',String(e.reason?.message||e.reason||'Unknown rejection')));
- renderDiag();permissions();swHealth();cacheHealth();stale();setTimeout(()=>{if(window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)snapshot()},1500);
+ renderDiag();permissions();swHealth();stale();
+ let cacheChecked=false;
+ const inspectCacheWhenVisible=()=>{if(!cacheChecked&&!document.hidden&&document.querySelector('#system.active')){cacheChecked=true;cacheHealth();}};
+ document.addEventListener('fieldos:viewchange',inspectCacheWhenVisible);
+ document.addEventListener('visibilitychange',inspectCacheWhenVisible);
+ inspectCacheWhenVisible();setTimeout(()=>{if(window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)snapshot()},1500);
  window.FIELD_BROWSER_RESILIENCE={diag,snapshot,restore,permissions,swHealth,cacheHealth,stale,launch};
 })();

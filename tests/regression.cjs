@@ -14,7 +14,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 (async()=>{
  await tick();
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
- for(const btn of d.querySelectorAll('.workstation-nav button')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
+ for(const btn of d.querySelectorAll('.workstation-nav [data-open]')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
  console.log('PASS all 16 modules initialize and navigation changes active view');
  for(const theme of ['amber','red','mono','green']){d.querySelector(`[data-theme-choice="${theme}"]`).click();await tick();assert.equal(d.body.dataset.theme,theme);assert.equal(w.localStorage.getItem('fieldos-v12-theme'),theme)}
  console.log('PASS four themes and preference persistence');
@@ -303,16 +303,16 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
  const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
- assert.ok(html.includes('styles.css?v=3.60')&&html.includes('workstation.css?v=3.60')&&html.includes('field-tools.js?v=3.60'));
- assert.ok(appJs.includes("sw.js?v=3.60")&&appJs.includes("fieldos-sw-reloaded-v3.60"));
- assert.ok(swJs.includes("field-os-v3-60")&&swJs.includes("field-tools.js?v=3.60"));
- assert.ok(manifest.includes("index.html?v=3.60"));
+ assert.ok(html.includes('styles.css?v=3.61')&&html.includes('workstation.css?v=3.61')&&html.includes('field-tools.js?v=3.61'));
+ assert.ok(appJs.includes("sw.js?v=3.61")&&appJs.includes("fieldos-sw-reloaded-v3.61"));
+ assert.ok(swJs.includes("field-os-v3-61")&&swJs.includes("field-tools.js?v=3.61"));
+ assert.ok(manifest.includes("index.html?v=3.61"));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS v3.60 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS v3.61 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
- assert.ok(workstationJs.includes('FIELD / OS <b>3.60</b>')&&workstationJs.includes('<em>v3.60</em>'));
- assert.ok(routePlannerJs.includes("'BUILD: v3.60'"));
- console.log('PASS runtime workstation and route diagnostics display FIELD OS v3.60');
+ assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
+ assert.ok(routePlannerJs.includes("'BUILD: v3.61'"));
+ console.log('PASS runtime workstation and route diagnostics display FIELD OS v3.61');
  assert.ok(appJs.includes("zoomSnap:.125")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:.125")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
@@ -500,14 +500,14 @@ assert.ok(workstationCss.includes('grid-template-columns:repeat(5,minmax(0,1fr))
 assert.ok(workstationCss.includes('bottom:var(--mobile-dock-h)!important'));
 assert.ok(workstationCss.includes('.tab-sheet.open{'));
 assert.ok(workstationCss.includes('transform:translateY(0)!important'));
-console.log('PASS v3.60 mobile dock owns bottom safe area and More sheet geometry');
+console.log('PASS v3.61 mobile dock owns bottom safe area and More sheet geometry');
 
 assert.ok(appJs.includes('zoomSnap:.125')&&appJs.includes('zoomDelta:.25')&&appJs.includes('wheelPxPerZoomLevel:180'));
 assert.ok(routePlannerJs.includes('zoomSnap:.125')&&routePlannerJs.includes('zoomDelta:.25')&&routePlannerJs.includes('wheelPxPerZoomLevel:180'));
 assert.ok(routePlannerJs.includes('[0,450,1100][i]'));
 assert.ok(fieldIntelJs.includes("document.visibilityState==='visible'&&(dr.active||dr.armed)"));
 assert.ok(workstationCss.includes('map interaction performance'));
-console.log('PASS v3.60 smooth zoom, faster trail-server failover, and hidden-work throttling');
+console.log('PASS v3.61 smooth zoom, faster trail-server failover, and hidden-work throttling');
 
 assert.ok(appJs.includes('function enableContinuousWheelZoom(map)'));
 assert.ok(appJs.includes('st.zoom-dy/520'));
@@ -518,19 +518,55 @@ assert.ok(fieldToolsJs.includes("fieldos-v12-map-pack"));
 assert.ok(!fieldToolsJs.includes('fieldos-v12-active-map-pack'));
 assert.ok(swJs.includes("e.request.mode==='navigate'"));
 assert.ok(swJs.includes("cache.match('./index.html')"));
-console.log('PASS v3.60 continuous native zoom and offline shell/map/route contracts');
+console.log('PASS v3.61 continuous native zoom and offline shell/map/route contracts');
 
 assert.ok(workstationCss.includes('#route .module-grid>.route-planner-panel.module-hero'));
 assert.ok(workstationCss.includes('grid-column:1 / -1!important'));
 assert.ok(workstationCss.includes('#route .module-grid>.route-performance-panel'));
-console.log('PASS v3.60 route planner and ETA reclaim full desktop width without blank column');
+console.log('PASS v3.61 route planner and ETA reclaim full desktop width without blank column');
 
 assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
 assert.ok(workstationCss.includes('v3.59 QA/UI hardening'));
 assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.60</b>')&&workstationJs.includes('<em>v3.60</em>'));
-console.log('PASS v3.60 zoom lifecycle, mobile dense-panel layout, and runtime branding');
+assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
+console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
 
+
+ // Search index must reflect all source mutations without exposing cached objects.
+ const bulk=Array.from({length:5000},(_,i)=>({name:'Place '+String(i).padStart(4,'0'),lat:44+i/100000,lon:-73,type:'TEST'}));
+ click('offlinePlaceClear');w.FIELD_PLACES.import(bulk);
+ assert.equal(w.FIELD_PLACES.search('place').length,50);
+ const cachedResult=w.FIELD_PLACES.search('Place 0001');cachedResult[0].name='MUTATED';
+ assert.equal(w.FIELD_PLACES.search('Place 0001')[0].name,'Place 0001');
+ const previousWaypoints=w.localStorage.getItem('fieldos-v12-waypoints');
+ w.localStorage.setItem('fieldos-v12-waypoints',JSON.stringify([{name:'Index Fresh Mark',lat:45,lon:-73,type:'NOTE'}]));
+ assert.equal(w.FIELD_PLACES.search('index fresh mark').length,1);
+ w.localStorage.setItem('fieldos-v12-waypoints',previousWaypoints);
+ assert.equal(w.FIELD_PLACES.search('index fresh mark').length,0);
+ w.localStorage.setItem('fieldos-v12-places',JSON.stringify([{name:'Other Tab Place',lat:44,lon:-72}]));
+ w.dispatchEvent(new w.StorageEvent('storage',{key:'fieldos-v12-places'}));
+ assert.equal(w.FIELD_PLACES.search('other tab place').length,1);
+ assert.equal(w.FIELD_PLACES.search('Place 0001').length,0);
+ console.log('PASS 5,000-place indexing, result limit, mutation isolation, waypoint invalidation and cross-tab imports');
+ const previousCurrent=w.FIELD_ROUTE_STATE.current;
+ w.FIELD_ROUTE_STATE.current=()=>({lat:0,lon:0});
+ w.localStorage.setItem('fieldos-v12-field-utility-marks','{"broken":true}');
+ d.getElementById('fieldMarkLabel').value='<img src=x onerror=alert(1)>';
+ click('fieldAddMark');
+ const mark=JSON.parse(w.localStorage.getItem('fieldos-v12-field-utility-marks'))[0];
+ assert.equal(mark.lat,0);assert.equal(mark.lon,0);assert.equal(d.querySelector('#fieldMarks img'),null);
+ assert.match(d.getElementById('fieldMarks').textContent,/0.0000, 0.0000/);
+ const originalSetItem=w.Storage.prototype.setItem;
+ w.Storage.prototype.setItem=()=>{throw new Error('Quota exceeded')};
+ click('fieldAddMark');assert.match(d.getElementById('fieldUtilityState').textContent,/MARK SAVE FAILED/);
+ w.Storage.prototype.setItem=originalSetItem;w.FIELD_ROUTE_STATE.current=previousCurrent;
+ console.log('PASS marks recover malformed storage, preserve zero coordinates, escape labels and report quota failure');
+ const previousCaches=w.caches;let cacheScans=0,opened=[];
+ w.caches={keys:async()=>{cacheScans++;await tick();return ['field-os-test','unrelated-app'];},open:async name=>{opened.push(name);return {keys:async()=>[{},{}]}}};
+ const reports=await Promise.all([w.FIELD_BROWSER_RESILIENCE.cacheHealth(),w.FIELD_BROWSER_RESILIENCE.cacheHealth(),w.FIELD_BROWSER_RESILIENCE.cacheHealth()]);
+ assert.equal(cacheScans,1);assert.deepEqual(opened,['field-os-test']);assert.equal(reports[0].count,2);
+ if(previousCaches===undefined)delete w.caches;else w.caches=previousCaches;
+ console.log('PASS concurrent storage-health requests share one scan and ignore unrelated app caches');
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
