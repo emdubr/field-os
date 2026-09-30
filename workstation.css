@@ -1810,3 +1810,5 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   #survival.guide-reading-mode .guide-reader.active{padding:12px 10px 34px}
   .guide-reader-head h3{font-size:22px}
 }
+
+#survival.guide-reading-mode>.view-head{display:none!important}
