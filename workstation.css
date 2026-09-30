@@ -3899,3 +3899,27 @@ input,select,textarea{
   :root{--ws-nav-w:196px;--ws-edge:8px}
   body .workstation-nav button{font-size:12px!important;min-height:38px!important}
 }
+
+
+@media(min-width:1024px){
+  body .module-console-header{
+    display:grid!important;
+    grid-template-columns:minmax(190px,1.4fr) repeat(4,minmax(90px,.8fr)) minmax(90px,.7fr)!important;
+    align-items:center!important;
+    min-height:48px!important;
+    padding:8px 10px!important;
+    gap:8px!important;
+    overflow:hidden!important;
+  }
+  body .module-console-header>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  body .module-band{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:center!important;
+    min-height:30px!important;
+    padding:5px 10px!important;
+    gap:8px!important;
+    overflow:hidden!important;
+  }
+  body .module-band>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+}
