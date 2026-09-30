@@ -235,8 +235,25 @@
   function gradeAtDistance(profile,distanceM){
     const s=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
     if(s.length<2)return 0;
-    let i=1;while(i<s.length-1&&s[i].distanceM<distanceM)i++;
-    return sampleGrade(s[Math.max(0,i-1)],s[Math.min(s.length-1,i)]);
+    const totalM=Math.max(0,Number(s.at(-1).distanceM)||0);
+    const d=clamp(Number(distanceM)||0,0,totalM);
+    // Grade-coloring is intentionally averaged across a real horizontal window.
+    // DEM samples can jitter several feet between adjacent points; using one tiny
+    // sample interval made visually flat trail sections appear falsely red.
+    const halfWindow=Math.min(45,Math.max(20,totalM/80));
+    let startM=Math.max(0,d-halfWindow),endM=Math.min(totalM,d+halfWindow);
+    if(endM-startM<25){
+      if(startM===0)endM=Math.min(totalM,25);
+      else if(endM===totalM)startM=Math.max(0,totalM-25);
+    }
+    const runM=endM-startM;
+    if(runM<10)return 0;
+    const a=profileElevationAt(s,startM),b=profileElevationAt(s,endM);
+    if(!Number.isFinite(a)||!Number.isFinite(b))return 0;
+    const deltaFt=b-a;
+    // Ignore tiny DEM noise that would otherwise create false steep segments.
+    if(Math.abs(deltaFt)<4)return 0;
+    return deltaFt/(runM*3.28084)*100;
   }
   function drawRouteSlopeOverlay(svg,pts){
     const g=svg?.querySelector('.route-dom-slope-segments');
@@ -249,7 +266,6 @@
       const a=pts[i-1],b=pts[i],segM=meters(a,b),mid=cumulative+segM/2;
       const cls=slopeClass(gradeAtDistance(activeElevationProfile,mid));
       cumulative+=segM;
-      if(cls.key==='easy')continue;
       const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
       const line=document.createElementNS(ns,'line');
       line.setAttribute('x1',qa.x.toFixed(1));line.setAttribute('y1',qa.y.toFixed(1));
