@@ -92,7 +92,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.31',
+      'BUILD: v3.32',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -169,12 +169,14 @@
     return dedupe(out);
   }
   function authoritativeGeometry(route=state()?.getPoints?.()||[]){
+    const shared=dedupe((Array.isArray(route)?route:[]).filter(valid));
+    if(shared.length>1)return shared;
     const plan=planMeta();
     if(plan.routingMode==='trail'){
       const fromLegs=geometryFromLegs(plan.legs);
       if(fromLegs.length>1)return fromLegs;
     }
-    return dedupe((Array.isArray(route)?route:[]).filter(valid));
+    return shared;
   }
   function routeBearing(a,b){
     const r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r);
@@ -611,7 +613,7 @@
           maxGrade:Number(plan.elevationMaxGrade??plan.grade)||0
         }:null;
         applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
-        renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();renderTrailNames(plan.legs||[]);
+        renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();renderTrailNames(plan.legs||[]);renderTrailIntelligence(plan.trailIntelligence);
         if(latestFollowPosition)drawPlannerPosition(latestFollowPosition);
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
@@ -732,7 +734,7 @@
     aborter?.abort();setBusy(false);
     anchors=[];snapped=[];lastSuccessfulAnchors=[];
     state()?.setMeta?.({anchors:[],routedAnchors:[],legs:[],routingMode:routeMode(),routingSource:null,routeBuildState:'EMPTY',routeBuildLeg:0});
-    state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');renderTrailNames([]);
+    state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');renderTrailNames([]);renderTrailIntelligence(null);
     status('TAP MAP TO SET START','ready');
   }
 
@@ -882,7 +884,7 @@
       minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.elevationMaxGrade??saved.grade)||0
     }:null;
     if($('routeName'))$('routeName').value=saved.name||'FIELD ROUTE';
-    applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);renderTrailNames(saved.legs||[]);fitPlanner(points,16);
+    applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);renderTrailNames(saved.legs||[]);renderTrailIntelligence(saved.trailIntelligence);fitPlanner(points,16);
     status(`SAVED ROUTE LOADED -- ${String(saved.name||'FIELD ROUTE').toUpperCase()} // ${routeDistanceMiles(points).toFixed(2)} MI`,'ready');
   }
 
@@ -1112,7 +1114,7 @@
       if(last&&last.key===key)last.distanceM+=distanceM;
       else sections.push({
         key,label,name:tags.name||null,ref:tags.ref||null,
-        highway:tags.highway||null,surface:tags.surface||null,
+        highway:tags.highway||null,surface:tags.surface||null,smoothness:tags.smoothness||null,tracktype:tags.tracktype||null,
         sacScale:tags.sac_scale||null,trailVisibility:tags.trail_visibility||null,
         distanceM
       });
@@ -1131,6 +1133,67 @@
     }
     return out;
   }
+  function roughnessScore(section={}){
+    const surface=String(section.surface||'').toLowerCase();
+    const smooth=String(section.smoothness||'').toLowerCase();
+    const sac=String(section.sacScale||'').toLowerCase();
+    const vis=String(section.trailVisibility||'').toLowerCase();
+    const track=String(section.tracktype||'').toLowerCase();
+    let score=0;const reasons=[];
+    if(/rock|stone|scree|boulder|pebble|gravel/.test(surface)){score+=2;reasons.push(surface||'rocky surface')}
+    if(['bad','very_bad','horrible','very_horrible','impassable'].includes(smooth)){score+=2;reasons.push('smoothness '+smooth)}
+    if(['grade4','grade5'].includes(track)){score+=1.5;reasons.push('track '+track)}
+    const sacRank={strolling:0,hiking:.5,mountain_hiking:1.5,demanding_mountain_hiking:2.5,alpine_hiking:3.5,demanding_alpine_hiking:4.5,difficult_alpine_hiking:5}[sac]||0;
+    if(sacRank){score+=sacRank;reasons.push(sac.replaceAll('_',' '))}
+    if(['intermediate','bad','horrible','no'].includes(vis)){score+=1;reasons.push('visibility '+vis)}
+    return {score,reasons};
+  }
+  function trailIntelligence(legs=[],distanceMiles=0,gainFt=0){
+    const sections=combinedTrailSections(legs),totalM=Math.max(1,sections.reduce((s,x)=>s+(Number(x.distanceM)||0),0));
+    let weighted=0,rockyM=0,roughM=0,visibilityM=0,knownM=0;
+    const reasons=new Set();
+    for(const sec of sections){
+      const d=Number(sec.distanceM)||0,rough=roughnessScore(sec);
+      weighted+=rough.score*d;
+      if(sec.surface||sec.smoothness||sec.sacScale||sec.tracktype||sec.trailVisibility)knownM+=d;
+      if(/rock|stone|scree|boulder|pebble|gravel/i.test(String(sec.surface||'')))rockyM+=d;
+      if(rough.score>=2)roughM+=d;
+      if(['intermediate','bad','horrible','no'].includes(String(sec.trailVisibility||'').toLowerCase()))visibilityM+=d;
+      rough.reasons.forEach(x=>reasons.add(x));
+    }
+    const avg=weighted/totalM;
+    const terrainMultiplier=avg>=3?1.45:avg>=2?1.30:avg>=1?1.16:1;
+    const baseHours=Math.max(0,distanceMiles/3+gainFt/2000);
+    const estimatedHours=baseHours*terrainMultiplier;
+    return {
+      source:'OSM TRAIL TAGS + DEM / NAISMITH BASELINE',
+      baseHours,terrainMultiplier,estimatedHours,
+      terrainClass:avg>=3?'VERY ROUGH / TECHNICAL':avg>=2?'ROUGH / ROCKY':avg>=1?'MIXED TERRAIN':'TYPICAL TRAIL',
+      rockyPct:rockyM/totalM*100,roughPct:roughM/totalM*100,visibilityConcernPct:visibilityM/totalM*100,
+      metadataCoveragePct:knownM/totalM*100,reasons:[...reasons].slice(0,12),sections
+    };
+  }
+  function renderTrailIntelligence(data=planMeta().trailIntelligence){
+    const box=$('trailIntelBody'),statusEl=$('trailIntelStatus');
+    if(!box)return;
+    if(!data){
+      box.innerHTML='<div class="trail-intel-empty">RESEARCH RUNS AFTER A SNAPPED ROUTE IS BUILT</div>';
+      if(statusEl)statusEl.textContent='WAITING FOR ROUTE';
+      return;
+    }
+    const fmt=t=>{const m=Math.max(0,Math.round((Number(t)||0)*60));return `${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`};
+    box.innerHTML=`<div><span>BASE NAISMITH</span><b>${fmt(data.baseHours)}</b></div>
+      <div><span>TERRAIN MULTIPLIER</span><b>×${Number(data.terrainMultiplier||1).toFixed(2)}</b></div>
+      <div><span>ADJUSTED ETA</span><b>${fmt(data.estimatedHours)}</b></div>
+      <div><span>TERRAIN</span><b>${escapeHtml(data.terrainClass||'UNKNOWN')}</b></div>
+      <div><span>ROCKY SURFACE</span><b>${Number(data.rockyPct||0).toFixed(0)}%</b></div>
+      <div><span>ROUGH / TECHNICAL</span><b>${Number(data.roughPct||0).toFixed(0)}%</b></div>
+      <div><span>VISIBILITY CONCERN</span><b>${Number(data.visibilityConcernPct||0).toFixed(0)}%</b></div>
+      <div><span>OSM METADATA COVERAGE</span><b>${Number(data.metadataCoveragePct||0).toFixed(0)}%</b></div>
+      <div class="trail-intel-reasons"><span>INDICATORS</span><b>${escapeHtml((data.reasons||[]).join(' · ')||'NO ROUGHNESS TAGS FOUND')}</b></div>`;
+    if(statusEl)statusEl.textContent='OSM + DEM ANALYSIS READY';
+  }
+
   function renderTrailNames(legs=planMeta().legs||[]){
     const box=$('routeTrailNames'),count=$('routeTrailNameCount');
     if(!box)return;
@@ -1516,7 +1579,7 @@
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
         routingResolvedAnchors=anchors.length;
-        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],trailSections:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);renderTrailNames([]);
+        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],trailSections:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);renderTrailNames([]);renderTrailIntelligence(null);
         lastSuccessfulAnchors=anchors.map(p=>({...p}));
         fitPlanner(direct,16);setBusy(false);
         const enriched=await enrichRoute(direct,signal,'DIRECT ROUTE');
@@ -1563,8 +1626,9 @@
       const clean=dedupe(full);
       if(clean.length<2)throw rpError('RP-307','Trail router returned empty route geometry.',{rawPoints:full.length});
       state()?.setPoints?.(clean);
-      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
-      renderTrailNames(legs);
+      const intelligence=trailIntelligence(legs,enriched.dist,Number(enriched.profile?.gainFt||0));
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),trailIntelligence:intelligence,estimatedHours:intelligence.estimatedHours,snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
+      renderTrailNames(legs);renderTrailIntelligence(intelligence);
       lastSuccessfulAnchors=anchors.map(p=>({...p}));
       routingResolvedAnchors=anchors.length;
       overlay(clean);fitPlanner(clean,16);setBusy(false);
