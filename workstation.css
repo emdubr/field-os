@@ -1054,3 +1054,55 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .planned-route-arrow{fill:none;stroke:#10202b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .planned-route-marker circle{fill:#10202b;stroke:#ffcf40;stroke-width:3}
 .planned-route-marker text{fill:#fff;font:bold 12px monospace;text-anchor:middle}
+
+
+/* v3.11 route planner live telemetry */
+.route-live-telemetry{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:1px;
+  margin-top:8px;
+  border:1px solid var(--line);
+  background:var(--line);
+}
+.route-live-telemetry>div{
+  min-width:0;
+  padding:9px 10px;
+  background:var(--panel2);
+}
+.route-live-telemetry span{
+  display:block;
+  margin-bottom:5px;
+  color:var(--dim);
+  font-size:11px;
+  line-height:1.2;
+  letter-spacing:.05em;
+}
+.route-live-telemetry b{
+  display:block;
+  color:var(--fg2);
+  font-size:17px;
+  line-height:1.25;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.route-live-source{
+  padding:7px 10px;
+  border:1px solid var(--line);
+  border-top:0;
+  background:color-mix(in srgb,var(--panel2) 94%,var(--fg2));
+  color:var(--dim);
+  font-size:11px;
+  line-height:1.3;
+  letter-spacing:.03em;
+}
+@media(max-width:800px){
+  .route-live-telemetry{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .route-live-telemetry>div:last-child{grid-column:1/-1}
+}
+@media(max-width:430px){
+  .route-live-telemetry b{font-size:15px}
+  .route-live-telemetry span,.route-live-source{font-size:10px}
+}
