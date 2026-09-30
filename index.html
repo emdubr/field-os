@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.13" />
-  <link rel="stylesheet" href="workstation.css?v=3.13">
+  <link rel="stylesheet" href="styles.css?v=3.14" />
+  <link rel="stylesheet" href="workstation.css?v=3.14">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.13</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.14</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.13</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.14</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.13</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.14</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -159,18 +159,28 @@
             <span id="mapErrorText">No network or saved offline map is available.</span>
           </div>
         </article>
-        <div class="button-row"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
+        <div class="button-row map-quick-actions"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
         <div class="map-source-bar" aria-label="Map controls">
-          <button id="mapTopoMode" class="map-source-btn active" type="button" data-map-action="topo">TOPO + CONTOURS</button>
-          <button id="mapTrailLayer" class="map-source-btn active" type="button" data-map-action="trails">HIKING ROUTES</button>
-          <button id="mapOsmMode" class="map-source-btn" type="button" data-map-action="osm">STREET OSM</button>
-          <button id="mapSatelliteMode" class="map-source-btn" type="button" data-map-action="satellite">SATELLITE</button>
-          <button id="mapTerrainLayer" class="map-source-btn" type="button" data-map-action="terrain">TERRAIN SHADE</button>
-          <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
-          <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
-          <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
-          <button class="map-source-btn" type="button" data-map-action="fit-route">FIT ROUTE</button>
-          <button id="mapLiveLocation" class="map-source-btn map-location-toggle" type="button" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button>
+          <section class="map-control-group map-layer-controls" aria-label="Map layers">
+            <div class="map-control-group-title">MAP LAYERS</div>
+            <div class="map-control-grid">
+              <button id="mapTopoMode" class="map-source-btn active" type="button" data-map-action="topo">TOPO + CONTOURS</button>
+              <button id="mapTrailLayer" class="map-source-btn active" type="button" data-map-action="trails">HIKING ROUTES</button>
+              <button id="mapOsmMode" class="map-source-btn" type="button" data-map-action="osm">STREET OSM</button>
+              <button id="mapSatelliteMode" class="map-source-btn" type="button" data-map-action="satellite">SATELLITE</button>
+              <button id="mapTerrainLayer" class="map-source-btn" type="button" data-map-action="terrain">TERRAIN SHADE</button>
+            </div>
+          </section>
+          <section class="map-control-group map-navigation-controls" aria-label="Map navigation">
+            <div class="map-control-group-title">MAP NAVIGATION</div>
+            <div class="map-control-grid">
+              <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
+              <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
+              <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
+              <button class="map-source-btn" type="button" data-map-action="fit-route">FIT ROUTE</button>
+              <button id="mapLiveLocation" class="map-source-btn map-location-toggle" type="button" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button>
+            </div>
+          </section>
           <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
         </div>
         <article class="panel offline-map-manager" id="offlineMapManager">
@@ -310,7 +320,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.13 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.14 // MAP STARTING</div>
           <div id="routePlannerMap" class="field-real-map route-planner-real-map" role="application" aria-label="Interactive trail route planner map"></div>
           <div class="route-live-telemetry" aria-label="Live route statistics">
             <div><span>DISTANCE</span><b id="plannerRouteDistance">0.00 mi</b></div>
@@ -540,12 +550,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.13"></script>
-  <script src="app.js?v=3.13"></script>
-  <script src="workstation.js?v=3.13"></script>
-  <script src="map-engine.js?v=3.13"></script>
+  <script src="route-state.js?v=3.14"></script>
+  <script src="app.js?v=3.14"></script>
+  <script src="workstation.js?v=3.14"></script>
+  <script src="map-engine.js?v=3.14"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.13"></script>
+  <script src="route-planner.js?v=3.14"></script>
 </body>
 </html>
 
