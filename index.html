@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.32" />
-  <link rel="stylesheet" href="workstation.css?v=3.32">
+  <link rel="stylesheet" href="styles.css?v=3.33" />
+  <link rel="stylesheet" href="workstation.css?v=3.33">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.32</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.33</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.32</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.33</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.32</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.33</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -185,37 +185,43 @@
 
       <section class="view" id="map" data-view="map">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost map-location-toggle" id="requestLiveLocation" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
-        <article class="panel full-map">
-          <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">MAP STARTING</span></div>
-          <div id="realMap" class="field-real-map main-real-map" aria-label="Interactive hiking topographic map"></div>
-          <div id="mapFallback" class="field-map-fallback main-map-fallback" hidden>
-            <b>LIVE MAP UNAVAILABLE</b>
-            <span id="mapErrorText">No network or saved offline map is available.</span>
+        <div class="terrain-map-layout">
+          <div class="terrain-map-main">
+            <article class="panel full-map terrain-map-card">
+              <div class="panel-title"><span>LIVE TERRAIN MAP</span><span class="tiny" id="mapModeLabel">MAP STARTING</span></div>
+              <div id="realMap" class="field-real-map main-real-map" aria-label="Interactive hiking topographic map"></div>
+              <div id="mapFallback" class="field-map-fallback main-map-fallback" hidden>
+                <b>LIVE MAP UNAVAILABLE</b>
+                <span id="mapErrorText">No network or saved offline map is available.</span>
+              </div>
+            </article>
+            <div class="button-row map-quick-actions"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
           </div>
-        </article>
-        <div class="button-row map-quick-actions"><button class="action" id="mapMarkBtn">MARK</button><button class="action" data-open="waypoints">WAYPOINTS</button><button class="action" data-open="trailreturn">RETURN TRAIL</button><button class="action" data-open="nav">RTB</button><button class="action" data-open="route">ROUTES</button><button class="action" data-open="track">TRACK</button></div>
-        <div class="map-source-bar" aria-label="Map controls">
-          <section class="map-control-group map-layer-controls" aria-label="Map layers">
-            <div class="map-control-group-title">MAP LAYERS</div>
-            <div class="map-control-grid">
-              <button id="mapTopoMode" class="map-source-btn active" type="button" data-map-action="topo">TOPO + CONTOURS</button>
-              <button id="mapTrailLayer" class="map-source-btn active" type="button" data-map-action="trails">HIKING ROUTES</button>
-              <button id="mapOsmMode" class="map-source-btn" type="button" data-map-action="osm">STREET OSM</button>
-              <button id="mapSatelliteMode" class="map-source-btn" type="button" data-map-action="satellite">SATELLITE</button>
-              <button id="mapTerrainLayer" class="map-source-btn" type="button" data-map-action="terrain">TERRAIN SHADE</button>
+          <aside class="terrain-control-rail">
+            <div class="map-source-bar" aria-label="Map controls">
+              <section class="map-control-group map-layer-controls" aria-label="Map layers">
+                <div class="map-control-group-title">MAP LAYERS</div>
+                <div class="map-control-grid">
+                  <button id="mapTopoMode" class="map-source-btn active" type="button" data-map-action="topo">TOPO + CONTOURS</button>
+                  <button id="mapTrailLayer" class="map-source-btn active" type="button" data-map-action="trails">HIKING ROUTES</button>
+                  <button id="mapOsmMode" class="map-source-btn" type="button" data-map-action="osm">STREET OSM</button>
+                  <button id="mapSatelliteMode" class="map-source-btn" type="button" data-map-action="satellite">SATELLITE</button>
+                  <button id="mapTerrainLayer" class="map-source-btn" type="button" data-map-action="terrain">TERRAIN SHADE</button>
+                </div>
+              </section>
+              <section class="map-control-group map-navigation-controls" aria-label="Map navigation">
+                <div class="map-control-group-title">MAP NAVIGATION</div>
+                <div class="map-control-grid">
+                  <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
+                  <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
+                  <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
+                  <button class="map-source-btn" type="button" data-map-action="fit-route">FIT ROUTE</button>
+                  <button id="mapLiveLocation" class="map-source-btn map-location-toggle" type="button" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button>
+                </div>
+              </section>
+              <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
             </div>
-          </section>
-          <section class="map-control-group map-navigation-controls" aria-label="Map navigation">
-            <div class="map-control-group-title">MAP NAVIGATION</div>
-            <div class="map-control-grid">
-              <button class="map-source-btn" type="button" data-map-action="zoom-in">ZOOM +</button>
-              <button class="map-source-btn" type="button" data-map-action="zoom-out">ZOOM −</button>
-              <button class="map-source-btn" type="button" data-map-action="center">CENTER</button>
-              <button class="map-source-btn" type="button" data-map-action="fit-route">FIT ROUTE</button>
-              <button id="mapLiveLocation" class="map-source-btn map-location-toggle" type="button" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button>
-            </div>
-          </section>
-          <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
+          </aside>
         </div>
         <article class="panel offline-map-manager" id="offlineMapManager">
           <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
@@ -331,15 +337,20 @@
         </article>
         <article class="panel solar-panel">
           <div class="panel-title"><span>SUNLIGHT / SOLAR NAV</span><span class="tiny" id="solarPositionSource">LOCAL CALCULATION</span></div>
+          <div class="sun-state-strip"><b id="sunState">CALCULATING</b><span id="sunNextEvent">---</span></div>
           <div class="sunlight-summary">
+            <div><span>CIVIL DAWN</span><b id="civilDawnTime">---</b></div>
             <div><span>SUNRISE</span><b id="sunriseTime">---</b></div>
+            <div><span>SOLAR NOON</span><b id="solarNoonTime">---</b></div>
             <div><span>SUNSET</span><b id="sunsetTime">---</b></div>
+            <div><span>CIVIL DUSK</span><b id="civilDuskTime">---</b></div>
             <div><span>DAYLIGHT</span><b id="daylightDuration">---</b></div>
-            <div><span>REMAINING</span><b id="daylightRemaining">---</b></div>
+            <div><span>DAYLIGHT LEFT</span><b id="daylightRemaining">---</b></div>
+            <div><span>MAX SUN ALT</span><b id="solarNoonElevation">---</b></div>
           </div>
           <div class="sun-arc" aria-hidden="true"><i id="sunArcMarker"></i></div>
-          <div class="solar-row"><div class="sun">☀</div><div><b>Sun azimuth</b><strong id="sunAz">---</strong><small>at current position</small></div><div><b>Sun elevation</b><strong id="sunEl">---</strong><small>above horizon</small></div></div>
-          <div class="solar-location-line"><span>LOCATION</span><b id="solarLocation">---</b></div>
+          <div class="solar-row"><div class="sun">☀</div><div><b>Sun azimuth</b><strong id="sunAz">---</strong><small>true azimuth</small></div><div><b>Sun elevation</b><strong id="sunEl">---</strong><small>above horizon</small></div></div>
+          <div class="solar-location-line"><span>POSITION / CLOCK</span><b id="solarLocation">---</b></div>
         </article>
       </section>
 
@@ -354,7 +365,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.32 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.33 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -436,13 +447,7 @@
               <span><i class="slope-swatch hard"></i> HARD ≥ 15%</span>
               <span>THE SAME COLORS ARE APPLIED DIRECTLY TO THE 2D ROUTE LAYER AND 3D GEOMETRY.</span>
             </div>
-            <div class="route-3d-head"><b>3D ROUTE GEOMETRY</b><span id="route3dStatus">DEM ROUTE GEOMETRY // WAITING FOR ELEVATION</span></div>
-            <canvas id="routeGeometry3D" class="route-geometry-3d" width="720" height="360" aria-label="Interactive 3D route elevation geometry"></canvas>
-            <div class="route-3d-controls">
-              <label><span>VERTICAL EXAGGERATION</span><input id="route3dExaggeration" type="range" min="1" max="6" step="0.1" value="2.2"></label>
-              <label><span>AZIMUTH</span><input id="route3dAzimuth" type="range" min="0" max="359" step="1" value="38"></label>
-              <span>DRAG THE 3D VIEW TO ROTATE + TILT</span>
-            </div>
+
             <div class="elevation-band-head"><b>ELEVATION BY DISTANCE</b><span id="elevationBandSize">AUTO BANDS</span></div>
             <div class="elevation-table-wrap"><table class="elevation-breakdown-table">
               <thead><tr><th>MILES</th><th>START FT</th><th>END FT</th><th>GAIN FT</th><th>LOSS FT</th><th>NET</th><th>AVG GRADE</th><th>MAX UP</th><th>MAX DOWN</th><th>SLOPE CLASS</th></tr></thead>
@@ -515,13 +520,13 @@
           <article class="panel sensor-card"><div class="sensor-top"><b>RTC</b><span class="badge warn-badge">PLANNED</span></div><p>RAK12002 • not installed in demo</p><div class="bar"><i style="width:20%"></i></div></article>
           <article class="panel sensor-card"><div class="sensor-top"><b>RADAR / OPTICS</b><span class="badge warn-badge">FUTURE</span></div><p>External device bridge placeholder</p><div class="bar"><i style="width:8%"></i></div></article>
         </div>
-        <article class="panel"><div class="panel-title"><span>PRESSURE TREND</span><span class="tiny">LAST 60 SAMPLES</span></div><canvas id="pressureChart" width="720" height="180" class="chart"></canvas></article>
-        <div class="sensor-chart-grid">
-          <article class="panel"><div class="panel-title"><span>GNSS SIGNAL / FIX</span><span class="tiny">SATELLITES + ACCURACY</span></div><canvas id="gnssSignalChart" width="720" height="180" class="chart sensor-chart"></canvas></article>
-          <article class="panel"><div class="panel-title"><span>MESH LINK QUALITY</span><span class="tiny">RSSI + SNR + NODES</span></div><canvas id="meshSignalChart" width="720" height="180" class="chart sensor-chart"></canvas></article>
-          <article class="panel"><div class="panel-title"><span>ENVIRONMENT</span><span class="tiny">TEMP + HUMIDITY</span></div><canvas id="environmentChart" width="720" height="180" class="chart sensor-chart"></canvas></article>
-          <article class="panel"><div class="panel-title"><span>IMU MOTION</span><span class="tiny">PITCH + ROLL</span></div><canvas id="imuChart" width="720" height="180" class="chart sensor-chart"></canvas></article>
-          <article class="panel"><div class="panel-title"><span>POWER TREND</span><span class="tiny">DEVICE / PHONE BATTERY</span></div><canvas id="batteryChart" width="720" height="180" class="chart sensor-chart"></canvas></article>
+        <div class="sensor-dashboard-grid">
+          <article class="panel sensor-chart-card sensor-chart-wide"><div class="panel-title"><span>PRESSURE TREND</span><span class="tiny">LAST 60 SAMPLES</span></div><canvas id="pressureChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-half"><div class="panel-title"><span>GNSS SIGNAL / FIX</span><span class="tiny">SATELLITES + ACCURACY</span></div><canvas id="gnssSignalChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-half"><div class="panel-title"><span>MESH LINK QUALITY</span><span class="tiny">RSSI + SNR + NODES</span></div><canvas id="meshSignalChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-third"><div class="panel-title"><span>ENVIRONMENT</span><span class="tiny">TEMP + HUMIDITY</span></div><canvas id="environmentChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-third"><div class="panel-title"><span>IMU MOTION</span><span class="tiny">PITCH + ROLL</span></div><canvas id="imuChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-third"><div class="panel-title"><span>POWER TREND</span><span class="tiny">DEVICE / PHONE BATTERY</span></div><canvas id="batteryChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
         </div>
         <p class="muted sensor-source-note">TAP/Meshtastic telemetry can populate these histories through the FIELD/OS telemetry bridge. Browser-only GNSS does not expose radio C/N0, so GNSS strength uses satellite count and fix accuracy unless the device supplies radio-strength fields.</p>
         <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">CROSS-CHECK</span></div><div class="integrity-grid"><div><b>GNSS FIX</b><span class="good-text">TRUSTED</span></div><div><b>IMU MOTION</b><span>MATCH</span></div><div><b>BARO ALT</b><span>MATCH</span></div><div><b>DRIFT WATCH</b><span class="good-text">CLEAR</span></div></div></article>
@@ -648,12 +653,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.32"></script>
-  <script src="app.js?v=3.32"></script>
-  <script src="workstation.js?v=3.32"></script>
-  <script src="map-engine.js?v=3.32"></script>
+  <script src="route-state.js?v=3.33"></script>
+  <script src="app.js?v=3.33"></script>
+  <script src="workstation.js?v=3.33"></script>
+  <script src="map-engine.js?v=3.33"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.32"></script>
+  <script src="route-planner.js?v=3.33"></script>
 </body>
 </html>
 
