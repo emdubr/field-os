@@ -23,10 +23,15 @@
   let plannerPreviewLayer=null;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
+  let plannerUserLayer=null;
   let plannerBaseFallbackActive=false;
   let hasActivated=false;
   let hoverPoint=null;
   let routingResolvedAnchors=0;
+  let followWatchId=null;
+  let followEnabled=false;
+  let latestFollowPosition=null;
+  const SAVED_ROUTES_KEY='fieldos-v12-saved-routes';
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -140,6 +145,7 @@
     plannerPreviewLayer=L.layerGroup().addTo(plannerMap);
     plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
     plannerSnapLayer=L.layerGroup().addTo(plannerMap);
+    plannerUserLayer=L.layerGroup().addTo(plannerMap);
 
     plannerMap.on('click',e=>{if(!busy)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
     plannerMap.on('mousemove',e=>{
@@ -256,6 +262,8 @@
           maxGrade:Number(plan.grade)||0
         }:null;
         applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
+        renderSavedRoutes();updateFollowButton();
+        if(latestFollowPosition)drawPlannerPosition(latestFollowPosition);
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
           overlay(pts);
@@ -292,17 +300,21 @@
   function bindControls(){
     document.querySelectorAll('[data-route-plan-action]').forEach(btn=>btn.addEventListener('click',()=>{
       const action=btn.dataset.routePlanAction;
-      if(action==='current')addAnchor(state()?.current?.());
+      if(action==='current')addAnchor(latestFollowPosition||state()?.current?.());
       else if(action==='undo')undo();
       else if(action==='reverse')reverse();
       else if(action==='clear')clearAll();
       else if(action==='recenter')recenter();
+      else if(action==='follow')toggleFollow();
+      else if(action==='load-saved')loadSelectedRoute();
     }));
     $('routeSnapMode')?.addEventListener('change',()=>{
       state()?.setMeta?.({routingMode:routeMode()});
       if(anchors.length>=2)recalculate();
       else status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
     });
+    $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
+    renderSavedRoutes();
   }
 
   function addAnchor(p){
@@ -377,6 +389,124 @@
       ensurePlannerMap()?.setView([here.lat,here.lon],14);
     }
   }
+
+  function publishPlannerPosition(pos){
+    if(!valid(pos))return;
+    latestFollowPosition={lat:+pos.lat,lon:+pos.lon,alt:pos.alt??null,accuracy:Number(pos.accuracy)||null,heading:Number.isFinite(Number(pos.heading))?Number(pos.heading):null,source:pos.source||'PHONE GPS'};
+    window.FIELD_CURRENT_POSITION={...latestFollowPosition};
+    try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(latestFollowPosition))}catch{}
+    document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...latestFollowPosition}}));
+  }
+
+  function drawPlannerPosition(pos=latestFollowPosition){
+    if(!plannerMap||!plannerUserLayer||!valid(pos))return;
+    plannerUserLayer.clearLayers();
+    const c=plannerColors(),p=[pos.lat,pos.lon],acc=Math.max(0,Number(pos.accuracy)||0);
+    if(acc){
+      L.circle(p,{radius:acc,color:c.fg2,weight:1,opacity:.8,fillColor:c.fg2,fillOpacity:.08,interactive:false}).addTo(plannerUserLayer);
+    }
+    L.circleMarker(p,{radius:8,color:'#ffffff',weight:2,fillColor:c.fg2,fillOpacity:1,interactive:false})
+      .bindTooltip('YOU',{permanent:true,direction:'top',offset:[0,-8],className:'planner-user-label'})
+      .addTo(plannerUserLayer);
+    if(followEnabled)plannerMap.panTo(p,{animate:true,duration:.35});
+    const gps=$('plannerGpsStatus');
+    if(gps)gps.textContent=`GPS // ${acc?('±'+Math.round(acc)+' m'):'LIVE'}${followEnabled?' // FOLLOWING':''}`;
+  }
+
+  function updateFollowButton(){
+    const btn=$('routeFollowMe');
+    if(!btn)return;
+    btn.classList.toggle('active',followEnabled);
+    btn.setAttribute('aria-pressed',followEnabled?'true':'false');
+    btn.textContent=followEnabled?'FOLLOWING GPS':'FOLLOW ME';
+  }
+
+  function startFollow(){
+    if(!navigator.geolocation){
+      status('GPS FOLLOW UNAVAILABLE -- GEOLOCATION NOT SUPPORTED','error');
+      return;
+    }
+    if(followWatchId!=null){followEnabled=true;updateFollowButton();drawPlannerPosition();return;}
+    followEnabled=true;updateFollowButton();
+    status('REQUESTING LIVE GPS -- KEEP FIELD/OS OPEN','loading');
+    followWatchId=navigator.geolocation.watchPosition(
+      p=>{
+        const pos={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,accuracy:p.coords.accuracy,heading:p.coords.heading,source:'PHONE GPS'};
+        publishPlannerPosition(pos);drawPlannerPosition(pos);
+        const pts=state()?.getPoints?.()||[];
+        status(pts.length>1?'FOLLOWING ROUTE -- LIVE GPS':'LIVE GPS FOLLOW -- PLAN OR LOAD A ROUTE','ready');
+      },
+      err=>{
+        status(`GPS FOLLOW ERROR -- ${String(err.message||err).toUpperCase()}`,'error');
+        stopFollow();
+      },
+      {enableHighAccuracy:true,maximumAge:2000,timeout:15000}
+    );
+  }
+
+  function stopFollow(){
+    if(followWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(followWatchId);
+    followWatchId=null;followEnabled=false;updateFollowButton();
+    const gps=$('plannerGpsStatus');if(gps)gps.textContent=latestFollowPosition?'GPS // PAUSED':'GPS // OFF';
+  }
+
+  function toggleFollow(){followEnabled?stopFollow():startFollow()}
+
+  function readSavedRoutes(){
+    try{
+      const parsed=JSON.parse(localStorage.getItem(SAVED_ROUTES_KEY)||'[]');
+      return Array.isArray(parsed)?parsed:[];
+    }catch{return []}
+  }
+  function writeSavedRoutes(routes){
+    try{localStorage.setItem(SAVED_ROUTES_KEY,JSON.stringify(routes));return true}catch(err){console.warn('FIELD/OS saved routes write failed',err);return false}
+  }
+  function renderSavedRoutes(){
+    const sel=$('savedRouteSelect');if(!sel)return;
+    const routes=readSavedRoutes();
+    const current=sel.value;
+    sel.innerHTML='<option value="">SAVED ROUTES…</option>'+routes.map(x=>`<option value="${x.id}">${String(x.name||'FIELD ROUTE').replace(/[<>&"]/g,'')} // ${Number(x.distanceMiles||0).toFixed(2)} MI</option>`).join('');
+    if(routes.some(x=>x.id===current))sel.value=current;
+    const count=$('savedRouteCount');if(count)count.textContent=String(routes.length);
+  }
+  function saveCurrentRoute(){
+    const st=state(),points=st?.getPoints?.()||[];
+    if(points.length<2){status('SAVE FAILED -- PLOT OR LOAD A ROUTE FIRST','error');return}
+    const plan=st.getPlan?.()||{},name=$('routeName')?.value.trim()||plan.name||'FIELD ROUTE';
+    const snapshot={...plan,id:'route-'+Date.now(),name,savedAt:new Date().toISOString(),points:points.map(p=>({lat:+p.lat,lon:+p.lon})),anchors:sanitizeAnchors(anchors),distanceMiles:routeDistanceMiles(points)};
+    const routes=readSavedRoutes();
+    routes.unshift(snapshot);
+    if(routes.length>20)routes.length=20;
+    if(!writeSavedRoutes(routes)){status('SAVE FAILED -- LOCAL STORAGE UNAVAILABLE','error');return}
+    st.setMeta?.({...plan,name,savedAt:snapshot.savedAt});st.save?.();
+    renderSavedRoutes();
+    if($('savedRouteSelect'))$('savedRouteSelect').value=snapshot.id;
+    status(`ROUTE SAVED -- ${name.toUpperCase()} // ${snapshot.distanceMiles.toFixed(2)} MI`,'ready');
+    navigator.vibrate?.(25);
+  }
+  function loadSelectedRoute(){
+    const id=$('savedRouteSelect')?.value;if(!id)return status('SELECT A SAVED ROUTE FIRST','error');
+    const saved=readSavedRoutes().find(x=>x.id===id);if(!saved)return status('SAVED ROUTE NOT FOUND','error');
+    const st=state(),points=(saved.points||[]).filter(valid);
+    if(points.length<2)return status('SAVED ROUTE HAS NO USABLE GEOMETRY','error');
+    anchors=sanitizeAnchors(saved.anchors);
+    if(!anchors.length)anchors=[points[0],points.at(-1)];
+    lastSuccessfulAnchors=anchors.map(p=>({...p}));routingResolvedAnchors=anchors.length;snapped=[];
+    st?.setMeta?.({...saved,anchors,routedAnchors:anchors});st?.setPoints?.(points);st?.save?.();
+    const profile=Array.isArray(saved.elevationProfile)&&saved.elevationProfile.length>1?{
+      samples:saved.elevationProfile,gainFt:Number(saved.elevationGainFt)||0,lossFt:Number(saved.elevationLossFt)||0,
+      minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.grade)||0
+    }:null;
+    if($('routeName'))$('routeName').value=saved.name||'FIELD ROUTE';
+    applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);fitPlanner(points,16);
+    status(`SAVED ROUTE LOADED -- ${String(saved.name||'FIELD ROUTE').toUpperCase()} // ${routeDistanceMiles(points).toFixed(2)} MI`,'ready');
+  }
+
+  document.addEventListener('fieldos:positionchange',e=>{
+    const p=e.detail;
+    if(valid(p)){latestFollowPosition={...p};drawPlannerPosition(latestFollowPosition)}
+  });
+
 
   function bboxFor(a,b){
     const legMiles=Math.max(.1,miles(a,b));
