@@ -67,6 +67,11 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.match(css,/#map \.module-grid>\.module-hero[\s\S]*?grid-column:1\/-1!important/);
  assert.match(css,/#map \.module-grid>\.terrain-controls-below[\s\S]*?grid-column:1\/-1!important/);
  console.log('PASS terrain map hero and controls are pinned full-width on desktop');
+ assert.match(css,/has-slope-overlay \.route-dom-main[\s\S]*?stroke:transparent!important/);
+ assert.match(planner,/classList\.toggle\('has-slope-overlay',hasSlope\)/);
+ assert.match(css,/@media\(max-width:760px\)[\s\S]*?#map \.map-quick-actions[\s\S]*?repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(css,/@media\(max-width:760px\)[\s\S]*?#route \.route-planner-actions[\s\S]*?repeat\(2,minmax\(0,1fr\)\)/);
+ console.log('PASS mobile map/route layout rules and slope base-bleed guard');
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
@@ -88,6 +93,17 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  for(let cycle=0;cycle<8;cycle++)for(const btn of navButtons){btn.click();await tick();}
  assert.equal(new Set([...d.querySelectorAll('[id]')].map(e=>e.id)).size,[...d.querySelectorAll('[id]')].length);
  console.log('PASS repeated module-switch stress with stable DOM ids');
+
+ // Mobile viewport/orientation churn should not throw or lose primary navigation.
+ for(const width of [320,390,430,760,390,320,430,760]){
+   Object.defineProperty(w,'innerWidth',{configurable:true,value:width});
+   Object.defineProperty(w,'innerHeight',{configurable:true,value:width<500?844:1024});
+   w.dispatchEvent(new w.Event('resize'));w.dispatchEvent(new w.Event('orientationchange'));await tick();
+   for(const tab of d.querySelectorAll('.tabbar .tab-btn[data-open]')){tab.click();await tick();assert.equal(d.querySelector('.view.active')?.id,tab.dataset.open)}
+ }
+ const more=d.getElementById('moreTabs'),closeSheet=d.getElementById('closeTabSheet'),sheet=d.getElementById('tabSheet');
+ for(let i=0;i<20;i++){more.click();await tick();assert.equal(sheet.getAttribute('aria-hidden'),'false');closeSheet.click();await tick();assert.equal(sheet.getAttribute('aria-hidden'),'true')}
+ console.log('PASS mobile resize/orientation and tab-sheet stress');
 
  // Repeated planner activation should remain idempotent and not multiply control bindings.
  d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
