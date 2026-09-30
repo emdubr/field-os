@@ -31,7 +31,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  console.log('PASS route overlays on both maps, reverse and clear synchronization');
  console.log('PASS direct routing, distance, missing elevation, reverse, undo, clear persistence');
  const g=r.buildGraph([{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98},{lat:44.02,lon:-72.98}],tags:{highway:'path'}}]);
- const a=r.nearestNode(g,{lat:44.0001,lon:-72.995}),b=r.nearestNode(g,{lat:44.0001,lon:-72.99}),path=r.shortestPath(g,a.id,b.id);assert.ok(path.length===2);assert.ok(a.d<12&&b.d<12);assert.ok(r.meters(path[0],path[1])>390&&r.meters(path[0],path[1])<410);
+ const a=r.nearestNode(g,{lat:44.0001,lon:-72.995}),b=r.nearestNode(g,{lat:44.0001,lon:-72.99}),routeResult=r.shortestPath(g,a.id,b.id),path=routeResult.path;assert.ok(Array.isArray(path)&&path.length>=2);assert.equal(routeResult.limitHit,false);assert.ok(a.d<12&&b.d<12);const pathM=path.slice(1).reduce((sum,p,i)=>sum+r.meters(path[i],p),0);assert.ok(pathM>390&&pathM<410);
  assert.equal(r.nearestNode(g,{lat:0,lon:0}),null);assert.equal(r.samplePolyline([{lat:44,lon:-73},{lat:44.01,lon:-73}],80)[0].distanceM,0);
  console.log('PASS trail-edge projection, same-segment route, distance, no-nearby-trail detection');
  w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}:{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
