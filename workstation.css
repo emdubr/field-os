@@ -1812,3 +1812,18 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 }
 
 #survival.guide-reading-mode>.view-head{display:none!important}
+
+
+/* v3.32 trail intelligence + telemetry history */
+.trail-intel-panel{margin-top:8px;border:1px solid var(--line);background:var(--panel)}
+.trail-intel-head{display:flex;justify-content:space-between;gap:10px;padding:7px 9px;border-bottom:1px solid var(--line);background:var(--panel3);color:var(--fg2);font:700 10px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.trail-intel-head span{color:var(--dim)}
+.trail-intel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line)}
+.trail-intel-grid>div{padding:8px 9px;background:var(--panel2);min-width:0}
+.trail-intel-grid span{display:block;color:var(--dim);font-size:9px;margin-bottom:4px}
+.trail-intel-grid b{display:block;color:var(--fg);font-size:12px;overflow-wrap:anywhere}
+.trail-intel-grid .trail-intel-reasons,.trail-intel-empty{grid-column:1/-1}
+.trail-intel-empty{color:var(--dim);font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.sensor-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.sensor-chart-grid .panel{min-width:0}.sensor-chart{width:100%;height:auto;min-height:160px}.sensor-source-note{margin:8px 0 10px}
+@media(max-width:900px){.trail-intel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sensor-chart-grid{grid-template-columns:1fr}}
