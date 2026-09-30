@@ -268,6 +268,17 @@
           <div class="message"><b>RELAY-A</b><span>00:12</span><p>Telemetry nominal. Battery 82%.</p></div>
           <div class="message unread"><b>NODE-05</b><span>00:04</span><p>Weather moving in from west.</p></div>
         </article>
+        <article class="panel unified-inbox-panel">
+          <div class="panel-title"><span>UNIFIED COMMUNICATIONS INBOX</span><span class="tiny" id="unifiedInboxState">0 EVENTS</span></div>
+          <div class="unified-inbox-controls">
+            <select id="unifiedInboxFilter" class="terminal-input" aria-label="Inbox filter">
+              <option value="ALL">ALL SOURCES</option><option value="MESH">MESH</option><option value="SATELLITE">SATELLITE</option><option value="CHECK-IN">CHECK-IN</option><option value="ALERT">ALERTS</option><option value="OUTGOING">OUTGOING</option>
+            </select>
+            <button id="unifiedInboxMarkRead" class="action" type="button">MARK ALL READ</button>
+            <button id="unifiedInboxClear" class="danger-lite" type="button">CLEAR HISTORY</button>
+          </div>
+          <div id="unifiedInboxTimeline" class="unified-inbox-timeline"><p class="muted">No communications events yet.</p></div>
+        </article>
         <article class="panel mesh-network-panel">
           <div class="panel-title"><span>MESH NETWORK MAP</span><span class="tiny" id="meshNetworkState">NO NODE DATA</span></div>
           <div class="mesh-network-layout">

@@ -475,7 +475,12 @@ const trip=loadJSON('trip',{});
 document.getElementById('saveTrip')?.addEventListener('click',()=>{
   const data={}; ['tripName','tripBase','tripReturn','checkinInterval','tripEmergency'].forEach(id=>data[id]=document.getElementById(id)?.value||''); saveJSON('trip',data); navigator.vibrate?.(30); alert('Trip plan saved locally on this device.');
 });
-document.getElementById('checkinNow')?.addEventListener('click',()=>{addLog(`CHECK-IN — position ${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}; source ${currentNavPosition.source||'POSITION'}; battery demo 64%; status OK.`,'CHECK-IN');alert('Local check-in recorded. Live mesh transmission will be added when TAP integration is connected.')});
+document.getElementById('checkinNow')?.addEventListener('click',()=>{
+  const message=`CHECK-IN — position ${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}; source ${currentNavPosition.source||'POSITION'}; status OK.`;
+  addLog(message,'CHECK-IN');
+  document.dispatchEvent(new CustomEvent('fieldos:checkin',{detail:{text:message,position:{lat:currentNavPosition.lat,lon:currentNavPosition.lon},source:currentNavPosition.source||'POSITION',createdAt:Date.now()}}));
+  alert('Local check-in recorded. It will enter the FIELD/OS communications timeline; transmission requires a connected transport.');
+});
 
 // Field log
 let fieldLog=loadJSON('fieldlog',[]); if(!Array.isArray(fieldLog)) fieldLog=[];

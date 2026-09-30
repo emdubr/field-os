@@ -80,6 +80,50 @@
 
 
 
+
+  // Feature 13 — Unified Communications Inbox.
+  const inboxState={items:[],filter:'ALL'};
+  function normalizeInboxItem(raw={}){
+    const textValue=String(raw.text??raw.message??'').trim();if(!textValue)return null;
+    const createdAt=Number(raw.createdAt??raw.time)||Date.now(),source=String(raw.source??raw.transport??raw.channel??'SYSTEM').toUpperCase();
+    const category=String(raw.category??(source.includes('SAT')?'SATELLITE':source.includes('MESH')?'MESH':'ALERT')).toUpperCase();
+    return {id:String(raw.id||`evt-${createdAt}-${Math.random().toString(36).slice(2,7)}`),createdAt,source,category,text:textValue,title:String(raw.title||raw.from||source),direction:String(raw.direction||'IN').toUpperCase(),severity:String(raw.severity||'info').toLowerCase(),status:String(raw.status||''),read:raw.read===true,meta:raw.meta||{}};
+  }
+  function persistInbox(){write('comms-inbox',{savedAt:new Date().toISOString(),items:inboxState.items.slice(-300)})}
+  function ingestInbox(raw={}){
+    const item=normalizeInboxItem(raw);if(!item)return null;
+    const idx=inboxState.items.findIndex(x=>x.id===item.id);if(idx>=0)inboxState.items[idx]={...inboxState.items[idx],...item};else inboxState.items.push(item);
+    if(inboxState.items.length>300)inboxState.items.splice(0,inboxState.items.length-300);
+    persistInbox();renderInbox();document.dispatchEvent(new CustomEvent('fieldos:inboxchange',{detail:{count:inboxState.items.length,id:item.id}}));return item;
+  }
+  function updateInboxMessage(id,patch={}){
+    const item=inboxState.items.find(x=>x.id===id||x.meta?.messageId===id);if(!item)return null;Object.assign(item,patch);persistInbox();renderInbox();return item;
+  }
+  function inboxMatches(item,filter){
+    if(filter==='ALL')return true;if(filter==='ALERT')return item.category==='ALERT'||['warn','high','danger'].includes(item.severity);
+    if(filter==='OUTGOING')return item.direction==='OUT';return item.category===filter;
+  }
+  function renderInbox(){
+    const list=document.getElementById('unifiedInboxTimeline'),state=document.getElementById('unifiedInboxState'),filter=document.getElementById('unifiedInboxFilter');if(!list)return inboxState.items;
+    if(filter&&filter.value!==inboxState.filter)filter.value=inboxState.filter;
+    const shown=inboxState.items.filter(x=>inboxMatches(x,inboxState.filter)).slice().sort((a,b)=>b.createdAt-a.createdAt),unread=inboxState.items.filter(x=>!x.read).length;
+    if(state)state.textContent=`${inboxState.items.length} EVENTS // ${unread} UNREAD`;
+    list.innerHTML=shown.length?shown.map(x=>`<div class="unified-inbox-event ${x.read?'':'unread'} ${esc(x.severity)}"><span class="unified-inbox-badge">${esc(x.category)}</span><div class="unified-inbox-copy"><b>${esc(x.direction==='OUT'?'↑ '+x.title:'↓ '+x.title)}</b><p>${esc(x.text)}</p></div><span class="unified-inbox-meta">${new Date(x.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}${x.status?' // '+esc(x.status.toUpperCase()):''}</span></div>`).join(''):'<p class="muted">No events match this filter.</p>';
+    return shown;
+  }
+  function markInboxRead(){for(const x of inboxState.items)x.read=true;persistInbox();renderInbox()}
+  function clearInbox(){inboxState.items=[];persistInbox();renderInbox()}
+  const savedInbox=read('comms-inbox',null);if(Array.isArray(savedInbox?.items))inboxState.items=savedInbox.items.map(normalizeInboxItem).filter(Boolean);
+  document.addEventListener('fieldos:incomingmessage',e=>{const d=e.detail||{};ingestInbox({id:d.id,createdAt:d.createdAt,source:d.source||d.transport||'MESH',category:d.category,text:d.text||d.message,title:d.from||d.source||'INCOMING',direction:'IN',severity:d.severity||'info',status:'received',meta:d})});
+  document.addEventListener('fieldos:messagequeued',e=>{const d=e.detail||{};ingestInbox({id:`queue-${d.id}`,createdAt:d.createdAt,source:'LOCAL QUEUE',category:'OUTGOING',text:d.text||'Queued packet',title:d.channel||'PRIMARY',direction:'OUT',severity:'info',status:'queued',meta:{messageId:d.id}})});
+  document.addEventListener('fieldos:messagesent',e=>{const d=e.detail||{};updateInboxMessage(d.id,{source:String(d.transport||'TRANSPORT').toUpperCase(),category:'OUTGOING',status:'sent',read:true})});
+  document.addEventListener('fieldos:checkin',e=>{const d=e.detail||{};ingestInbox({id:`checkin-${d.createdAt||Date.now()}`,createdAt:d.createdAt,source:'LOCAL',category:'CHECK-IN',text:d.text||'Local check-in recorded',title:'CHECK-IN',direction:'OUT',severity:'info',status:'recorded',meta:d})});
+  document.addEventListener('fieldos:devicealert',e=>{const d=e.detail||{};ingestInbox({id:d.id,createdAt:d.createdAt,source:d.source||'DEVICE',category:'ALERT',text:d.text||d.message,title:d.title||'DEVICE ALERT',direction:'IN',severity:d.severity||'warn',status:'alert',meta:d})});
+  document.addEventListener('fieldos:sensoralert',e=>{const d=e.detail||{};ingestInbox({id:d.id,createdAt:d.createdAt,source:d.source||'SENSOR',category:'ALERT',text:d.text||d.message,title:d.title||'SENSOR ALERT',direction:'IN',severity:d.severity||'warn',status:'alert',meta:d})});
+  document.getElementById('unifiedInboxFilter')?.addEventListener('change',e=>{inboxState.filter=e.currentTarget.value;renderInbox()});document.getElementById('unifiedInboxMarkRead')?.addEventListener('click',markInboxRead);document.getElementById('unifiedInboxClear')?.addEventListener('click',clearInbox);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderInbox()});renderInbox();
+  window.FIELD_INBOX={ingest:ingestInbox,update:updateInboxMessage,render:renderInbox,markRead:markInboxRead,clear:clearInbox,state:inboxState};
+
   // Feature 12 — Store-and-Forward Messaging.
   const transportRegistry=new Map();
   const messageQueueState={items:[]};
@@ -104,7 +148,7 @@
   function queueMessage(textValue,{channel='PRIMARY',meta={}}={}){
     const textValueClean=String(textValue||'').trim().slice(0,1000);if(!textValueClean)return null;
     const item={id:`msg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,text:textValueClean,channel:String(channel||'PRIMARY'),createdAt:Date.now(),updatedAt:Date.now(),status:'pending',attempts:0,transport:null,error:null,meta};
-    messageQueueState.items.push(item);if(messageQueueState.items.length>250)messageQueueState.items.splice(0,messageQueueState.items.length-250);persistMessageQueue();renderMessageQueue();document.dispatchEvent(new CustomEvent('fieldos:messagequeued',{detail:{id:item.id,channel:item.channel}}));flushMessageQueue();return item;
+    messageQueueState.items.push(item);if(messageQueueState.items.length>250)messageQueueState.items.splice(0,messageQueueState.items.length-250);persistMessageQueue();renderMessageQueue();document.dispatchEvent(new CustomEvent('fieldos:messagequeued',{detail:{id:item.id,channel:item.channel,text:item.text,createdAt:item.createdAt}}));flushMessageQueue();return item;
   }
   async function sendQueueItem(item,entry){
     item.status='sending';item.updatedAt=Date.now();item.transport=entry.name;item.attempts=(item.attempts||0)+1;item.error=null;persistMessageQueue();renderMessageQueue();

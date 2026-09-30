@@ -121,6 +121,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  w.FIELD_TRANSPORT.queue('second packet',{channel:'PRIMARY'});await waitFor(()=>w.FIELD_TRANSPORT.state.items.at(-1).status==='sent');assert.equal(delivered.length,2);
  unregister();assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-message-queue')).items.length>=2);
  console.log('PASS feature 12 Store-and-Forward Messaging persists offline packets and automatically flushes through an available registered transport');
+ w.FIELD_INBOX.clear();w.FIELD_INBOX.ingest({id:'mesh-1',source:'MESH',category:'MESH',from:'NODE-9',text:'At the junction',createdAt:1000});
+ w.FIELD_INBOX.ingest({id:'sat-1',source:'SATELLITE',category:'SATELLITE',from:'SAT CONTACT',text:'Weather update received',createdAt:2000});
+ d.getElementById('checkinNow').click();await tick();
+ d.dispatchEvent(new w.CustomEvent('fieldos:devicealert',{detail:{id:'alert-1',source:'TAP V2',title:'DEVICE ALERT',text:'External sensor battery low',severity:'warn',createdAt:3000}}));await tick();
+ assert.ok(w.FIELD_INBOX.state.items.some(x=>x.category==='MESH'));assert.ok(w.FIELD_INBOX.state.items.some(x=>x.category==='SATELLITE'));assert.ok(w.FIELD_INBOX.state.items.some(x=>x.category==='CHECK-IN'));assert.ok(w.FIELD_INBOX.state.items.some(x=>x.category==='ALERT'));
+ w.FIELD_INBOX.state.filter='SATELLITE';w.FIELD_INBOX.render();assert.equal(d.querySelectorAll('#unifiedInboxTimeline .unified-inbox-event').length,1);assert.match(d.getElementById('unifiedInboxTimeline').textContent,/Weather update/);
+ w.FIELD_INBOX.state.filter='ALL';w.FIELD_INBOX.markRead();assert.equal(w.FIELD_INBOX.state.items.filter(x=>!x.read).length,0);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-comms-inbox')).items.length>=4);
+ console.log('PASS feature 13 Unified Communications Inbox merges mesh, satellite, check-in, outgoing, and alert events into one persistent filtered timeline');
+
 
 
 

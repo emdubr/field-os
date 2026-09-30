@@ -3129,3 +3129,11 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .store-forward-row.pending>i{color:var(--warn);border-color:var(--warn)}.store-forward-row.sending>i{color:var(--fg2);border-color:var(--fg2)}.store-forward-row.sent>i{color:var(--fg2)}.store-forward-row.failed>i{color:var(--danger);border-color:var(--danger)}
 .store-forward-copy{min-width:0}.store-forward-copy b{display:block;font-size:9px;overflow-wrap:anywhere}.store-forward-copy small{display:block;color:var(--dim);font-size:7px;line-height:1.35;margin-top:3px}.store-forward-time{text-align:right;color:var(--dim);font-size:7px;white-space:nowrap}
 @media(max-width:600px){.store-forward-row{grid-template-columns:auto minmax(0,1fr)}.store-forward-time{grid-column:2;text-align:left}.store-forward-copy b{font-size:10px}.store-forward-copy small{font-size:8px}}
+
+
+/* feature 13 — unified communications inbox */
+.unified-inbox-controls{display:grid;grid-template-columns:minmax(150px,1fr) auto auto;gap:6px;margin-bottom:7px}.unified-inbox-timeline{display:grid;gap:5px;max-height:390px;overflow:auto}
+.unified-inbox-event{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;border:1px solid color-mix(in srgb,var(--line) 40%,transparent);background:var(--panel2);padding:7px;align-items:start}.unified-inbox-event.unread{box-shadow:inset 3px 0 0 var(--fg2)}
+.unified-inbox-badge{font-size:7px;border:1px solid var(--line);padding:3px 5px;color:var(--dim);white-space:nowrap}.unified-inbox-event.alert .unified-inbox-badge,.unified-inbox-event.high .unified-inbox-badge{color:var(--danger);border-color:var(--danger)}.unified-inbox-event.warn .unified-inbox-badge{color:var(--warn);border-color:var(--warn)}
+.unified-inbox-copy{min-width:0}.unified-inbox-copy b{display:block;font-size:9px;overflow-wrap:anywhere}.unified-inbox-copy p{margin:3px 0 0;font-size:8px;line-height:1.4;color:var(--dim);overflow-wrap:anywhere}.unified-inbox-meta{text-align:right;color:var(--dim);font-size:7px;white-space:nowrap}
+@media(max-width:600px){.unified-inbox-controls{grid-template-columns:1fr 1fr}.unified-inbox-controls select{grid-column:1/-1}.unified-inbox-event{grid-template-columns:auto minmax(0,1fr)}.unified-inbox-meta{grid-column:2;text-align:left}.unified-inbox-copy b{font-size:10px}.unified-inbox-copy p{font-size:9px}}
