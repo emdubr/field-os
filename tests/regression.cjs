@@ -301,6 +301,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(manifest.includes("index.html?v=3.52"));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
  console.log('PASS v3.52 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ assert.ok(appJs.includes("zoomSnap:.25")&&appJs.includes("zoomDelta:.5")&&appJs.includes("wheelDebounceTime:24")&&appJs.includes("wheelPxPerZoomLevel:100"));
+ assert.ok(routePlannerJs.includes("zoomSnap:.25")&&routePlannerJs.includes("zoomDelta:.5")&&routePlannerJs.includes("wheelDebounceTime:24")&&routePlannerJs.includes("wheelPxPerZoomLevel:100"));
+ console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
+
 
 
 
