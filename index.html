@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.30" />
-  <link rel="stylesheet" href="workstation.css?v=3.30">
+  <link rel="stylesheet" href="styles.css?v=3.31" />
+  <link rel="stylesheet" href="workstation.css?v=3.31">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.30</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.31</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.30</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.31</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.30</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.31</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -77,7 +77,7 @@
           <div class="console-main-grid detail-main-grid">
             <nav class="console-rail terminal-panel" aria-label="Field modules">
               <div class="terminal-title">FIELD MODULES <span>?</span></div>
-              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="survival">▷ SURVIVAL GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
+              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
               <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
             </nav>
 
@@ -176,7 +176,7 @@
           <div class="console-bottom-grid detail-bottom-grid">
             <article class="terminal-panel event-console" data-open="log"><div class="terminal-title">♙ MESSAGES / EVENT LOG <span>×</span></div><div class="event-lines"><span><b>13:36:12</b> [GPS] 3D fix acquired (18 satellites)</span><span><b>13:36:15</b> [MESH] Node “RIDGE-01” online / -85 dBm</span><span><b>13:36:41</b> [NAV] Off-route warning: 180 ft</span><span><b>13:37:02</b> [ROUTE] Recalculated ETA: 1h 02m</span><span><b>13:37:18</b> [ENV] Pressure trend: -1.7 hPa / 3h</span><span><b>13:37:34</b> [TRACK] Breadcrumb point 1842 committed</span><span><b>13:37:55</b> [SYSTEM] Battery 62% / est. 14h</span></div></article>
             <article class="terminal-panel trip-console" data-open="trip"><div class="terminal-title">♙ TRIP PLAN <span>×</span></div><p>NAME: Jay Peak Loop<br>DATE: 2026-10-04<br>START: 08:00<br>EST. TIME: 6h 20m<br>CHECK-INS: Every 2 hours<br>NEXT: 14:00 / 00:22:05<br>TURNAROUND: 15:30<br>EMERGENCY: Armed</p><div class="trip-progress"><i style="width:41%"></i></div></article>
-            <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ SURVIVAL GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
+            <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ FIELD GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
             <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table"><b>NODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DIST&nbsp;&nbsp;RSSI&nbsp;&nbsp;HOP&nbsp;BAT</b><br>BASE-01&nbsp;&nbsp;&nbsp;1.2mi&nbsp;-72&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;88%<br>RIDGE-01&nbsp;&nbsp;3.6mi&nbsp;-85&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;71%<br>CAMP-01&nbsp;&nbsp;&nbsp;4.8mi&nbsp;-91&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;64%<br>RELAY-A&nbsp;&nbsp;&nbsp;5.1mi&nbsp;-96&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;92%</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
           </div>
           <div class="console-command-strip"><button data-open="route">PLAN ROUTE</button><button data-open="waypoints">WAYPOINTS</button><button data-open="track">RECORD TRACK</button><button data-open="trip">TRIP PLAN</button><button data-open="log">FIELD LOG</button><button data-open="system">SETTINGS</button></div>
@@ -354,7 +354,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.30 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.31 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -374,6 +374,10 @@
           </div>
           <div id="plannerElevationSource" class="route-live-source">ELEVATION // WAITING FOR ROUTE</div>
           <div id="plannerGpsStatus" class="route-live-source planner-gps-source">GPS // OFF</div>
+          <div class="route-trail-name-panel">
+            <div class="route-trail-name-head"><b>TRAILS / ROUTES USED</b><span>NAMED SECTIONS <strong id="routeTrailNameCount">0</strong></span></div>
+            <div id="routeTrailNames" class="route-trail-name-list"><div class="route-trail-empty">TRAIL NAMES // WAITING FOR SNAPPED ROUTE</div></div>
+          </div>
           <div class="route-planner-helpbar"><span id="routePlannerHelp">Tap the map to set a start point.</span><span>TRAIL DATA: OPENSTREETMAP</span></div>
           <div class="button-row route-planner-actions">
             <button id="undoRoutePoint" data-native-route="1" class="action" type="button" data-route-plan-action="undo">UNDO POINT</button>
@@ -403,7 +407,11 @@
             <div class="panel-title"><span>FIELD/OS DIFFICULTY</span><span class="tiny">EFFORT ESTIMATE</span></div>
             <div class="route-grade-badge" id="routeDifficulty">PLOT ROUTE</div>
             <dl class="readouts large-readouts route-elevation-readouts"><div><dt>DISTANCE</dt><dd id="routeDistance">0.00 mi</dd></div><div><dt>GAIN</dt><dd id="routeGainOut">---</dd></div><div><dt>LOSS</dt><dd id="routeLossOut">---</dd></div><div><dt>ELEV RANGE</dt><dd id="routeElevRange">---</dd></div><div><dt>EST. TIME</dt><dd id="routeTime">---</dd></div><div><dt>POINTS</dt><dd id="routePointCount">0</dd></div></dl>
-            <canvas id="routeProfile" width="720" height="220" class="chart elevation-profile-chart"></canvas>
+            <div class="elevation-profile-wrap">
+              <canvas id="routeProfile" width="720" height="220" class="chart elevation-profile-chart"></canvas>
+              <i id="routeProfileHoverLine" class="route-profile-hover-line"></i>
+              <div id="routeProfileHover" class="route-profile-hover" role="status"></div>
+            </div>
             <div class="elevation-detail-grid" aria-label="Detailed route elevation statistics">
               <div><span>START ELEV</span><b id="elevStart">---</b></div>
               <div><span>FINISH ELEV</span><b id="elevFinish">---</b></div>
@@ -508,16 +516,18 @@
       </section>
 
       <section class="view" id="survival" data-view="survival">
-        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>FIELD MANUAL</h2><span></span></div>
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>FIELD GUIDE</h2><span></span></div>
         <article class="panel manual-tools">
-          <div class="panel-title"><span>OFFLINE REFERENCE LIBRARY</span><span class="tiny">VETTED SOURCES</span></div>
+          <div class="panel-title"><span>FIELD GUIDE MENU</span><span class="tiny">VETTED SOURCES</span></div>
           <input id="guideSearch" class="terminal-input" type="search" placeholder="SEARCH: hypothermia, water, bear..." autocomplete="off" />
           <div id="guideFilters" class="chip-row"></div>
         </article>
         <div id="guideGrid" class="grid two-col survival-grid"></div>
-        <article id="guideDetail" class="panel guide-preview">
-          <div class="panel-title"><span>FIELD MANUAL INDEX</span><span class="tiny">SELECT ENTRY</span></div>
-          <p>Select a guide above. Critical first-aid entries are concise reminders, not a replacement for training or professional medical care.</p>
+        <article id="guideDetail" class="guide-preview guide-reader">
+          <div class="guide-reader-empty">
+            <h3>FIELD GUIDE</h3>
+            <p>Select an entry from the guide menu to open the text-only reader.</p>
+          </div>
         </article>
       </section>
 
@@ -565,7 +575,7 @@
           <div class="lost-step"><b>02 LOCATE</b><p>Use last trusted GNSS fix, breadcrumb track, compass, terrain, altitude trend, and landmarks.</p></div>
           <div class="lost-step"><b>03 COMMUNICATE</b><p>Use cellular/911 or certified satellite SOS when available; mesh is a supplemental path.</p></div>
           <div class="lost-step"><b>04 STABILIZE</b><p>Manage exposure, water, injuries, remaining daylight, and battery reserve.</p></div>
-          <div class="button-row"><button class="action" data-open="map">VIEW LAST FIX</button><button class="action" data-open="nav">RETURN / BREADCRUMB</button><button class="action" data-open="survival">FIELD MANUAL</button></div>
+          <div class="button-row"><button class="action" data-open="map">VIEW LAST FIX</button><button class="action" data-open="nav">RETURN / BREADCRUMB</button><button class="action" data-open="survival">FIELD GUIDE</button></div>
         </article>
       </section>
 
@@ -626,12 +636,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.30"></script>
-  <script src="app.js?v=3.30"></script>
-  <script src="workstation.js?v=3.30"></script>
-  <script src="map-engine.js?v=3.30"></script>
+  <script src="route-state.js?v=3.31"></script>
+  <script src="app.js?v=3.31"></script>
+  <script src="workstation.js?v=3.31"></script>
+  <script src="map-engine.js?v=3.31"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.30"></script>
+  <script src="route-planner.js?v=3.31"></script>
 </body>
 </html>
 
