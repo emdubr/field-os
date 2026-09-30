@@ -88,7 +88,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.36',
+      'BUILD: v3.38',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -259,7 +259,9 @@
     const g=svg?.querySelector('.route-dom-slope-segments');
     if(!g)return;
     g.replaceChildren();
-    if(!gaiaRouteEnabled||!activeElevationProfile?.samples?.length||pts.length<2)return;
+    const hasSlope=!!(gaiaRouteEnabled&&activeElevationProfile?.samples?.length&&pts.length>=2);
+    svg?.classList.toggle('has-slope-overlay',hasSlope);
+    if(!hasSlope)return;
     const ns='http://www.w3.org/2000/svg';
     let cumulative=0;
     for(let i=1;i<pts.length;i++){
