@@ -25,6 +25,8 @@
   let plannerPreviewRenderer=null;
   let plannerDomRouteSvg=null;
   let plannerDomRouteGeometry=[];
+  let plannerRouteRedrawFrame=0;
+  let plannerZooming=false;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -85,7 +87,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.26',
+      'BUILD: v3.27',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -189,9 +191,9 @@
     refreshDomRouteLayer();
   }
   function drawRouteDirections(points,c){
-    if(!plannerDirectionLayer||!gaiaRouteEnabled)return;
+    if(!plannerDirectionLayer||!gaiaRouteEnabled)return 0;
     const pts=(Array.isArray(points)?points:[]).filter(valid);
-    if(pts.length<2)return;
+    if(pts.length<2)return 0;
     const cumulative=[0];let total=0;
     for(let i=1;i<pts.length;i++){total+=meters(pts[i-1],pts[i]);cumulative.push(total)}
     if(total<80)return;
@@ -209,8 +211,9 @@
         html:`<span class="gaia-route-direction" style="transform:rotate(${deg}deg)">▲</span>`,
         iconSize:[18,18],iconAnchor:[9,9]
       });
-      L.marker([p.lat,p.lon],{pane:'fieldRouteDirectionPane',icon,interactive:false}).addTo(plannerDirectionLayer);
+      L.marker([p.lat,p.lon],{pane:'fieldRouteDirectionPane',icon,interactive:false,keyboard:false}).addTo(plannerDirectionLayer);
     }
+    return count;
   }
 
   function ensureDomRouteLayer(){
@@ -242,6 +245,19 @@
     svg.classList.toggle('has-route',!!poly);
   }
   function refreshDomRouteLayer(){drawDomRouteLayer(plannerDomRouteGeometry)}
+  function scheduleDomRouteLayer(){
+    if(plannerRouteRedrawFrame)return;
+    plannerRouteRedrawFrame=requestAnimationFrame(()=>{
+      plannerRouteRedrawFrame=0;
+      if(!plannerZooming)refreshDomRouteLayer();
+    });
+  }
+  function setDomRouteZooming(on){
+    plannerZooming=!!on;
+    const svg=ensureDomRouteLayer();
+    if(svg)svg.classList.toggle('route-zooming',plannerZooming);
+    if(!plannerZooming)scheduleDomRouteLayer();
+  }
 
   function plannerColors(){
     const st=getComputedStyle(document.body);
@@ -315,7 +331,7 @@
     const anchorPane=plannerMap.createPane('fieldRouteAnchorPane');
     anchorPane.style.zIndex='630';
     const directionPane=plannerMap.createPane('fieldRouteDirectionPane');
-    directionPane.style.zIndex='625';
+    directionPane.style.zIndex='760';
     directionPane.style.pointerEvents='none';
 
     // Explicit SVG renderers avoid the custom-pane Canvas visibility issue.
@@ -341,8 +357,12 @@
       overlay(state()?.getPoints?.()||[]);
     });
     plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
-    plannerMap.on('move zoom resize',refreshDomRouteLayer);
-    plannerMap.on('moveend zoomend',refreshDomRouteLayer);
+    // Pan redraws are coalesced to one paint per animation frame. Zoom uses
+    // Leaflet's animation without recomputing every route point on every tick.
+    plannerMap.on('move resize',scheduleDomRouteLayer);
+    plannerMap.on('zoomstart',()=>setDomRouteZooming(true));
+    plannerMap.on('zoomend',()=>setDomRouteZooming(false));
+    plannerMap.on('moveend',scheduleDomRouteLayer);
     return plannerMap;
   }
 
@@ -367,7 +387,8 @@
       // Route Layer: draw the authoritative geometry in a dedicated DOM SVG
       // above Leaflet. This avoids Canvas/SVG pane renderer differences.
       drawDomRouteLayer(pts);
-      if(gaiaRouteEnabled&&pts.length>1)drawRouteDirections(pts,c);
+      const arrowCount=gaiaRouteEnabled&&pts.length>1?drawRouteDirections(pts,c):0;
+      if(geometryState&&pts.length>1)geometryState.textContent=`SNAPPED GEOMETRY // ${pts.length} PTS // ${arrowCount} ARROWS`;
 
       // While planning, always show the unresolved leg(s) immediately as a dashed guide.
       if(anchors.length){
