@@ -243,6 +243,16 @@
           <p id="offlinePlaceStatus" class="muted" role="status">Import a GeoJSON point collection or JSON array with name, type, lat and lon.</p>
         </article>
         <article class="panel field-tools-panel"><div class="panel-title"><span>MAP LAYER PRESETS</span><span class="tiny" id="mapPresetState">ONE-TAP SETUP</span></div><div class="button-row"><button class="action" data-layer-preset="hike">HIKING</button><button class="action" data-layer-preset="street">STREET</button><button class="action" data-layer-preset="terrain">TERRAIN</button></div></article>
+        <article class="panel field-tools-panel route-offline-readiness">
+          <div class="panel-title"><span>ROUTE OFFLINE READINESS</span><span class="tiny">CORRIDOR CHECK</span></div>
+          <div class="offline-map-grid">
+            <div><label class="field-label" for="routeCorridorPadding">SAFETY BUFFER EACH SIDE</label><select id="routeCorridorPadding" class="terminal-input"><option value="1">1 MILE</option><option value="2" selected>2 MILES</option><option value="5">5 MILES</option><option value="10">10 MILES</option></select></div>
+            <div><label class="field-label">CORRIDOR BOUNDS</label><p id="routeCorridorBounds" class="muted">PLAN A ROUTE FIRST</p></div>
+            <div><label class="field-label">OFFLINE COVERAGE</label><p id="routeOfflineCoverage" class="muted" role="status">NOT CHECKED</p></div>
+            <div class="button-row"><button id="checkRouteOffline" class="action" type="button">CHECK ROUTE COVERAGE</button><button id="activateRouteOffline" class="action" type="button">USE COVERING PACK</button></div>
+          </div>
+          <p class="muted">Checks whether a saved PMTiles archive covers the complete planned route plus the selected safety buffer. It does not bulk-download OpenStreetMap raster tiles.</p>
+        </article>
         <article class="panel offline-map-manager" id="offlineMapManager">
           <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
           <div class="offline-map-grid">

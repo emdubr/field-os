@@ -1227,6 +1227,42 @@ async function downloadFieldPmtiles(url){
   setOfflineMapStatus('VALIDATING…',94);
   return await saveFieldMapPackBlob(blob,name,'download');
 }
+function routeCorridorBounds(points=routePoints,paddingMiles=2){
+  const valid=(Array.isArray(points)?points:[]).filter(validLatLon);
+  if(!valid.length)return null;
+  let minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+  for(const p of valid){minLat=Math.min(minLat,Number(p.lat));maxLat=Math.max(maxLat,Number(p.lat));minLon=Math.min(minLon,Number(p.lon));maxLon=Math.max(maxLon,Number(p.lon));}
+  const pad=Math.max(.25,Math.min(15,Number(paddingMiles)||2)),mid=(minLat+maxLat)/2*Math.PI/180;
+  const latPad=pad/69,lonPad=pad/Math.max(10,69*Math.cos(mid));
+  return {minLat:Math.max(-85,minLat-latPad),maxLat:Math.min(85,maxLat+latPad),minLon:Math.max(-180,minLon-lonPad),maxLon:Math.min(180,maxLon+lonPad),paddingMiles:pad};
+}
+function packCoversBounds(pack,b){
+  const p=pack?.bounds;if(!b||!Array.isArray(p)||p.length<4)return false;
+  return Number(p[0])<=b.minLon&&Number(p[1])<=b.minLat&&Number(p[2])>=b.maxLon&&Number(p[3])>=b.maxLat;
+}
+async function analyzeRouteOfflineCoverage(){
+  const out=document.getElementById('routeOfflineCoverage'),pad=Number(document.getElementById('routeCorridorPadding')?.value||2);
+  const b=routeCorridorBounds(routePoints,pad);
+  if(!b){if(out)out.textContent='PLAN A ROUTE FIRST';return {bounds:null,matches:[]};}
+  let packs=[];try{packs=await listFieldMapPacks();}catch{}
+  const matches=packs.filter(p=>packCoversBounds(p,b));
+  const text=matches.length?`READY // ${matches.length} SAVED PACK${matches.length===1?'':'S'} COVER FULL ${b.paddingMiles.toFixed(1)} MI CORRIDOR`:`GAP // NO SAVED PACK COVERS FULL ${b.paddingMiles.toFixed(1)} MI CORRIDOR`;
+  if(out)out.textContent=text;
+  const boundsOut=document.getElementById('routeCorridorBounds');
+  if(boundsOut)boundsOut.textContent=`${b.minLat.toFixed(4)}, ${b.minLon.toFixed(4)} → ${b.maxLat.toFixed(4)}, ${b.maxLon.toFixed(4)}`;
+  return {bounds:b,matches};
+}
+async function activateBestRoutePack(){
+  const {matches}=await analyzeRouteOfflineCoverage();
+  if(!matches.length)return alert('No saved PMTiles pack fully covers this route corridor. Import or download a regional pack first.');
+  matches.sort((a,b)=>Number(a.size||Infinity)-Number(b.size||Infinity));
+  await activateFieldMapPack(matches[0].id);
+  setOfflineMapStatus('ROUTE CORRIDOR PACK ACTIVE',100);
+}
+document.getElementById('checkRouteOffline')?.addEventListener('click',analyzeRouteOfflineCoverage);
+document.getElementById('activateRouteOffline')?.addEventListener('click',activateBestRoutePack);
+document.getElementById('routeCorridorPadding')?.addEventListener('change',analyzeRouteOfflineCoverage);
+document.addEventListener('fieldos:routechange',()=>analyzeRouteOfflineCoverage());
 document.getElementById('offlinePmtilesFile')?.addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
   try{setOfflineMapStatus('IMPORTING…',20);const rec=await saveFieldMapPackBlob(file,file.name,'import');await refreshFieldMapPackUI();await activateFieldMapPack(rec.id);}catch(err){setOfflineMapStatus('IMPORT FAILED');alert(err.message||String(err));}finally{e.target.value='';}
