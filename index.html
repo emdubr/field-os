@@ -294,6 +294,13 @@
           <div class="panel-title"><span>FORECAST HAZARD FLAGS</span><span class="tiny" id="weatherHazardCount">0 FLAGS</span></div>
           <div id="weatherHazards" class="weather-hazard-list"><p class="muted">No cached forecast to screen.</p></div>
         </article>
+        <article class="panel environment-intel-panel">
+          <div class="panel-title"><span>ENVIRONMENT INTELLIGENCE</span><span class="tiny" id="environmentIntelState">CACHE EMPTY</span></div>
+          <div class="button-row"><button id="environmentIntelRefresh" class="action" type="button">REFRESH AIR + EARTHQUAKES</button></div>
+          <dl class="readouts"><div><dt>US AQI</dt><dd id="environmentAqi">—</dd></div><div><dt>PM2.5</dt><dd id="environmentPm25">—</dd></div><div><dt>NEARBY QUAKES / 24H</dt><dd id="environmentQuakes">—</dd></div><div><dt>NEAREST EVENT</dt><dd id="environmentNearestQuake">—</dd></div><div><dt>UPDATED</dt><dd id="environmentIntelAge">—</dd></div></dl>
+          <div id="environmentIntelList" class="condition-list"></div>
+          <p class="muted">Air quality uses Open-Meteo air-quality data at the current/route position. Earthquake screening uses the USGS past-day feed and prioritizes events near the loaded route. The last successful result remains available offline.</p>
+        </article>
         <article class="panel">
           <div class="panel-title"><span>NEXT 12 HOURS</span><span class="tiny">OFFLINE AFTER DOWNLOAD</span></div>
           <div id="weatherHourly" class="weather-hourly-strip"><p class="muted">Download a forecast to populate this timeline.</p></div>
