@@ -3948,3 +3948,47 @@ input,select,textarea{
     min-height:0!important;
   }
 }
+
+
+/* v3.65 DENSE DESKTOP FLOW — independent card heights, no paired-row voids. */
+@media(min-width:1024px){
+  body .module-grid{
+    display:block!important;
+    columns:2!important;
+    column-gap:10px!important;
+  }
+  body .module-grid>*{
+    display:inline-block!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0 0 10px!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+    vertical-align:top!important;
+  }
+  body .module-grid>.module-slot{
+    display:inline-block!important;
+    width:100%!important;
+  }
+  body .module-grid>.module-slot>.panel,
+  body .module-grid>article.panel{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+  }
+  body #route .route-planner-panel,
+  body #route .route-performance-panel,
+  body #route .route-elevation-panel,
+  body #map .terrain-map-card,
+  body #map .terrain-controls-below,
+  body #map .offline-map-manager,
+  body #map .route-offline-readiness,
+  body #track .track-map-panel,
+  body #trailreturn .return-map-panel{
+    column-span:all!important;
+    display:block!important;
+    width:100%!important;
+  }
+}
