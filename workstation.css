@@ -1689,3 +1689,10 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .slope-badge.slope-medium{color:#f28c28;border-color:#f28c28;background:rgba(242,140,40,.06)}
 .slope-badge.slope-hard{color:#e5484d;border-color:#e5484d;background:rgba(229,72,77,.08)}
 .elevation-breakdown-table th,.elevation-breakdown-table td{font-variant-numeric:tabular-nums}
+
+
+/* v3.29 elevation slope emphasis */
+.elevation-profile-chart{background:transparent}
+.elevation-breakdown-table tr.slope-easy td{box-shadow:none!important}
+.elevation-breakdown-table tr.slope-medium td:first-child{box-shadow:inset 3px 0 #f28c28}
+.elevation-breakdown-table tr.slope-hard td:first-child{box-shadow:inset 3px 0 #e5484d}
