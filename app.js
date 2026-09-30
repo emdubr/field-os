@@ -326,14 +326,25 @@ function renderGuides(){
   const filtered=guides.filter(g=>(activeCategory==='ALL'||g.category.toUpperCase()===activeCategory) && (!q||`${g.title} ${g.category} ${g.summary} ${g.steps.join(' ')}`.toLowerCase().includes(q)));
   guideGrid.innerHTML=filtered.map(g=>`<button class="survival-card ${g.urgency==='EMERGENCY'?'emergency':g.urgency==='HIGH'?'high':''}" data-guide="${g.id}"><span class="urgency">${g.urgency}</span><b>${g.title}</b><small>${g.summary}</small></button>`).join('') || '<article class="panel"><p>No matching guide entries.</p></article>';
 }
+function closeGuideReader(){
+  document.getElementById('survival')?.classList.remove('guide-reading-mode');
+  guideDetail?.classList.remove('active');
+  document.getElementById('survival')?.scrollIntoView({behavior:'auto',block:'start'});
+}
 function showGuide(id){
   const g=guides.find(x=>x.id===id); if(!g||!guideDetail) return;
-  guideDetail.innerHTML=`<div class="panel-title"><span>${g.title}</span><span class="tiny">${g.category.toUpperCase()} / ${g.urgency}</span></div><p>${g.summary}</p><ol class="guide-steps">${g.steps.map(x=>`<li>${x}</li>`).join('')}</ol><div class="guide-source"><b>SOURCE:</b> ${g.source}<br><span class="source-link">${g.url}</span><br><br>Offline quick reference only. For medical emergencies, use trained first aid and professional emergency services when available.</div>`;
-  guideDetail.scrollIntoView({behavior:'smooth',block:'start'});
+  guideDetail.innerHTML=`<button class="guide-reader-back" type="button" data-guide-close>← FIELD GUIDE MENU</button>
+    <header class="guide-reader-head"><span>${g.category.toUpperCase()} · ${g.urgency}</span><h3>${g.title}</h3><p>${g.summary}</p></header>
+    <div class="guide-reader-body"><ol class="guide-steps">${g.steps.map(x=>`<li>${x}</li>`).join('')}</ol>
+    <div class="guide-source"><b>SOURCE:</b> ${g.source}<br><span class="source-link">${g.url}</span><br><br>Offline quick reference only. For medical emergencies, use trained first aid and professional emergency services when available.</div></div>`;
+  document.getElementById('survival')?.classList.add('guide-reading-mode');
+  guideDetail.classList.add('active');
+  document.getElementById('survival')?.scrollIntoView({behavior:'auto',block:'start'});
 }
 document.addEventListener('click',e=>{
   const f=e.target.closest('[data-guide-filter]'); if(f){activeCategory=f.dataset.guideFilter;renderFilters();renderGuides();}
   const g=e.target.closest('[data-guide]'); if(g) showGuide(g.dataset.guide);
+  if(e.target.closest('[data-guide-close]')) closeGuideReader();
 });
 guideSearch?.addEventListener('input',renderGuides); renderFilters(); renderGuides();
 
@@ -398,11 +409,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.30',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.31',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.30';
+        const key='fieldos-sw-reloaded-v3.31';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
