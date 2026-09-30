@@ -1698,7 +1698,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .elevation-breakdown-table tr.slope-hard td:first-child{box-shadow:inset 3px 0 #e5484d}
 
 
-/* v3.30 slope-colored 2D Route Layer + 3D route geometry */
+/* v3.30 slope-colored 2D Route Layer */
 .route-planner-real-map .route-dom-slope{
   vector-effect:non-scaling-stroke;
   stroke-linecap:round;
@@ -1940,7 +1940,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 }
 
 
-/* v3.34 UI hardening after stress pass */
+/* v3.35 UI hardening after stress pass */
 #map .view-head{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:10px!important;align-items:center!important}
 #map .view-head h2{min-width:0;overflow-wrap:anywhere}
 #map .view-head-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:6px!important}
