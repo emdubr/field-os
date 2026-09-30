@@ -75,6 +75,46 @@
 
 
 
+
+  // Feature 08 — Position Confidence.
+  function numericFromText(id){
+    const raw=text(id),m=raw.match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):null;
+  }
+  function computePositionConfidence(){
+    const fix=text('mobileFixState'),source=(window.FIELD_ROUTE_STATE?.current?.()?.source||text('navPositionSource')||'UNKNOWN').toUpperCase();
+    const ageRaw=text('fixAge'),ageParts=(ageRaw.match(/(\d+):(\d+):(\d+)/)||[]),ageSec=ageParts.length?Number(ageParts[1])*3600+Number(ageParts[2])*60+Number(ageParts[3]):0;
+    const statedAcc=numericFromText('navAccuracy')??numericFromText('homeAccuracy')??15;
+    const drActive=!!window.FIELD_DR?.state?.active,drUncertainty=Number(window.FIELD_DR?.state?.uncertaintyM);
+    let mode='trusted',authority='GNSS',uncertainty=statedAcc,score=100;
+    if(drActive){mode='estimated';authority='DEAD RECKONING';uncertainty=Number.isFinite(drUncertainty)?drUncertainty:Math.max(50,statedAcc);score=58}
+    else if(/STALE|NO FIX|AWAITING|UNAVAILABLE/i.test(fix)||ageSec>180){mode='stale';authority='LAST TRUSTED FIX';score=20;uncertainty=Math.max(statedAcc,100)}
+    else{
+      score-=Math.min(45,Math.max(0,statedAcc-3)*2.2);
+      score-=Math.min(35,ageSec/4);
+      if(statedAcc>25||ageSec>45){mode='degraded';authority='GNSS';}
+    }
+    if(mode==='estimated'){
+      score-=Math.min(38,Math.max(0,uncertainty-25)/15);
+    }
+    score=Math.round(Math.max(0,Math.min(100,score)));
+    const label=mode==='trusted'?'TRUSTED GNSS':mode==='degraded'?'DEGRADED GNSS':mode==='estimated'?'DEAD-RECKONING ESTIMATE':'STALE / LAST FIX';
+    const detail=mode==='trusted'?`Recent GNSS fix with stated accuracy about ±${Math.round(uncertainty)} m.`:
+      mode==='degraded'?`GNSS remains authoritative, but fix age or stated accuracy reduces confidence.`:
+      mode==='estimated'?`GNSS is unavailable; position is estimated and uncertainty expands with time and travel.`:
+      `No fresh GNSS authority. Treat this as a stale last-known position until a trusted fix returns.`;
+    return {score,mode,label,detail,authority,source,ageSec,uncertaintyM:uncertainty};
+  }
+  function renderPositionConfidence(result=computePositionConfidence()){
+    const panel=document.querySelector('.position-confidence-panel'),set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+    if(panel){panel.classList.remove('conf-trusted','conf-degraded','conf-estimated','conf-stale');panel.classList.add(`conf-${result.mode}`)}
+    set('posConfidenceState',result.mode.toUpperCase());set('posConfidenceScore',String(result.score));set('posConfidenceLabel',result.label);set('posConfidenceDetail',result.detail);set('posConfidenceSource',result.source);set('posConfidenceAge',`${Math.floor(result.ageSec/60)}m ${result.ageSec%60}s`);set('posConfidenceUncertainty',result.uncertaintyM>=1000?`±${(result.uncertaintyM/1000).toFixed(1)} km`:`±${Math.round(result.uncertaintyM)} m`);set('posConfidenceAuthority',result.authority);
+    const bar=document.getElementById('posConfidenceBar');if(bar)bar.style.width=`${result.score}%`;
+    const ring=document.getElementById('posConfidenceRing');if(ring)ring.setAttribute('aria-label',`Position confidence ${result.score} percent, ${result.label}`);
+    return result;
+  }
+  document.addEventListener('fieldos:positionchange',renderPositionConfidence);document.addEventListener('fieldos:telemetry',renderPositionConfidence);document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(renderPositionConfidence,2000);setTimeout(renderPositionConfidence,180);
+  window.FIELD_POSITION_CONFIDENCE={compute:computePositionConfidence,render:renderPositionConfidence};
+
   // Feature 07 — dead-reckoning backup. Estimate remains separate from GNSS.
   const dr={armed:false,active:false,anchor:null,anchorTime:0,lastFixTime:0,heading:null,speedMps:0,estimated:null,uncertaintyM:null};
   const projectPoint=(p,distanceM,headingDeg)=>{

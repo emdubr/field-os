@@ -355,6 +355,15 @@
           <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>
           <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd id="navAccuracy">±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
         </article>
+        <article class="panel position-confidence-panel">
+          <div class="panel-title"><span>POSITION CONFIDENCE</span><span class="tiny" id="posConfidenceState">CALCULATING</span></div>
+          <div class="position-confidence-hero">
+            <div class="position-confidence-ring" id="posConfidenceRing"><b id="posConfidenceScore">--</b><small>CONF</small></div>
+            <div class="position-confidence-copy"><strong id="posConfidenceLabel">WAITING FOR POSITION</strong><p id="posConfidenceDetail">FIELD/OS is evaluating source, fix age, stated accuracy, and dead-reckoning uncertainty.</p></div>
+          </div>
+          <div class="position-confidence-bar"><i id="posConfidenceBar"></i></div>
+          <dl class="readouts"><div><dt>SOURCE</dt><dd id="posConfidenceSource">---</dd></div><div><dt>FIX AGE</dt><dd id="posConfidenceAge">---</dd></div><div><dt>UNCERTAINTY</dt><dd id="posConfidenceUncertainty">---</dd></div><div><dt>AUTHORITY</dt><dd id="posConfidenceAuthority">---</dd></div></dl>
+        </article>
         <article class="panel dr-panel">
           <div class="panel-title"><span>DEAD RECKONING BACKUP</span><span class="tiny" id="drState">STANDBY</span></div>
           <div id="drWarning" class="dr-warning">GNSS remains authoritative while available. Dead reckoning is an estimate only.</div>
