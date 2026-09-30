@@ -346,10 +346,10 @@
       zoomAnimation:true,
       fadeAnimation:true,
       markerZoomAnimation:true,
-      zoomSnap:.25,
-      zoomDelta:.5,
-      wheelDebounceTime:24,
-      wheelPxPerZoomLevel:100
+      zoomSnap:.125,
+      zoomDelta:.25,
+      wheelDebounceTime:12,
+      wheelPxPerZoomLevel:180
     }).setView([here.lat,here.lon],14);
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -423,9 +423,10 @@
     plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
     // Pan redraws are coalesced to one paint per animation frame. Zoom uses
     // Leaflet's animation without recomputing every route point on every tick.
-    plannerMap.on('move resize',scheduleDomRouteLayer);
-    plannerMap.on('zoomstart',()=>setDomRouteZooming(true));
-    plannerMap.on('zoomend',()=>setDomRouteZooming(false));
+    plannerMap.on('move',scheduleDomRouteLayer);
+    plannerMap.on('resize',scheduleDomRouteLayer);
+    plannerMap.on('zoomstart',()=>{setDomRouteZooming(true);plannerMap.getContainer().classList.add('field-map-zooming')});
+    plannerMap.on('zoomend',()=>{plannerMap.getContainer().classList.remove('field-map-zooming');setDomRouteZooming(false)});
     plannerMap.on('moveend',scheduleDomRouteLayer);
     return plannerMap;
   }
@@ -958,7 +959,7 @@
         }finally{
           clearTimeout(deadline);
         }
-      },[0,1200,3000][i]);
+      },[0,450,1100][i]);
     }));
 
     const promise=Promise.any(requests).then(graph=>{
