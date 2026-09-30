@@ -21,6 +21,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('tripName').value='QA Hike';click('saveTrip');assert.match(w.localStorage.getItem('fieldos-v12-trip'),/QA Hike/);
  console.log('PASS waypoint/base and trip persistence');
 
+ const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
  sosBtn.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
  sosBtn.dispatchEvent(new w.Event('pointercancel',{bubbles:true}));
