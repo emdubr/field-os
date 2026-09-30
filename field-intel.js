@@ -74,6 +74,57 @@
 
 
 
+
+  // Feature 07 — dead-reckoning backup. Estimate remains separate from GNSS.
+  const dr={armed:false,active:false,anchor:null,anchorTime:0,lastFixTime:0,heading:null,speedMps:0,estimated:null,uncertaintyM:null};
+  const projectPoint=(p,distanceM,headingDeg)=>{
+    const R=6371000,br=toRad(headingDeg),lat1=toRad(p.lat),lon1=toRad(p.lon),ang=distanceM/R;
+    const lat2=Math.asin(Math.sin(lat1)*Math.cos(ang)+Math.cos(lat1)*Math.sin(ang)*Math.cos(br));
+    const lon2=lon1+Math.atan2(Math.sin(br)*Math.sin(ang)*Math.cos(lat1),Math.cos(ang)-Math.sin(lat1)*Math.sin(lat2));
+    return {lat:lat2*180/Math.PI,lon:((lon2*180/Math.PI+540)%360)-180};
+  };
+  function estimateDr(anchor,elapsedSec,speedMps,headingDeg,baseUncertainty=15){
+    if(!validPoint(anchor)||!Number.isFinite(Number(elapsedSec))||!Number.isFinite(Number(speedMps))||!Number.isFinite(Number(headingDeg)))return null;
+    const sec=Math.max(0,Math.min(7200,Number(elapsedSec))),spd=Math.max(0,Math.min(15,Number(speedMps))),distance=sec*spd,pos=projectPoint(anchor,distance,Number(headingDeg));
+    // Conservative growth: fixed anchor error + time drift + distance/heading uncertainty.
+    const uncertainty=Math.min(10000,Math.max(Number(baseUncertainty)||15,Number(baseUncertainty)||15)+sec*.35+distance*.12);
+    return {...pos,distanceM:distance,elapsedSec:sec,uncertaintyM:uncertainty,heading:Number(headingDeg),speedMps:spd};
+  }
+  function parseHeading(){
+    const raw=text('navHeading'),m=raw.match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):null;
+  }
+  function armDr(){
+    const p=getPosition();if(!validPoint(p))return null;
+    dr.armed=true;dr.anchor={lat:p.lat,lon:p.lon,alt:p.alt??null,source:p.source||'LAST FIX'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.heading=Number.isFinite(parseHeading())?parseHeading():0;
+    const mph=parseFloat(text('speed'));dr.speedMps=Number.isFinite(mph)?mph*.44704:0;dr.active=false;dr.estimated={...dr.anchor};dr.uncertaintyM=15;renderDr();return {...dr};
+  }
+  function resetDr(){dr.armed=false;dr.active=false;dr.anchor=null;dr.estimated=null;dr.uncertaintyM=null;renderDr()}
+  function updateDr(now=Date.now()){
+    const fix=text('mobileFixState'),stale=/STALE|NO FIX|AWAITING|UNAVAILABLE/i.test(fix);
+    if(!dr.armed&&stale)armDr();
+    if(!dr.armed){renderDr();return null}
+    if(!stale){dr.active=false;dr.lastFixTime=now;const p=getPosition();if(validPoint(p)){dr.anchor={lat:p.lat,lon:p.lon,alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=now;dr.estimated={...dr.anchor};dr.uncertaintyM=15}renderDr();return dr.estimated}
+    dr.active=true;
+    const heading=Number.isFinite(dr.heading)?dr.heading:(parseHeading()??0),elapsed=(now-dr.anchorTime)/1000,est=estimateDr(dr.anchor,elapsed,dr.speedMps,heading,15);
+    if(est){dr.estimated={lat:est.lat,lon:est.lon,alt:dr.anchor?.alt??null,source:'DEAD RECKONING ESTIMATE'};dr.uncertaintyM=est.uncertaintyM}
+    renderDr(now);return dr.estimated;
+  }
+  function renderDr(now=Date.now()){
+    const panel=document.querySelector('.dr-panel'),state=document.getElementById('drState'),warning=document.getElementById('drWarning'),set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    if(panel){panel.classList.toggle('dr-active',dr.active);panel.classList.toggle('dr-critical',dr.active&&Number(dr.uncertaintyM)>500)}
+    if(state)state.textContent=!dr.armed?'STANDBY':dr.active?'ESTIMATED / GNSS LOST':'ARMED / GNSS PRIMARY';
+    if(warning)warning.textContent=dr.active?'ESTIMATED POSITION ONLY — uncertainty grows with time and travel. Verify against terrain, compass and last trusted fix.':'GNSS remains authoritative while available. Dead reckoning is an estimate only.';
+    set('drPosition',dr.estimated&&validPoint(dr.estimated)?`${dr.estimated.lat.toFixed(5)}, ${dr.estimated.lon.toFixed(5)}`:'---');
+    set('drUncertainty',dr.uncertaintyM==null?'---':dr.uncertaintyM<1000?`±${Math.round(dr.uncertaintyM)} m`:`±${(dr.uncertaintyM/1000).toFixed(1)} km`);
+    set('drHeading',Number.isFinite(dr.heading)?`${Math.round(dr.heading)}°`:'---');set('drSpeed',Number.isFinite(dr.speedMps)?`${(dr.speedMps*2.23694).toFixed(1)} mph`:'---');
+    set('drElapsed',dr.anchorTime?`${Math.max(0,Math.floor((now-dr.anchorTime)/1000))} s`:'---');set('drAnchorAge',dr.anchorTime?new Date(dr.anchorTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
+  }
+  document.getElementById('drArm')?.addEventListener('click',armDr);document.getElementById('drReset')?.addEventListener('click',resetDr);
+  document.addEventListener('fieldos:positionchange',e=>{const p=e.detail;if(validPoint(p)){dr.anchor={lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.estimated={...dr.anchor};dr.uncertaintyM=Number(p.accuracy)||15;dr.active=false;if(dr.armed)renderDr()}});
+  document.addEventListener('fieldos:telemetry',e=>{const h=Number(e.detail?.heading),s=Number(e.detail?.speedMps);if(Number.isFinite(h))dr.heading=h;if(Number.isFinite(s))dr.speedMps=Math.max(0,s)});
+  setInterval(updateDr,1000);setTimeout(renderDr,160);
+  window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,state:dr};
+
   // Feature 06 — stripped-down breadcrumb navigation.
   let breadcrumbIndex=null,breadcrumbReversed=false;
   const bearing=(a,b)=>{const r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lon-a.lon)*r);return (Math.atan2(y,x)*180/Math.PI+360)%360};

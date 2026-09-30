@@ -355,6 +355,12 @@
           <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>
           <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd id="navAccuracy">±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
         </article>
+        <article class="panel dr-panel">
+          <div class="panel-title"><span>DEAD RECKONING BACKUP</span><span class="tiny" id="drState">STANDBY</span></div>
+          <div id="drWarning" class="dr-warning">GNSS remains authoritative while available. Dead reckoning is an estimate only.</div>
+          <dl class="readouts large-readouts"><div><dt>EST POSITION</dt><dd id="drPosition">---</dd></div><div><dt>UNCERTAINTY</dt><dd id="drUncertainty">---</dd></div><div><dt>HEADING</dt><dd id="drHeading">---</dd></div><div><dt>SPEED</dt><dd id="drSpeed">---</dd></div><div><dt>ELAPSED</dt><dd id="drElapsed">---</dd></div><div><dt>ANCHOR</dt><dd id="drAnchorAge">---</dd></div></dl>
+          <div class="button-row"><button id="drArm" class="action" type="button">ARM FROM LAST FIX</button><button id="drReset" class="action" type="button">RESET ESTIMATE</button></div>
+        </article>
         <article class="panel solar-panel">
           <div class="panel-title"><span>SUNLIGHT / SOLAR NAV</span><span class="tiny" id="solarPositionSource">LOCAL CALCULATION</span></div>
           <div class="sun-state-strip"><b id="sunState">CALCULATING</b><span id="sunNextEvent">---</span></div>
