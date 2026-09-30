@@ -1630,3 +1630,10 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   filter:drop-shadow(0 0 2px #000) drop-shadow(0 0 4px color-mix(in srgb,var(--warn) 48%,transparent))!important;
 }
 .route-planner-real-map .route-dom-highlight{stroke:#fff!important;stroke-width:2.5!important;stroke-opacity:.92!important}
+
+
+/* v3.26 keep planner controls above direct Route Layer */
+.route-planner-real-map .leaflet-control-container{
+  position:relative!important;
+  z-index:800!important;
+}
