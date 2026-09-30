@@ -268,6 +268,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const jWarn=r.junctionWarningsForPath(jPath,[{highway:'path',name:'Main Trail'},{highway:'path',name:'Main Trail'}],jGraph);
  assert.equal(jWarn.length,1);assert.equal(jWarn[0].alternates,1);assert.ok(jWarn[0].options.some(x=>/Side Trail/.test(x)));
  console.log('PASS mapped branch intersections generate junction-topology warnings with alternate trail labels');
+ assert.ok(appJs.includes('function routeCorridorBounds('));assert.ok(appJs.includes('function packCoversBounds('));assert.ok(appJs.includes('activateBestRoutePack'));
+ assert.ok(html.includes('id="routeCorridorPadding"'));assert.ok(html.includes('id="checkRouteOffline"'));assert.ok(html.includes('id="activateRouteOffline"'));
+ console.log('PASS browser offline-route corridor coverage controls and pack selection are wired');
+
 
  const filtered=r.displayTrailSections([{result:{trailSections:[
    {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:80},
