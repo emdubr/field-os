@@ -681,7 +681,7 @@
     const ring=document.getElementById('posConfidenceRing');if(ring)ring.setAttribute('aria-label',`Position confidence ${result.score} percent, ${result.label}`);
     return result;
   }
-  document.addEventListener('fieldos:positionchange',renderPositionConfidence);document.addEventListener('fieldos:telemetry',renderPositionConfidence);document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(renderPositionConfidence,2000);setTimeout(renderPositionConfidence,180);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:telemetry',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()},2000);setTimeout(renderPositionConfidence,180);
   window.FIELD_POSITION_CONFIDENCE={compute:computePositionConfidence,render:renderPositionConfidence};
 
   // Feature 07 — dead-reckoning backup. Estimate remains separate from GNSS.
