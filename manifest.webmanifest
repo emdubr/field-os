@@ -1,7 +1,7 @@
 {
   "name": "FIELD/OS Backcountry Interface",
   "short_name": "FIELD/OS",
-  "start_url": "./index.html?v=3.29",
+  "start_url": "./index.html?v=3.30",
   "display": "standalone",
   "background_color": "#020704",
   "theme_color": "#020704",
