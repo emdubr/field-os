@@ -134,6 +134,47 @@
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='weather')renderWeather()});window.addEventListener('online',()=>{if(document.querySelector('#weather.active'))renderWeather()});window.addEventListener('offline',()=>{if(document.querySelector('#weather.active'))renderWeather()});setTimeout(()=>renderWeather(),450);
   window.FIELD_WEATHER={state:weatherState,fetch:fetchWeather,setCache:setWeatherCache,normalize:normalizeForecast,hazards:weatherHazards,render:renderWeather,pressureTrend:localWeatherPressureTrend,codeLabel:weatherCodeLabel};
 
+  // Browser environmental intelligence — cached air quality + route-aware earthquake screening.
+  const environmentState={cache:read('environment-intel-cache',null)};
+  const environmentAnchor=()=>{
+    const route=cleanPoints(window.FIELD_ROUTE_STATE?.getPlan?.()?.points||[]);
+    if(route.length)return route[Math.floor(route.length/2)];
+    const pos=getPosition();return validPoint(pos)?pos:null;
+  };
+  const minRouteDistanceM=(point,route)=>{
+    if(!route.length)return Infinity;let best=Infinity;
+    for(const p of route)best=Math.min(best,meters(point,p));
+    return best;
+  };
+  function renderEnvironmentIntel(){
+    const cache=environmentState.cache,set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+    if(!cache){set('environmentIntelState','CACHE EMPTY');set('environmentAqi','—');set('environmentPm25','—');set('environmentQuakes','—');set('environmentNearestQuake','—');set('environmentIntelAge','—');return}
+    const age=Math.max(0,Date.now()-Date.parse(cache.downloadedAt)),mins=Math.floor(age/60000);
+    set('environmentIntelState',navigator.onLine?'CACHED // ONLINE':'CACHED // OFFLINE');
+    set('environmentAqi',Number.isFinite(cache.air?.aqi)?String(Math.round(cache.air.aqi)):'NO DATA');
+    set('environmentPm25',Number.isFinite(cache.air?.pm25)?cache.air.pm25.toFixed(1)+' µg/m³':'NO DATA');
+    set('environmentQuakes',String(cache.quakes?.length||0));
+    const nearest=cache.quakes?.[0];set('environmentNearestQuake',nearest?`M${nearest.mag.toFixed(1)} // ${Math.round(nearest.distanceMi)} mi`:'NONE WITHIN 100 MI');
+    set('environmentIntelAge',mins<60?`${mins} MIN AGO`:`${Math.floor(mins/60)} H AGO`);
+    const list=document.getElementById('environmentIntelList');if(list)list.innerHTML=(cache.quakes||[]).slice(0,5).map(q=>`<div class="condition-row"><b>M${q.mag.toFixed(1)}</b><span>${esc(q.place||'USGS EVENT')}</span><em>${Math.round(q.distanceMi)} mi</em></div>`).join('')||'<p class="muted">No USGS past-day events within 100 miles of the loaded route/position.</p>';
+  }
+  async function fetchEnvironmentIntel(){
+    const anchor=environmentAnchor();if(!anchor)throw new Error('Load a route or enable a valid position first.');
+    const route=cleanPoints(window.FIELD_ROUTE_STATE?.getPlan?.()?.points||[]),screen=route.length?route:[anchor];
+    const aqUrl=`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${anchor.lat.toFixed(5)}&longitude=${anchor.lon.toFixed(5)}&current=us_aqi,pm2_5&timezone=auto`;
+    const quakeUrl='https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
+    const [aq,eq]=await Promise.allSettled([fetch(aqUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Air quality HTTP '+r.status);return r.json()}),fetch(quakeUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('USGS HTTP '+r.status);return r.json()})]);
+    const previous=environmentState.cache||{},air=aq.status==='fulfilled'?{aqi:Number(aq.value?.current?.us_aqi),pm25:Number(aq.value?.current?.pm2_5),time:aq.value?.current?.time||null}:previous.air||null;
+    let quakes=previous.quakes||[];
+    if(eq.status==='fulfilled')quakes=(eq.value?.features||[]).map(f=>{const co=f?.geometry?.coordinates||[],point={lat:Number(co[1]),lon:Number(co[0])},d=minRouteDistanceM(point,screen);return {mag:Number(f?.properties?.mag)||0,place:String(f?.properties?.place||''),time:Number(f?.properties?.time)||0,lat:point.lat,lon:point.lon,distanceMi:d/1609.344};}).filter(q=>Number.isFinite(q.distanceMi)&&q.distanceMi<=100).sort((a,b)=>a.distanceMi-b.distanceMi).slice(0,25);
+    if(aq.status==='rejected'&&eq.status==='rejected')throw new Error('Environmental sources unavailable.');
+    environmentState.cache={downloadedAt:new Date().toISOString(),anchor:{lat:anchor.lat,lon:anchor.lon},air,quakes,sources:{air:'Open-Meteo Air Quality',earthquakes:'USGS Past Day'}};
+    write('environment-intel-cache',environmentState.cache);renderEnvironmentIntel();return environmentState.cache;
+  }
+  document.getElementById('environmentIntelRefresh')?.addEventListener('click',()=>fetchEnvironmentIntel().catch(err=>{const s=document.getElementById('environmentIntelState');if(s)s.textContent='REFRESH FAILED';console.warn('FIELD/OS environment intelligence failed',err)}));
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='weather')renderEnvironmentIntel()});window.addEventListener('offline',renderEnvironmentIntel);window.addEventListener('online',renderEnvironmentIntel);setTimeout(renderEnvironmentIntel,500);
+  window.FIELD_ENVIRONMENT_INTEL={state:environmentState,fetch:fetchEnvironmentIntel,render:renderEnvironmentIntel};
+
   // Backfill original Feature 03 — Route Data Confidence Meter.
   function computeRouteConfidence(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{}){
     const points=cleanPoints(plan.points||[]),sections=Array.isArray(plan.trailSections)?plan.trailSections:[],profile=Array.isArray(plan.elevationProfile)?plan.elevationProfile:[],mode=String(plan.routingMode||plan.mode||'').toLowerCase(),build=String(plan.routeBuildState||'').toUpperCase();
