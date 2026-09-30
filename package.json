@@ -1,7 +1,7 @@
 {
   "name": "field-os",
   "private": true,
-  "version": "3.38.0",
+  "version": "3.39.0",
   "description": "FIELD/OS browser regression harness",
   "scripts": {
     "test": "node tests/regression.cjs",
