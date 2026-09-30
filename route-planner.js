@@ -596,12 +596,17 @@
 
       tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(p.elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
       tip.className=`route-profile-hover slope-${cls.key} active`;
-      tip.style.left=`${x}px`;
+      if(rect.width<=760){
+        const tipW=Math.min(260,Math.max(150,rect.width-12));
+        const leftPx=clamp(x-tipW/2,6,Math.max(6,rect.width-tipW-6));
+        tip.style.left=`${leftPx}px`;
+      }else tip.style.left=`${x}px`;
       if(line){line.classList.add('active');line.style.left=`${x}px`}
     };
 
     canvas.addEventListener('pointermove',update,{passive:true});
     canvas.addEventListener('pointerdown',update,{passive:true});
+    canvas.addEventListener('pointerup',()=>setTimeout(clear,900),{passive:true});
     canvas.addEventListener('pointerleave',clear);
     canvas.addEventListener('pointercancel',clear);
   }
