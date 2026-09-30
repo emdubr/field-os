@@ -237,23 +237,32 @@
     if(s.length<2)return 0;
     const totalM=Math.max(0,Number(s.at(-1).distanceM)||0);
     const d=clamp(Number(distanceM)||0,0,totalM);
-    // Grade-coloring is intentionally averaged across a real horizontal window.
-    // DEM samples can jitter several feet between adjacent points; using one tiny
-    // sample interval made visually flat trail sections appear falsely red.
-    const halfWindow=Math.min(45,Math.max(20,totalM/80));
+    // Estimate sustained grade with a local least-squares fit instead of a
+    // two-point delta. GLO-90 can contain single-sample bumps that look like a
+    // 15%+ hill even on visually flat trail; regression suppresses those spikes.
+    const halfWindow=Math.min(80,Math.max(35,totalM/60));
     let startM=Math.max(0,d-halfWindow),endM=Math.min(totalM,d+halfWindow);
-    if(endM-startM<25){
-      if(startM===0)endM=Math.min(totalM,25);
-      else if(endM===totalM)startM=Math.max(0,totalM-25);
+    const desired=Math.min(totalM,70);
+    if(endM-startM<desired){
+      if(startM===0)endM=Math.min(totalM,desired);
+      else if(endM===totalM)startM=Math.max(0,totalM-desired);
     }
     const runM=endM-startM;
-    if(runM<10)return 0;
-    const a=profileElevationAt(s,startM),b=profileElevationAt(s,endM);
-    if(!Number.isFinite(a)||!Number.isFinite(b))return 0;
-    const deltaFt=b-a;
-    // Ignore tiny DEM noise that would otherwise create false steep segments.
-    if(Math.abs(deltaFt)<4)return 0;
-    return deltaFt/(runM*3.28084)*100;
+    if(runM<15)return 0;
+    const count=9,pts=[];
+    for(let i=0;i<count;i++){
+      const x=startM+runM*(i/(count-1)),y=profileElevationAt(s,x);
+      if(Number.isFinite(y))pts.push({x,y});
+    }
+    if(pts.length<3)return 0;
+    const startFt=pts[0].y,endFt=pts.at(-1).y;
+    if(Math.abs(endFt-startFt)<6)return 0;
+    const mx=pts.reduce((sum,p)=>sum+p.x,0)/pts.length;
+    const my=pts.reduce((sum,p)=>sum+p.y,0)/pts.length;
+    let num=0,den=0;
+    for(const p of pts){const dx=p.x-mx;num+=dx*(p.y-my);den+=dx*dx}
+    if(den<=0)return 0;
+    return (num/den)/3.28084*100;
   }
   function drawRouteSlopeOverlay(svg,pts){
     const g=svg?.querySelector('.route-dom-slope-segments');
