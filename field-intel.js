@@ -242,7 +242,7 @@
   document.getElementById('recoveryFreezeTarget')?.addEventListener('click',()=>{const id=document.getElementById('recoveryTargetSelect')?.value,node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(id));if(node)activateRecovery(node)});
   document.getElementById('recoveryClear')?.addEventListener('click',clearRecovery);document.getElementById('recoverySaveWaypoint')?.addEventListener('click',()=>{if(!recoveryState.active||!recoveryState.target)return;document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`RECOVERY — ${recoveryState.target.name}`,type:'JUNCTION',lat:recoveryState.target.lat,lon:recoveryState.target.lon,notes:`Frozen separated-person last-known position at ${new Date(recoveryState.frozenAt).toISOString()}`}}))});
   document.addEventListener('click',e=>{const b=e.target.closest('[data-recovery-member]');if(!b)return;const node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(b.dataset.recoveryMember));if(node)activateRecovery(node)});
-  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderRecovery()});setInterval(()=>{if(recoveryState.active&&document.querySelector('#comms.active'))renderRecovery()},2000);setTimeout(renderRecovery,420);
+  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderRecovery()});setInterval(()=>{if(!document.hidden&&recoveryState.active&&document.querySelector('#comms.active'))renderRecovery()},5000);setTimeout(renderRecovery,420);
   window.FIELD_RECOVERY={state:recoveryState,activate:activateRecovery,clear:clearRecovery,addBreadcrumb:addRecoveryBreadcrumb,guidance:recoveryGuidance,render:renderRecovery,mapSvg:recoveryMapSvg};
 
   // Feature 15 — Group Expedition Mode.
@@ -313,7 +313,7 @@
   }
   document.getElementById('groupExpeditionEnabled')?.addEventListener('change',e=>setGroupConfig({enabled:e.currentTarget.checked}));document.getElementById('groupAllNodes')?.addEventListener('change',e=>{if(!e.currentTarget.checked&&!(groupConfig.members||[]).length)groupConfig.members=(window.FIELD_MESH?.state?.nodes||[]).map(n=>String(n.id));setGroupConfig({allNodes:e.currentTarget.checked,members:groupConfig.members})});document.getElementById('groupSeparationLimit')?.addEventListener('change',e=>setGroupConfig({separationMi:e.currentTarget.value}));
   document.addEventListener('click',e=>{const b=e.target.closest('[data-group-member]');if(!b||groupConfig.allNodes)return;const id=String(b.dataset.groupMember),set=new Set((groupConfig.members||[]).map(String));set.has(id)?set.delete(id):set.add(id);setGroupConfig({members:[...set]})});
-  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderGroup()});setInterval(()=>{if(groupConfig.enabled&&document.querySelector('#comms.active'))renderGroup()},10000);setTimeout(()=>renderGroup(),380);
+  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderGroup()});setInterval(()=>{if(!document.hidden&&groupConfig.enabled&&document.querySelector('#comms.active'))renderGroup()},15000);setTimeout(()=>renderGroup(),380);
   window.FIELD_GROUP={config:groupConfig,state:groupState,record:recordGroupHistory,movement:groupMovement,evaluate:evaluateGroup,render:renderGroup,setConfig:setGroupConfig};
 
   // Feature 14 — Automatic Check-ins.
@@ -642,7 +642,7 @@
   function ingestMeshNodes(list=[]){mergeMeshNodes(list);renderMeshNetwork();document.dispatchEvent(new CustomEvent('fieldos:meshroster',{detail:{count:meshState.nodes.length}}));return meshState.nodes}
   const savedMesh=read('mesh-roster',null);if(Array.isArray(savedMesh?.nodes))meshState.nodes=savedMesh.nodes.map(normalizeMeshNode).filter(Boolean);
   document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},nodes=Array.isArray(d.mesh?.nodeList)?d.mesh.nodeList:Array.isArray(d.mesh?.nodes)?d.mesh.nodes:Array.isArray(d.nodes)?d.nodes:null;if(nodes)ingestMeshNodes(nodes)});
-  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()},5000);setTimeout(renderMeshNetwork,220);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
 
   // Feature 08 — Position Confidence.
@@ -681,7 +681,7 @@
     const ring=document.getElementById('posConfidenceRing');if(ring)ring.setAttribute('aria-label',`Position confidence ${result.score} percent, ${result.label}`);
     return result;
   }
-  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:telemetry',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()},2000);setTimeout(renderPositionConfidence,180);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:telemetry',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))renderPositionConfidence()},5000);setTimeout(renderPositionConfidence,180);
   window.FIELD_POSITION_CONFIDENCE={compute:computePositionConfidence,render:renderPositionConfidence};
 
   // Feature 07 — dead-reckoning backup. Estimate remains separate from GNSS.
@@ -768,7 +768,7 @@
   function breadcrumbReverse(){breadcrumbReversed=!breadcrumbReversed;breadcrumbIndex=null;return renderBreadcrumb()}
   document.getElementById('breadcrumbPrev')?.addEventListener('click',()=>breadcrumbStep(-1));document.getElementById('breadcrumbNext')?.addEventListener('click',()=>breadcrumbStep(1));document.getElementById('breadcrumbNearest')?.addEventListener('click',breadcrumbNearest);document.getElementById('breadcrumbReverse')?.addEventListener('click',breadcrumbReverse);
   document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#breadcrumb.active'))renderBreadcrumb()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='breadcrumb')renderBreadcrumb()});
-  setInterval(()=>{if(document.querySelector('#breadcrumb.active'))renderBreadcrumb()},1500);
+  setInterval(()=>{if(!document.hidden&&document.querySelector('#breadcrumb.active'))renderBreadcrumb()},3000);
   window.FIELD_BREADCRUMB={compute:computeBreadcrumb,render:renderBreadcrumb,step:breadcrumbStep,nearest:breadcrumbNearest,reverse:breadcrumbReverse,get reversed(){return breadcrumbReversed}};
 
   // Feature 05 — Off-course rerouting.
@@ -810,7 +810,7 @@
   document.addEventListener('click',e=>{const b=e.target.closest('[data-reroute]');if(!b)return;b.disabled=true;applyReroute(b.dataset.reroute).catch(()=>{}).finally(()=>b.disabled=false)});
   document.getElementById('restoreOriginalRoute')?.addEventListener('click',restoreOriginalRoute);
   document.addEventListener('fieldos:positionchange',refreshReroute);document.addEventListener('fieldos:routechange',()=>setTimeout(refreshReroute,0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')refreshReroute()});
-  setInterval(()=>{if(document.querySelector('#nav.active'))refreshReroute()},3000);setTimeout(refreshReroute,150);
+  setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))refreshReroute()},5000);setTimeout(refreshReroute,150);
   window.FIELD_REROUTE={compute:computeReroute,apply:applyReroute,restore:restoreOriginalRoute,refresh:refreshReroute,saveOriginal:saveOriginalForReroute};
 
   // Feature 04 — Escape / Bailout Planner.
