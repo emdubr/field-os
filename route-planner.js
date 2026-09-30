@@ -27,6 +27,11 @@
   let plannerDomRouteGeometry=[];
   let plannerRouteRedrawFrame=0;
   let plannerZooming=false;
+  let activeElevationProfile=null;
+  let route3dAzimuth=38;
+  let route3dTilt=58;
+  let route3dExaggeration=2.2;
+  let route3dDrag=null;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -87,7 +92,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.29',
+      'BUILD: v3.30',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -224,10 +229,36 @@
     const svg=document.createElementNS(ns,'svg');
     svg.setAttribute('class','planner-dom-route-layer');
     svg.setAttribute('aria-hidden','true');
-    svg.innerHTML='<polyline class="route-dom-casing"/><polyline class="route-dom-main"/><polyline class="route-dom-highlight"/>';
+    svg.innerHTML='<polyline class="route-dom-casing"/><polyline class="route-dom-main"/><g class="route-dom-slope-segments"></g><polyline class="route-dom-highlight"/>';
     host.appendChild(svg);
     plannerDomRouteSvg=svg;
     return svg;
+  }
+  function gradeAtDistance(profile,distanceM){
+    const s=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    if(s.length<2)return 0;
+    let i=1;while(i<s.length-1&&s[i].distanceM<distanceM)i++;
+    return sampleGrade(s[Math.max(0,i-1)],s[Math.min(s.length-1,i)]);
+  }
+  function drawRouteSlopeOverlay(svg,pts){
+    const g=svg?.querySelector('.route-dom-slope-segments');
+    if(!g)return;
+    g.replaceChildren();
+    if(!gaiaRouteEnabled||!activeElevationProfile?.samples?.length||pts.length<2)return;
+    const ns='http://www.w3.org/2000/svg';
+    let cumulative=0;
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1],b=pts[i],segM=meters(a,b),mid=cumulative+segM/2;
+      const cls=slopeClass(gradeAtDistance(activeElevationProfile,mid));
+      cumulative+=segM;
+      if(cls.key==='easy')continue;
+      const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
+      const line=document.createElementNS(ns,'line');
+      line.setAttribute('x1',qa.x.toFixed(1));line.setAttribute('y1',qa.y.toFixed(1));
+      line.setAttribute('x2',qb.x.toFixed(1));line.setAttribute('y2',qb.y.toFixed(1));
+      line.setAttribute('class',`route-dom-slope route-dom-slope-${cls.key}`);
+      g.appendChild(line);
+    }
   }
   function drawDomRouteLayer(points=[]){
     const svg=ensureDomRouteLayer();
@@ -241,7 +272,8 @@
     const poly=gaiaRouteEnabled&&pts.length>1
       ?pts.map(p=>{const q=plannerMap.latLngToContainerPoint([p.lat,p.lon]);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`}).join(' ')
       :'';
-    svg.querySelectorAll('polyline').forEach(el=>el.setAttribute('points',poly));
+    svg.querySelectorAll(':scope > polyline').forEach(el=>el.setAttribute('points',poly));
+    drawRouteSlopeOverlay(svg,pts);
     svg.classList.toggle('has-route',!!poly);
   }
   function refreshDomRouteLayer(){drawDomRouteLayer(plannerDomRouteGeometry)}
@@ -257,6 +289,92 @@
     const svg=ensureDomRouteLayer();
     if(svg)svg.classList.toggle('route-zooming',plannerZooming);
     if(!plannerZooming)scheduleDomRouteLayer();
+  }
+
+  function clearRoute3D(message='ELEVATION DATA REQUIRED'){
+    const c=$('routeGeometry3D');if(!c)return;
+    const ctx=c.getContext('2d'),w=c.width,h=c.height;
+    ctx.clearRect(0,0,w,h);
+    const st=getComputedStyle(document.body);
+    ctx.fillStyle=st.getPropertyValue('--panel2').trim()||'#09120b';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle=st.getPropertyValue('--line').trim()||'#245537';ctx.strokeRect(.5,.5,w-1,h-1);
+    ctx.fillStyle=st.getPropertyValue('--dim').trim()||'#64806a';ctx.font='14px monospace';
+    ctx.fillText(message,18,28);
+  }
+  function drawRoute3D(profile=activeElevationProfile){
+    const c=$('routeGeometry3D');if(!c)return;
+    const samples=(profile?.samples||[]).filter(p=>valid(p)&&Number.isFinite(p.elevationFt));
+    if(samples.length<2)return clearRoute3D();
+    const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body);
+    const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',dim=st.getPropertyValue('--dim').trim()||'#64806a';
+    const panel=st.getPropertyValue('--panel2').trim()||'#09120b',line=st.getPropertyValue('--line').trim()||'#245537';
+    ctx.clearRect(0,0,w,h);ctx.fillStyle=panel;ctx.fillRect(0,0,w,h);
+
+    const meanLat=samples.reduce((s,p)=>s+p.lat,0)/samples.length;
+    const meanLon=samples.reduce((s,p)=>s+p.lon,0)/samples.length;
+    const cosLat=Math.max(.2,Math.cos(meanLat*Math.PI/180));
+    const raw=samples.map(p=>({
+      x:(p.lon-meanLon)*111320*cosLat,
+      y:(p.lat-meanLat)*110540,
+      z:p.elevationFt*.3048,
+      d:p.distanceM,
+      elev:p.elevationFt
+    }));
+    const minZ=Math.min(...raw.map(p=>p.z));
+    raw.forEach(p=>p.z=(p.z-minZ)*route3dExaggeration);
+
+    const az=route3dAzimuth*Math.PI/180,tilt=route3dTilt*Math.PI/180;
+    const projected=raw.map(p=>{
+      const xr=p.x*Math.cos(az)-p.y*Math.sin(az);
+      const yr=p.x*Math.sin(az)+p.y*Math.cos(az);
+      return {sx:xr,sy:yr*Math.cos(tilt)-p.z*Math.sin(tilt),depth:yr*Math.sin(tilt)+p.z*Math.cos(tilt),d:p.d,elev:p.elev};
+    });
+    const xs=projected.map(p=>p.sx),ys=projected.map(p=>p.sy);
+    const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+    const spanX=Math.max(1,maxX-minX),spanY=Math.max(1,maxY-minY);
+    const pad=34,scale=Math.min((w-pad*2)/spanX,(h-pad*2)/spanY);
+    projected.forEach(p=>{p.x=pad+(p.sx-minX)*scale;p.y=h-pad-(p.sy-minY)*scale});
+
+    // Ground reference.
+    ctx.strokeStyle=line;ctx.lineWidth=1;ctx.globalAlpha=.65;
+    for(let i=0;i<=4;i++){const y=pad+(h-pad*2)*i/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-pad,y);ctx.stroke()}
+    ctx.globalAlpha=1;
+
+    // Vertical posts make elevation extrusion legible.
+    ctx.strokeStyle=dim;ctx.lineWidth=1;ctx.globalAlpha=.28;
+    const stride=Math.max(1,Math.floor(projected.length/24));
+    for(let i=0;i<projected.length;i+=stride){
+      const p=projected[i];ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x,h-pad);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+
+    // Easy route is neutral; medium/hard override segment color.
+    for(let i=1;i<projected.length;i++){
+      const a=projected[i-1],b=projected[i],gradeValue=sampleGrade(samples[i-1],samples[i]),cls=slopeClass(gradeValue);
+      ctx.strokeStyle=cls.key==='hard'?'#e5484d':cls.key==='medium'?'#f28c28':fg;
+      ctx.lineWidth=cls.key==='hard'?6:cls.key==='medium'?5:3.5;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    }
+    ctx.fillStyle=fg;ctx.font='14px monospace';
+    ctx.fillText(`3D ROUTE // AZ ${Math.round(route3dAzimuth)}° // TILT ${Math.round(route3dTilt)}° // Z×${route3dExaggeration.toFixed(1)}`,16,22);
+    const label=$('route3dStatus');if(label)label.textContent=`DEM ROUTE GEOMETRY // ${samples.length} PTS // Z×${route3dExaggeration.toFixed(1)}`;
+  }
+  function bindRoute3DControls(){
+    const c=$('routeGeometry3D');if(!c||c.dataset.bound3d==='1')return;
+    c.dataset.bound3d='1';
+    const ex=$('route3dExaggeration'),az=$('route3dAzimuth');
+    ex?.addEventListener('input',()=>{route3dExaggeration=Number(ex.value)||2.2;drawRoute3D()});
+    az?.addEventListener('input',()=>{route3dAzimuth=Number(az.value)||0;drawRoute3D()});
+    c.addEventListener('pointerdown',e=>{route3dDrag={x:e.clientX,y:e.clientY,az:route3dAzimuth,tilt:route3dTilt};c.setPointerCapture?.(e.pointerId)});
+    c.addEventListener('pointermove',e=>{
+      if(!route3dDrag)return;
+      route3dAzimuth=(route3dDrag.az+(e.clientX-route3dDrag.x)*.55+360)%360;
+      route3dTilt=clamp(route3dDrag.tilt-(e.clientY-route3dDrag.y)*.22,25,78);
+      if(az)az.value=String(Math.round(route3dAzimuth));
+      drawRoute3D();
+    });
+    const end=()=>{route3dDrag=null};
+    c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
   }
 
   function plannerColors(){
@@ -523,6 +641,7 @@
     $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('routeSaveTop')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('copyRouteDiag')?.addEventListener('click',copyRouteDiagnostic);
+    bindRoute3DControls();
     renderSavedRoutes();
   }
 
@@ -1233,6 +1352,7 @@
     set('routeDistance',distText);set('plannerRouteDistance',distText);
     set('routePointCount',String(pts.length));set('plannerRoutePoints',String(pts.length));
     if(profile){
+      activeElevationProfile=profile;
       const gain=Math.round(profile.gainFt),loss=Math.round(profile.lossFt),min=Math.round(profile.minFt),max=Math.round(profile.maxFt);
       const gainText=`${gain.toLocaleString()} ft`,lossText=`${loss.toLocaleString()} ft`,rangeText=`${min.toLocaleString()}–${max.toLocaleString()} ft`;
       set('routeGainOut',gainText);set('plannerRouteGain',gainText);
@@ -1244,7 +1364,10 @@
       if(gradeInput)gradeInput.value=String(Math.round(profile.maxGrade));
       gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
       drawElevationProfile(profile,dist);
+      drawRoute3D(profile);
+      drawDomRouteLayer(authoritativeGeometry(pts));
     }else{
+      activeElevationProfile=null;
       const hasRoute=pts.length>1;
       const loading=elevationState==='loading'&&hasRoute;
       const unavailable=elevationState==='unavailable'&&hasRoute;
@@ -1254,6 +1377,8 @@
       set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
       set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
       renderElevationBreakdown(null,dist);
+      clearRoute3D(loading?'ELEVATION LOADING…':unavailable?'ELEVATION UNAVAILABLE':'PLOT ROUTE TO BUILD 3D GEOMETRY');
+      drawDomRouteLayer(authoritativeGeometry(pts));
     }
     return dist;
   }
