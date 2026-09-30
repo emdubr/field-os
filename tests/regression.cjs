@@ -52,6 +52,21 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  ]}}]);
  assert.equal(filtered.length,2);assert.ok(filtered.some(x=>x.name==='Long Trail'));assert.ok(filtered.some(x=>!x.name&&x.distanceM>=160.9344));
  console.log('PASS short unnamed connector paths are hidden from the trail list');
+ const flatProfile={samples:[
+   {distanceM:0,elevationFt:500},
+   {distanceM:25,elevationFt:503},
+   {distanceM:50,elevationFt:499},
+   {distanceM:75,elevationFt:502},
+   {distanceM:100,elevationFt:500}
+ ]};
+ const flatGrade=r.gradeAtDistance(flatProfile,50);
+ assert.ok(Math.abs(flatGrade)<8,`flat DEM noise misclassified at ${flatGrade}%`);
+ assert.equal(r.slopeClass(flatGrade).key,'easy');
+ console.log('PASS flat/noisy DEM route segment remains easy, not red');
+ const css=fs.readFileSync(dir+'/workstation.css','utf8');
+ assert.match(css,/#map \.module-grid>\.module-hero[\s\S]*?grid-column:1\/-1!important/);
+ assert.match(css,/#map \.module-grid>\.terrain-controls-below[\s\S]*?grid-column:1\/-1!important/);
+ console.log('PASS terrain map hero and controls are pinned full-width on desktop');
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
