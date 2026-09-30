@@ -1044,9 +1044,31 @@ function ensureFieldMap(id,fallbackId,labelId){
   const overlay=L.layerGroup().addTo(map);
   const state={id,el,fallback,label,map,overlay,base:null,trails:null,baseKind:'',attr:'',centered:false,tileErrors:0};
   fieldMaps.set(id,state);
-  map.setView([currentNavPosition.lat,currentNavPosition.lon],14);
+  map.setView([currentNavPosition.lat,currentNavPosition.lon],14);enableContinuousWheelZoom(map);
   map.on('zoomend moveend',()=>{state.centered=true;});
   return state;
+}
+function enableContinuousWheelZoom(map){
+  if(!map||map._fieldContinuousWheel)return;
+  map._fieldContinuousWheel=true;
+  map.scrollWheelZoom?.disable?.();
+  const el=map.getContainer();let target=map.getZoom(),raf=0,anchor=null,last=0;
+  const frame=()=>{
+    raf=0;const now=performance.now();const current=map.getZoom();const diff=target-current;
+    if(Math.abs(diff)<.002){if(Math.abs(diff)>0)map.setZoomAround(anchor||map.getSize().divideBy(2),target,{animate:false});return;}
+    const dt=Math.min(32,Math.max(8,now-(last||now-16)));last=now;
+    const next=current+diff*(1-Math.exp(-dt/55));
+    map.setZoomAround(anchor||map.getSize().divideBy(2),next,{animate:false});
+    raf=requestAnimationFrame(frame);
+  };
+  el.addEventListener('wheel',e=>{
+    if(e.ctrlKey)return;
+    e.preventDefault();anchor=map.mouseEventToContainerPoint(e);
+    const dy=Math.max(-120,Math.min(120,e.deltaY));
+    target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/420));
+    last=performance.now();if(!raf)raf=requestAnimationFrame(frame);
+  },{passive:false});
+  map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
 }
 function showFieldFallback(state,message='SCHEMATIC FALLBACK'){
   if(!state)return;
