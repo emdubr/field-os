@@ -588,8 +588,8 @@
         const d=Math.abs((samples[n].distanceM||0)-target);
         if(d<best){best=d;idx=n}
       }
-      const p=samples[idx],a=samples[Math.max(0,idx-1)],b=samples[Math.min(samples.length-1,idx+1)];
-      const gradeValue=a===b?0:sampleGrade(a,b);
+      const p=samples[idx];
+      const gradeValue=gradeAtDistance(profile,p.distanceM||target);
       const cls=slopeClass(gradeValue);
       const done=(p.distanceM||0)/1609.344;
       const remaining=Math.max(0,(totalM-(p.distanceM||0))/1609.344);
@@ -1319,10 +1319,17 @@
         else if(de<-5)loss+=-de;
         maxGrade=Math.max(maxGrade,Math.abs(de/runFt*100));
       }
-      return {
-        samples:samples.map((p,i)=>({lat:p.lat,lon:p.lon,distanceM:p.distanceM,elevationFt:smooth[i]})),
-        gainFt:gain,lossFt:loss,minFt:Math.min(...smooth),maxFt:Math.max(...smooth),maxGrade
+      const smoothedSamples=samples.map((p,i)=>({lat:p.lat,lon:p.lon,distanceM:p.distanceM,elevationFt:smooth[i]}));
+      const profile={
+        samples:smoothedSamples,
+        gainFt:gain,lossFt:loss,minFt:Math.min(...smooth),maxFt:Math.max(...smooth),maxGrade:0
       };
+      // Report the same sustained grade used by the route-layer colors, rather
+      // than a single DEM sample jump.
+      let robustMaxGrade=0;
+      for(const p of smoothedSamples)robustMaxGrade=Math.max(robustMaxGrade,Math.abs(gradeAtDistance(profile,p.distanceM)));
+      profile.maxGrade=robustMaxGrade;
+      return profile;
     }catch(err){
       if(err?.name==='AbortError'&&timedOut&&!signal?.aborted)throw rpError('RP-403','Elevation request timed out.');
       throw err;
@@ -1361,8 +1368,8 @@
     const low=samples.reduce((a,b)=>b.elevationFt<a.elevationFt?b:a,samples[0]);
     let maxUp=-Infinity,maxDown=Infinity;
     for(let i=1;i<samples.length;i++){
-      const runFt=Math.max(1,(samples[i].distanceM-samples[i-1].distanceM)*3.28084);
-      const grade=(samples[i].elevationFt-samples[i-1].elevationFt)/runFt*100;
+      const mid=((samples[i].distanceM||0)+(samples[i-1].distanceM||0))/2;
+      const grade=gradeAtDistance(profile,mid);
       maxUp=Math.max(maxUp,grade);maxDown=Math.min(maxDown,grade);
     }
     const quarterM=0.25*1609.344;
@@ -1385,7 +1392,7 @@
       for(let j=1;j<segmentSamples.length;j++){
         const p=segmentSamples[j],prior=segmentSamples[j-1],de=p.elevationFt-prev;
         if(de>5)gain+=de;else if(de<-5)loss+=-de;
-        const local=sampleGrade(prior,p);
+        const local=gradeAtDistance(profile,((prior.distanceM||0)+(p.distanceM||0))/2);
         maxLocalGrade=Math.max(maxLocalGrade,Math.abs(local));
         maxUpGrade=Math.max(maxUpGrade,local);
         maxDownGrade=Math.min(maxDownGrade,local);
@@ -1401,7 +1408,8 @@
     const exposure={easyMi:0,mediumMi:0,hardMi:0};
     for(let i=1;i<samples.length;i++){
       const mi=(samples[i].distanceM-samples[i-1].distanceM)/1609.344;
-      const cls=slopeClass(sampleGrade(samples[i-1],samples[i])).key;
+      const mid=(samples[i].distanceM+samples[i-1].distanceM)/2;
+      const cls=slopeClass(gradeAtDistance(profile,mid)).key;
       exposure[cls+'Mi']+=mi;
     }
     return {
@@ -1478,7 +1486,8 @@
     ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();
     xy.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
     for(let i=1;i<xy.length;i++){
-      const gradeValue=sampleGrade(profile.samples[i-1],profile.samples[i]);
+      const mid=(profile.samples[i-1].distanceM+profile.samples[i].distanceM)/2;
+      const gradeValue=gradeAtDistance(profile,mid);
       const cls=slopeClass(gradeValue);
       if(cls.key==='easy')continue;
       ctx.strokeStyle=cls.key==='hard'?'#e5484d':'#f28c28';
