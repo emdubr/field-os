@@ -25,3 +25,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run FIELD OS regression suite
         run: npm test
+      - name: Install Chromium for layout regression
+        run: npx playwright install --with-deps chromium
+      - name: Check desktop and responsive layouts
+        run: npm run test:desktop

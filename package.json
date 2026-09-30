@@ -1,14 +1,16 @@
 {
   "name": "field-os",
   "private": true,
-  "version": "3.59.0",
+  "version": "3.60.0",
   "description": "FIELD/OS browser regression harness",
   "scripts": {
     "test": "node tests/regression.cjs && node tests/service-worker.cjs",
-    "test:regression": "node tests/regression.cjs"
+    "test:regression": "node tests/regression.cjs",
+    "test:desktop": "node tests/desktop.cjs"
   },
   "devDependencies": {
-    "jsdom": "30.1.1"
+    "jsdom": "30.1.1",
+    "playwright": "1.62.1"
   },
   "engines": {
     "node": ">=20"

@@ -3686,3 +3686,22 @@ input,select,textarea{
   .route-performance-grid,
   .weather-current-grid{grid-template-columns:1fr!important}
 }
+
+
+/* v3.60 desktop workspace: content-sized cards and readable working panels. */
+@media(min-width:1024px){
+  body .module-grid{align-items:start!important}
+  body .module-grid>.module-slot>.panel{height:auto!important}
+  body #system .module-grid,body #map .module-grid,body #route .module-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #map .module-grid>.route-offline-readiness,
+  #route .module-grid>.route-elevation-panel{grid-column:1 / -1!important}
+  #route .route-elevation-panel .route-elevation-readouts{
+    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px 20px;
+  }
+  #route .route-elevation-panel .elevation-detail-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  #system .field-tools-panel .button-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+  #system .field-tools-panel .button-row>*{min-width:0;width:100%}
+  body .workstation-nav{overscroll-behavior:contain;scrollbar-gutter:stable}
+}

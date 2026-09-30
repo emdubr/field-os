@@ -1,4 +1,4 @@
-/* FIELD/OS v3.59: home-style workspaces with density parity across modules. */
+/* FIELD/OS v3.60: home-style workspaces with density parity across modules. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['mission','MISSION MODE'],['survival','FIELD MANUAL'],['weather','WEATHER INTELLIGENCE'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +10,7 @@
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
   const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.59</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.60</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -39,11 +39,17 @@
     sos:[['Communication status','TRANSPORT','radio'],['Position reference','SOURCE / AGE','position'],['Trip context','LOCAL PLAN','context'],['Base reference','CALCULATED','base'],['Device availability','CONNECTION STATUS','hardware'],['Check-in state','LOCAL REMINDER','timing'],['Support modules','FIELD TOOLS','emergencytools']]
   };
   for(const id of Object.keys(specs)) specs[id].push(['Field status','LIVE / SOURCE','status']);
+  let plotHtml=null;
   function plot(){
+    if(plotHtml!==null)return plotHtml;
     if(routePoints.length<2)return note('Plot at least two points in Route Planner to show a route diagram.')+actions([['route','OPEN ROUTE PLANNER']]);
-    const lat=routePoints.map(p=>p.lat),lon=routePoints.map(p=>p.lon),minLa=Math.min(...lat),minLo=Math.min(...lon),dLa=Math.max(...lat)-minLa||.001,dLo=Math.max(...lon)-minLo||.001;
-    const pts=routePoints.map(p=>[24+(p.lon-minLo)/dLo*352,196-(p.lat-minLa)/dLa*172]);
-    return `<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Schematic diagram of the planned route, not a terrain map"><defs><pattern id="grid-${document.querySelector('.view.active')?.id||'x'}" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M25 0H0V25" fill="none" stroke="currentColor" opacity=".13"/></pattern></defs><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Route geometry only. Axes scaled independently; no terrain or obstacle information.');
+    let minLa=Infinity,minLo=Infinity,maxLa=-Infinity,maxLo=-Infinity;
+    for(const p of routePoints){minLa=Math.min(minLa,p.lat);maxLa=Math.max(maxLa,p.lat);minLo=Math.min(minLo,p.lon);maxLo=Math.max(maxLo,p.lon);}
+    const dLa=maxLa-minLa||.001,dLo=maxLo-minLo||.001;
+    // Bound schematic markup, while retaining full geometry for route calculations.
+    const stride=Math.max(1,Math.ceil((routePoints.length-1)/599));
+    const pts=routePoints.filter((_,i)=>i%stride===0||i===routePoints.length-1).map(p=>[24+(p.lon-minLo)/dLo*352,196-(p.lat-minLa)/dLa*172]);
+    return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Schematic diagram of the planned route, not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Route geometry only. Axes scaled independently; no terrain or obstacle information.');
   }
   const bodies={
     status:()=>rows([
@@ -81,7 +87,7 @@
     events:()=>fieldLog.slice(-5).reverse().map(e=>`<div class="ws-event"><b>${esc(e.type||'NOTE')}</b><span>${esc(e.text||e.message||'Saved entry')}</span></div>`).join('')||note('No saved events yet. Record a note or save a route to populate the journal.'),
     batteries:()=>rows([['PHONE / COMPUTER',val('mobileBattery')],['TAP V2','UNAVAILABLE'],['SENSOR-2','UNAVAILABLE'],['HARDWARE RESERVE','NOT MEASURED'],['CHARGING',val('mobilePowerState')]])+note('The browser battery reading may be unavailable on some devices.'),
     display:()=>rows([['THEME',document.body.dataset.theme||'green'],['POWER MODE',storageGet(STORE_PREFIX+'power')||'normal'],['WAKE LOCK',fieldWakeLock?'ACTIVE':'OFF'],['SCREEN',`${innerWidth} × ${innerHeight}`],['VISIBILITY',document.visibilityState]])+actions([['system','DISPLAY THEME']]),
-    runtime:()=>rows([['RELEASE','FIELD/OS 2.8'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
+    runtime:()=>rows([['RELEASE','FIELD/OS 3.60'],['SECURE CONTEXT',isSecureContext?'YES':'NO'],['SERVICE WORKER','serviceWorker' in navigator?'SUPPORTED':'UNSUPPORTED'],['GEOLOCATION','geolocation' in navigator?'SUPPORTED':'UNSUPPORTED'],['WAKE LOCK','wakeLock' in navigator?'SUPPORTED':'UNSUPPORTED'],['TIME ZONE',Intl.DateTimeFormat().resolvedOptions().timeZone]]),
     plot,
     navtools:()=>actions([['map','TERRAIN MAP'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','SAVED WAYPOINTS'],['track','TRACK RECORDER'],['lost','LOST MODE']])+note('Use your route, saved base, and position source together when reviewing a return path.'),
     commtools:()=>actions([['trip','CHECK-IN PLAN'],['nav','COORDINATES'],['log','EVENT JOURNAL'],['system','DEVICE STATUS']])+note('Prepare a check-in locally and review the position source before copying it.'),
@@ -102,16 +108,25 @@
       if(child.matches('.grid.two-col')&&!child.id){[...child.children].forEach(c=>grid.append(c));child.remove();}
       else grid.append(child);
     });view.append(grid);
+    if(view.id==='route'){
+      const elevation=grid.querySelector('.route-elevation-panel');
+      const performance=grid.querySelector('.route-performance-panel');
+      if(elevation&&performance)performance.after(elevation);
+    }
     const consoleBar=document.createElement('div');
     consoleBar.className='module-console-header';
-    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.59</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.60</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
     const hero=grid.querySelector(':scope > .panel');hero?.classList.add('module-hero');
   }
+  const renderedHtml=new WeakMap();
+  function updateHtml(el,html){
+    if(el&&renderedHtml.get(el)!==html){el.innerHTML=html;renderedHtml.set(el,html);}
+  }
   function refreshHome(){
-    const set=(selector,html)=>{const el=document.querySelector('#home '+selector);if(el&&el.innerHTML!==html)el.innerHTML=html;};
+    const set=(selector,html)=>{const el=document.querySelector('#home '+selector);updateHtml(el,html);};
     set('.route-info-split',bodies.route());
     set('.detailed-nav .terminal-title',`NAVIGATION <span>${esc(currentNavPosition.source)}</span>`);
     set('.nav-readout',`${esc(currentNavPosition.lat.toFixed(5))}°<br>${esc(currentNavPosition.lon.toFixed(5))}°<br>${hasTrustedMapPosition()?'±'+Math.round(currentAccuracy)+' m accuracy':'Demo position'}`);
@@ -129,6 +144,7 @@
     document.querySelectorAll('#home .track-meter,#home .trip-progress').forEach(el=>el.hidden=true);
   }
   function refresh(){
+    if(document.hidden)return;
     const active=document.querySelector('.view.active');if(!active)return;
     if(active.id==='home')refreshHome();
     nav.querySelectorAll('[data-module]').forEach(b=>{b.classList.toggle('selected',b.dataset.module===active.id);if(b.dataset.module===active.id)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
@@ -154,10 +170,23 @@
     setConsole('.ws-console-track',`TRACK: ${trackState}`);
     setConsole('.ws-console-clock',now.toLocaleTimeString());
     const cb=active.querySelector('.ws-console-battery b'); if(cb) cb.textContent=val('mobileBattery');
-    active.querySelectorAll('.module-slot').forEach(slot=>{const body=bodies[slot.dataset.panelType];if(!body)return;let content=slot.querySelector('.ws-card-body');if(!content){content=document.createElement('div');content.className='ws-card-body';slot.firstElementChild.append(content);}const html=body();if(content.innerHTML!==html)content.innerHTML=html;});
+    active.querySelectorAll('.module-slot').forEach(slot=>{const body=bodies[slot.dataset.panelType];if(!body)return;let content=slot.querySelector('.ws-card-body');if(!content){content=document.createElement('div');content.className='ws-card-body';slot.firstElementChild.append(content);}const html=body();updateHtml(content,html);});
   }
-  document.addEventListener('click',()=>queueMicrotask(refresh));
-  document.addEventListener('input',()=>queueMicrotask(refresh));
+  // Coalesce input, navigation, and resize bursts into one paint. Hidden tabs
+  // resume from current state rather than rebuilding workstation cards in the background.
+  let refreshFrame=0;
+  function scheduleRefresh(){
+    if(document.hidden||refreshFrame)return;
+    refreshFrame=requestAnimationFrame(()=>{refreshFrame=0;refresh();});
+  }
+  document.addEventListener('fieldos:routechange',()=>{plotHtml=null;scheduleRefresh();});
+  document.addEventListener('fieldos:routemetadatachange',scheduleRefresh);
+  document.addEventListener('click',scheduleRefresh);
+  document.addEventListener('input',scheduleRefresh);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){cancelAnimationFrame(refreshFrame);refreshFrame=0;}
+    else scheduleRefresh();
+  });
   document.addEventListener('fieldos:viewchange',e=>{
     const name=e.detail?.view||document.querySelector('.view.active')?.id||'home';
     nav.querySelectorAll('[data-module]').forEach(b=>{
@@ -165,9 +194,9 @@
       b.classList.toggle('selected',active);
       if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
     });
-    queueMicrotask(refresh);
+    scheduleRefresh();
   });
-  setInterval(refresh,2000);refresh();
-  window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();refresh();});
+  setInterval(scheduleRefresh,2000);refresh();
+  window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();});
 })();
 

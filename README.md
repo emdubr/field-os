@@ -1,4 +1,4 @@
-# FIELD/OS 3.42
+# FIELD/OS 3.60
 
 TAP V2 companion interface. GitHub Pages deploys from main / root.
 
@@ -61,3 +61,23 @@ Features 50–59 are the Offline Field Utility console: decimal-to-DMS conversio
 Features 60–70 are Browser Data Resilience and Preflight: recovery snapshots, snapshot restore, permission audit, service-worker health, Cache Storage health, stale-data watchdog, local diagnostic event log, captured JS/unhandled-promise errors, safe field-UI reset, automatic route-state recovery snapshot, and a consolidated field-launch preflight.
 
 Native Apple-only APIs and physical TAP/Meshtastic transport are intentionally outside this web feature registry and will be handled by the separate Apple version.
+
+## v3.60 desktop UI and refresh fixes
+
+Desktop cards now size to their contents. Map, System, and Route use wider
+working columns; elevation occupies a full-width section above route parameters.
+Workstation updates are batched once per animation frame, pause when hidden,
+and retain unchanged generated content. The schematic caches route geometry and
+renders at most 600 display points without changing the route data.
+System/runtime labels and app-shell cache versions now agree on v3.60.
+
+Repaired regression checks that previously failed outside their variable scope,
+used numeric keys for string-keyed graph nodes, and asserted obsolete versions,
+zoom settings, and offline storage keys.
+
+`npm test` runs DOM/route and service-worker checks. `npm run test:desktop`
+uses Playwright Chromium (`npx playwright install chromium`) to check all 18
+navigation modules at 390, 768, 1024, 1280, 1440, and 1920 pixels, card sizing,
+full-width elevation, and stable schematic updates. Both run in GitHub Actions.
+Browser checks block external services; they do not validate live map providers
+or physical TAP hardware.
