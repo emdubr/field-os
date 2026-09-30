@@ -62,6 +62,16 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  const flatGrade=r.gradeAtDistance(flatProfile,50);
  assert.ok(Math.abs(flatGrade)<8,`flat DEM noise misclassified at ${flatGrade}%`);
  assert.equal(r.slopeClass(flatGrade).key,'easy');
+ const spikyFlat={samples:[
+   {distanceM:0,elevationFt:500},{distanceM:20,elevationFt:502},{distanceM:40,elevationFt:522},
+   {distanceM:60,elevationFt:499},{distanceM:80,elevationFt:501},{distanceM:100,elevationFt:500}
+ ]};
+ assert.equal(r.slopeClass(r.gradeAtDistance(spikyFlat,50)).key,'easy');
+ const sustainedSteep={samples:[
+   {distanceM:0,elevationFt:500},{distanceM:25,elevationFt:515},{distanceM:50,elevationFt:530},
+   {distanceM:75,elevationFt:545},{distanceM:100,elevationFt:560}
+ ]};
+ assert.equal(r.slopeClass(r.gradeAtDistance(sustainedSteep,50)).key,'hard');
  console.log('PASS flat/noisy DEM route segment remains easy, not red');
  const css=fs.readFileSync(dir+'/workstation.css','utf8');
  assert.match(css,/#map \.module-grid>\.module-hero[\s\S]*?grid-column:1\/-1!important/);
