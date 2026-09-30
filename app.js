@@ -524,11 +524,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.58',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.59',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.58';
+        const key='fieldos-sw-reloaded-v3.59';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -1533,6 +1533,7 @@ function fieldNativeDestroyAll(){
     st.el.removeEventListener('wheel',st.onWheel);
     st.el.removeEventListener('dblclick',st.onDbl);
     try{st.el.releasePointerCapture(st.drag?.id)}catch{}
+    clearTimeout(st.zoomSettleTimer);
     st.el.innerHTML='';
   }
   fieldNativeMaps.clear();
@@ -1630,7 +1631,7 @@ function fieldNativeRender(st){
   const token=++st.renderToken;
   const w=Math.max(220,st.el.clientWidth||st.el.getBoundingClientRect().width||600),h=Math.max(200,st.el.clientHeight||st.el.getBoundingClientRect().height||360);
   const kind=fieldMapMode==='osm'?'osm':'topo',max=kind==='osm'?19:17;
-  st.zoom=Math.max(2,Math.min(max,Math.round(st.zoom)));
+  st.zoom=Math.max(2,Math.min(max,Math.round(st.zoom)));st.renderedZoom=st.zoom;
   const c=fieldWorldPoint(st.center.lat,st.center.lon,st.zoom),minX=Math.floor((c.x-w/2)/256)-1,maxX=Math.floor((c.x+w/2)/256)+1,minY=Math.floor((c.y-h/2)/256)-1,maxY=Math.floor((c.y+h/2)/256)+1;
   const baseFrag=document.createDocumentFragment(),trailFrag=document.createDocumentFragment();
   st.tileErrors=0;st.tileLoads=0;

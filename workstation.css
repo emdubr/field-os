@@ -3654,3 +3654,35 @@ input,select,textarea{
     grid-template-columns:repeat(6,minmax(0,1fr))!important;
   }
 }
+
+
+/* v3.59 QA/UI hardening */
+@media(max-width:767px){
+  /* Operational text must remain legible on a phone without changing desktop density. */
+  .route-performance-grid span,
+  .route-performance-grid small,
+  .weather-current-grid span,
+  .weather-hour-card span,
+  .terrain-risk-item>span,
+  .terrain-risk-item>small,
+  .route-confidence-score small,
+  .route-confidence-factor small,
+  .mesh-node-row small,
+  .store-forward-copy small,
+  .group-member-stat small{
+    font-size:9px!important;
+    line-height:1.35!important;
+  }
+  .route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .weather-current-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .breadcrumb-vitals{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .breadcrumb-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .group-expedition-controls{grid-template-columns:1fr!important}
+  .group-expedition-controls>*{min-width:0!important}
+  .route-confidence-body{grid-template-columns:72px minmax(0,1fr)!important}
+  .route-confidence-score{width:66px!important;height:66px!important}
+}
+@media(max-width:390px){
+  .route-performance-grid,
+  .weather-current-grid{grid-template-columns:1fr!important}
+}
