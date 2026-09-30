@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.40" />
-  <link rel="stylesheet" href="workstation.css?v=3.40">
+  <link rel="stylesheet" href="styles.css?v=3.41" />
+  <link rel="stylesheet" href="workstation.css?v=3.41">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.40</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.41</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.40</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.41</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.40</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.41</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -282,6 +282,14 @@
           <div class="panel-title"><span>SOURCES / CACHE</span><span class="tiny">TRACEABILITY</span></div>
           <dl class="readouts"><div><dt>FORECAST</dt><dd id="weatherSource">OPEN-METEO / NOT DOWNLOADED</dd></div><div><dt>ALERTS</dt><dd id="weatherAlertSource">NWS WHEN AVAILABLE</dd></div><div><dt>POSITION</dt><dd id="weatherPosition">—</dd></div><div><dt>DOWNLOADED</dt><dd id="weatherDownloaded">—</dd></div></dl>
         </article>
+        <div class="grid two-col field-condition-grid">
+          <article class="panel pressure-storm-panel"><div class="panel-title"><span>BAROMETRIC STORM WATCH</span><span class="tiny" id="stormWatchState">INSUFFICIENT HISTORY</span></div><div class="condition-hero"><b id="pressureRate">---</b><span>hPa / 3h trend</span></div><dl class="readouts"><div><dt>CURRENT</dt><dd id="pressureCurrent">---</dd></div><div><dt>1H Δ</dt><dd id="pressureDelta1h">---</dd></div><div><dt>3H Δ</dt><dd id="pressureDelta3h">---</dd></div><div><dt>ASSESSMENT</dt><dd id="pressureAssessment">---</dd></div></dl></article>
+          <article class="panel fire-smoke-panel"><div class="panel-title"><span>WILDFIRE / SMOKE / CLOSURES</span><span class="tiny" id="hazardLayerState">CACHE // EMPTY</span></div><div class="button-row"><label class="action file-action">IMPORT GEOJSON<input id="hazardGeoJsonImport" type="file" accept=".json,.geojson,application/geo+json,application/json" hidden></label><button id="hazardClear" class="danger-lite" type="button">CLEAR CACHE</button></div><div id="hazardRouteSummary" class="condition-summary">No cached fire/smoke/closure geometry.</div><div id="hazardList" class="condition-list"></div></article>
+          <article class="panel avalanche-panel"><div class="panel-title"><span>AVALANCHE TERRAIN SCREENING</span><span class="tiny" id="avalancheState">WAITING FOR ROUTE</span></div><div class="condition-hero"><b id="avalancheExposure">---</b><span>route in 25–45° slope band</span></div><dl class="readouts"><div><dt>25–30°</dt><dd id="avalancheLow">---</dd></div><div><dt>30–35°</dt><dd id="avalancheModerate">---</dd></div><div><dt>35–45°</dt><dd id="avalancheHigh">---</dd></div><div><dt>&gt;45°</dt><dd id="avalancheExtreme">---</dd></div></dl><label class="field-label" for="avalancheBulletin">BULLETIN SNAPSHOT / NOTES</label><textarea id="avalancheBulletin" class="terminal-area" placeholder="Paste the current official avalanche bulletin summary before going offline..."></textarea><p class="muted">Slope-angle screening alone cannot determine avalanche safety. Use the current official avalanche forecast, observations, snowpack assessment and terrain-management practices.</p></article>
+          <article class="panel snow-travel-panel"><div class="panel-title"><span>SNOW TRAVEL</span><span class="tiny" id="snowTravelState">NO FORECAST</span></div><dl class="readouts large-readouts"><div><dt>SNOWFALL 24H</dt><dd id="snowfall24">---</dd></div><div><dt>SNOW DEPTH</dt><dd id="snowDepth">---</dd></div><div><dt>FREEZING LEVEL</dt><dd id="snowFreezingLevel">---</dd></div><div><dt>WIND</dt><dd id="snowWind">---</dd></div><div><dt>LOADING ASPECT</dt><dd id="snowLoadingAspect">---</dd></div><div><dt>TRAVEL NOTE</dt><dd id="snowTravelNote">---</dd></div></dl></article>
+          <article class="panel water-intel-panel"><div class="panel-title"><span>WATER INTELLIGENCE</span><span class="tiny" id="waterIntelState">LOCAL DATA</span></div><div class="button-row"><button id="waterSearchOnline" class="action" type="button">FIND + CACHE WATER</button><button id="waterClearCache" class="danger-lite" type="button">CLEAR WATER CACHE</button></div><div id="waterIntelList" class="condition-list"><p class="muted">Saved WATER/SPRING waypoints and tagged route crossings will appear here.</p></div></article>
+          <article class="panel trail-condition-panel"><div class="panel-title"><span>TRAIL-CONDITION INTELLIGENCE</span><span class="tiny" id="trailConditionState">WAITING FOR ROUTE</span></div><div id="trailConditionTags" class="condition-tags"></div><p id="trailConditionSummary" class="condition-summary">Conditions combine route surface metadata with cached weather/snow evidence.</p></article>
+        </div>
       </section>
 
       <section class="view" id="comms" data-view="comms">
@@ -444,6 +452,12 @@
             </div>
           </div>
         </article>
+        <article class="panel turn-nav-panel">
+          <div class="panel-title"><span>TURN-BY-TURN TRAIL NAV</span><span class="tiny" id="turnNavState">WAITING FOR ROUTE</span></div>
+          <div class="turn-nav-hero"><div id="turnNavArrow" class="turn-nav-arrow">↑</div><div><strong id="turnNavInstruction">NO ACTIVE INSTRUCTION</strong><div id="turnNavDistance" class="turn-nav-distance">---</div><small id="turnNavTrail">Plot or load a route to generate trail instructions.</small></div></div>
+          <dl class="readouts"><div><dt>NEXT CUE</dt><dd id="turnNavNext">---</dd></div><div><dt>CUES LEFT</dt><dd id="turnNavRemaining">0</dd></div><div><dt>ROUTE PROGRESS</dt><dd id="turnNavProgress">---</dd></div><div><dt>HAPTICS</dt><dd id="turnNavHapticsState">ON</dd></div></dl>
+          <div class="button-row"><button id="turnNavPrev" class="action" type="button">PREV CUE</button><button id="turnNavNextBtn" class="action" type="button">NEXT CUE</button><button id="turnNavToggleHaptics" class="action" type="button">TOGGLE HAPTICS</button></div>
+        </article>
         <article class="panel">
           <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>
           <dl class="readouts"><div><dt>DECIMAL</dt><dd id="coordDD">44.4759, -73.2121</dd></div><div><dt>DMS</dt><dd id="coordDMS">---</dd></div><div><dt>FIX AGE</dt><dd id="fixAge">00:00:04</dd></div><div><dt>ACCURACY</dt><dd id="navAccuracy">±4 m</dd></div></dl><div class="button-row"><button id="copyCurrentCoord" class="action">COPY COORDINATES</button><button id="saveCurrentAsBase" class="action">SAVE CURRENT AS BASE</button></div>
@@ -493,7 +507,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.40 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.41 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -552,6 +566,18 @@
           </div>
           <p class="muted route-planner-note">In SNAP TO TRAILS mode, FIELD/OS downloads nearby OpenStreetMap walking/trail geometry when online and routes between your control points. Use DIRECT / OFF-TRAIL for intentional cross-country legs. Always verify trail status, access, terrain and closures before relying on a planned route.</p>
           <details class="route-error-guide"><summary>ROUTE ERROR CODE GUIDE</summary><div><b>RP-201–205</b> trail-data/server problem · <b>RP-301</b> leg too long · <b>RP-302/303</b> start/end too far from mapped trail · <b>RP-304</b> disconnected trails · <b>RP-305</b> search too complex · <b>RP-306</b> points collapsed to same snap · <b>RP-401–403</b> elevation service · <b>RP-501–504</b> GPS · <b>RP-601–604</b> save/load.</div></details>
+        </article>
+        <article class="panel route-performance-panel">
+          <div class="panel-title"><span>ADAPTIVE ETA / FATIGUE MODEL</span><span class="tiny" id="adaptiveEtaState">WAITING FOR ROUTE</span></div>
+          <div class="route-performance-grid">
+            <div><span>LEARNED BASE PACE</span><b id="adaptiveBasePace">---</b><small id="adaptivePaceSource">DEFAULT MODEL</small></div>
+            <div><span>CONDITION FACTOR</span><b id="adaptiveConditionFactor">1.00×</b><small id="adaptiveConditionText">NO CONDITIONS</small></div>
+            <div><span>FATIGUE FACTOR</span><b id="fatigueFactor">1.00×</b><small id="fatigueText">FRESH</small></div>
+            <div><span>ADJUSTED SPEED</span><b id="adaptiveSpeed">---</b><small>current model</small></div>
+            <div><span>ROUTE ETA</span><b id="adaptiveEta">---</b><small id="adaptiveEtaConfidence">MODEL CONFIDENCE —</small></div>
+            <div><span>REMAINING ETA</span><b id="adaptiveRemainingEta">---</b><small id="adaptiveProgressText">PROGRESS —</small></div>
+          </div>
+          <p class="muted">ETA adapts from recorded walking pace when enough track history exists, then applies route grade, surface/conditions, snow and cumulative fatigue. Treat it as a planning estimate, not a guaranteed arrival time.</p>
         </article>
         <div class="grid two-col">
           <article class="panel">
@@ -867,13 +893,14 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.40"></script>
-  <script src="app.js?v=3.40"></script>
-  <script src="workstation.js?v=3.40"></script>
-  <script src="map-engine.js?v=3.40"></script>
+  <script src="route-state.js?v=3.41"></script>
+  <script src="app.js?v=3.41"></script>
+  <script src="workstation.js?v=3.41"></script>
+  <script src="map-engine.js?v=3.41"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.40"></script>
-  <script src="field-intel.js?v=3.40"></script>
+  <script src="route-planner.js?v=3.41"></script>
+  <script src="field-intel.js?v=3.41"></script>
+  <script src="field-ops.js?v=3.41"></script>
 </body>
 </html>
 

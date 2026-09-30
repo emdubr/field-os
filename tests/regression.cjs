@@ -9,7 +9,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 (async()=>{
  await tick();
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
@@ -165,6 +165,47 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  const weatherCache={downloadedAt:new Date(weatherBase).toISOString(),position:{lat:44.47,lon:-73.21},source:'TEST FORECAST',current:{tempF:45,precipIn:0,weatherCode:1,windMph:12,gustMph:18,visibilityM:12000,pressureHpa:1008},hourly:weatherHours,alerts:[{id:'a1',event:'Winter Weather Advisory',severity:'Moderate',headline:'Test advisory',description:'Test',expires:''}]};
  w.FIELD_WEATHER.setCache(weatherCache);const weatherFlags=w.FIELD_WEATHER.hazards(weatherCache);assert.ok(weatherFlags.some(x=>x.id==='thunder'));assert.ok(weatherFlags.some(x=>x.id==='gust'));assert.ok(weatherFlags.some(x=>x.id==='visibility'));assert.ok(weatherFlags.some(x=>x.id==='precip'));assert.ok(weatherFlags.some(x=>x.id==='alert-a1'));w.FIELD_WEATHER.render();assert.match(d.getElementById('weatherCondition').textContent,/PARTLY CLOUDY/);assert.equal(d.querySelectorAll('#weatherHazards .weather-hazard').length,weatherFlags.length);assert.ok(d.querySelectorAll('#weatherHourly .weather-hour-card').length>0);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-weather-cache')).hourly.length===12);
  console.log('PASS original feature 18 Weather Intelligence caches current/hourly forecast, screens thunder/wind/visibility/precipitation, and preserves alert/source metadata offline');
+ const opsWeatherCache={...weatherCache,current:{...weatherCache.current,snowfallIn:.2,snowDepthIn:8,freezingFt:4200,windDir:270},hourly:weatherHours.map((x,i)=>({...x,snowfallIn:i<12?.55:0,snowDepthIn:8,freezingFt:4200,windDir:270,tempF:i<4?30+i:36}))};
+ w.FIELD_WEATHER.setCache(opsWeatherCache);
+
+ w.FIELD_PRESSURE.state.samples.length=0;w.FIELD_PRESSURE.state.lastAlert=null;
+ w.FIELD_PRESSURE.add(1012,weatherBase-3*3600000);w.FIELD_PRESSURE.add(1009,weatherBase-3600000);w.FIELD_PRESSURE.add(1007,weatherBase);
+ const pressure=w.FIELD_PRESSURE.render(w.FIELD_PRESSURE.analyze(weatherBase));assert.ok(pressure.d3<=-4);assert.equal(pressure.level,'alert');assert.match(d.getElementById('stormWatchState').textContent,/RAPID PRESSURE FALL/);
+ console.log('PASS feature 19 Barometric Storm Detection identifies rapid multi-hour pressure falls and raises a local trend warning');
+
+ const hazardPlan={points:[{lat:44.47,lon:-73.21},{lat:44.48,lon:-73.20}]};
+ w.FIELD_HAZARDS.ingest({type:'FeatureCollection',features:[{type:'Feature',properties:{category:'WILDFIRE',name:'TEST FIRE'},geometry:{type:'Polygon',coordinates:[[[-73.22,44.46],[-73.19,44.46],[-73.19,44.49],[-73.22,44.49],[-73.22,44.46]]]}}]});
+ const hazardHits=w.FIELD_HAZARDS.screen(hazardPlan);assert.equal(hazardHits.length,1);assert.equal(hazardHits[0].category,'FIRE');assert.match(d.getElementById('hazardRouteSummary').textContent,/cached hazard/i);
+ console.log('PASS feature 20 Wildfire/Smoke cache imports GeoJSON and screens route geometry for cached fire, smoke and closure intersections');
+
+ const avalanchePlan={elevationProfile:[{lat:44,lon:-73,distanceM:0,elevationFt:1000},{lat:44.0009,lon:-73,distanceM:100,elevationFt:1190},{lat:44.0018,lon:-73,distanceM:200,elevationFt:1000}]};
+ const ava=w.FIELD_AVALANCHE.analyze(avalanchePlan);assert.ok(ava.exposure>0);assert.ok(ava.bands.moderate+ava.bands.high>0);w.FIELD_AVALANCHE.render(ava);assert.match(d.getElementById('avalancheState').textContent,/SCREENED/);
+ console.log('PASS feature 21 Avalanche Mode screens route DEM segments into slope-angle bands without presenting a safety verdict');
+
+ const snow=w.FIELD_SNOW.render(w.FIELD_SNOW.analyze(opsWeatherCache));assert.ok(snow.snow24>=6);assert.equal(snow.loading,'E');assert.match(d.getElementById('snowTravelNote').textContent,/SNOW|WIND/);
+ console.log('PASS feature 22 Snow Travel Mode summarizes snowfall, snow depth, freezing level, wind and likely lee loading aspect from cached forecast data');
+
+ w.FIELD_WATER.state.cache={savedAt:new Date(weatherBase).toISOString(),items:[{id:'spring1',name:'SPRING',type:'SPRING',lat:44.471,lon:-73.211,source:'OSM CACHE'}]};
+ const water=w.FIELD_WATER.rank(w.FIELD_WATER.collect(),{lat:44.47,lon:-73.21});assert.ok(water.some(x=>x.name==='SPRING'));assert.ok(water.find(x=>x.name==='SPRING').distanceM<200);w.FIELD_WATER.render(water);
+ console.log('PASS feature 23 Water Intelligence merges cached and saved water references and ranks positioned sources by distance');
+
+ const conditionPlan={trailSections:[{name:'Mud Trail',surface:'ground',distanceM:1000},{name:'Rock Ridge',surface:'rock',sacScale:'mountain_hiking',distanceM:1000}]};
+ const cond=w.FIELD_TRAIL_CONDITIONS.render(w.FIELD_TRAIL_CONDITIONS.analyze(conditionPlan,opsWeatherCache));assert.ok(cond.speedFactor>1);assert.ok(cond.tags.some(x=>x.id==='rocky'));assert.ok(cond.tags.some(x=>x.id==='snow'));
+ console.log('PASS feature 24 Trail-Condition Intelligence combines OSM surface metadata with cached precipitation, snow and freeze-thaw evidence');
+
+ const etaTrack=Array.from({length:6},(_,i)=>({lat:44+i*.005,lon:-73,time:new Date(weatherBase+i*10*60000).toISOString()}));
+ w.localStorage.setItem('fieldos-v12-track',JSON.stringify(etaTrack));
+ const etaPlan={points:[{lat:44,lon:-73},{lat:44.04,lon:-73}],distanceMiles:4,elevationGainFt:1800,trailSections:[{surface:'ground',distanceM:3000}]};
+ const eta=w.FIELD_ADAPTIVE_ETA.compute(etaPlan,{lat:44.01,lon:-73});assert.equal(eta.pace.source,'RECORDED TRACK');assert.ok(eta.totalHours>0);assert.ok(eta.remainingHours<eta.totalHours);w.FIELD_ADAPTIVE_ETA.render(eta);
+ console.log('PASS feature 25 Adaptive ETA learns a bounded personal pace from recorded tracks and adjusts time for grade, conditions and route progress');
+
+ const fatigue=w.FIELD_FATIGUE.compute({points:[{lat:44,lon:-73},{lat:44.08,lon:-73}],distanceMiles:12,elevationGainFt:4500},.8);assert.ok(fatigue.factor>1.2);assert.ok(/ACCUMULATING|FATIGUED|HIGH/.test(fatigue.level));
+ console.log('PASS feature 26 Fatigue Model increases the time factor as completed mileage and climbing accumulate');
+
+ const turnPlan={name:'TEST ROUTE',points:[{lat:44,lon:-73},{lat:44.005,lon:-73},{lat:44.005,lon:-72.995},{lat:44.01,lon:-72.995}],trailSections:[{name:'North Trail',distanceM:550},{name:'East Link',distanceM:400},{name:'Summit Trail',distanceM:550}]};
+ const cues=w.FIELD_TURNS.generate(turnPlan);assert.ok(cues.length>=3);assert.ok(cues.some(x=>x.type==='right'||x.type==='left'));assert.equal(cues.at(-1).type,'finish');const nextCue=w.FIELD_TURNS.next({lat:44.0001,lon:-73},turnPlan);assert.ok(nextCue);assert.ok(Number.isFinite(nextCue.distanceToCueM));
+ console.log('PASS feature 27 Turn-by-Turn Trail Instructions generates named-trail and geometry-turn cues with distance-to-next guidance');
+
 
 
 
