@@ -1399,14 +1399,14 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 
 
 /* v3.19 Gaia-style planner route visibility */
-.route-planner-real-map .leaflet-fieldRoutePane-pane{z-index:610!important;pointer-events:none!important}
-.route-planner-real-map .leaflet-fieldRoutePreviewPane-pane{z-index:605!important;pointer-events:none!important}
-.route-planner-real-map .leaflet-fieldRouteSnapPane-pane{z-index:620!important;pointer-events:none!important}
-.route-planner-real-map .leaflet-fieldRouteAnchorPane-pane{z-index:630!important}
-.route-planner-real-map .leaflet-fieldRoutePane-pane canvas,
-.route-planner-real-map .leaflet-fieldRoutePane-pane svg,
-.route-planner-real-map .leaflet-fieldRoutePreviewPane-pane canvas,
-.route-planner-real-map .leaflet-fieldRoutePreviewPane-pane svg{
+.route-planner-real-map .leaflet-fieldRoute-pane{z-index:610!important;pointer-events:none!important}
+.route-planner-real-map .leaflet-fieldRoutePreview-pane{z-index:605!important;pointer-events:none!important}
+.route-planner-real-map .leaflet-fieldRouteSnap-pane{z-index:620!important;pointer-events:none!important}
+.route-planner-real-map .leaflet-fieldRouteAnchor-pane{z-index:630!important}
+.route-planner-real-map .leaflet-fieldRoute-pane canvas,
+.route-planner-real-map .leaflet-fieldRoute-pane svg,
+.route-planner-real-map .leaflet-fieldRoutePreview-pane canvas,
+.route-planner-real-map .leaflet-fieldRoutePreview-pane svg{
   filter:none!important;
   opacity:1!important;
 }
