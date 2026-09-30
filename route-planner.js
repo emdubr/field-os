@@ -1062,6 +1062,7 @@
     }
     return out;
   }
+  const UNNAMED_TRAIL_DISPLAY_MIN_M=160.9344; // 0.10 mi
   function displayTrailSections(legs=[]){
     const out=[],named=new Map();
     for(const leg of Array.isArray(legs)?legs:[]){
@@ -1090,7 +1091,12 @@
         }else out.push({...sec,distanceM});
       }
     }
-    return out;
+    // Tiny unnamed connectors are useful for routing but noisy in the
+    // human-facing trail list. Keep them in geometry/intelligence, hide here.
+    return out.filter(sec=>{
+      const named=String(sec.name||'').trim()||String(sec.ref||'').trim();
+      return named||Number(sec.distanceM||0)>=UNNAMED_TRAIL_DISPLAY_MIN_M;
+    });
   }
 
   function roughnessScore(section={}){
