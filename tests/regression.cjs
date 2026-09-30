@@ -81,6 +81,10 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.match(planner,/classList\.toggle\('has-slope-overlay',hasSlope\)/);
  assert.match(css,/@media\(max-width:760px\)[\s\S]*?#map \.map-quick-actions[\s\S]*?repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(css,/@media\(max-width:760px\)[\s\S]*?#route \.route-planner-actions[\s\S]*?repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/portrait handheld readability pass[\s\S]*?#home \.handheld-status[\s\S]*?repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(css,/#home \.handheld-status button[\s\S]*?min-height:62px!important/);
+ assert.match(css,/narrow-module usability pass[\s\S]*?#sos \.sos-button[\s\S]*?min-height:64px!important/);
+ assert.match(css,/landscape-phone navigation[\s\S]*?body \.tabbar[\s\S]*?position:fixed!important/);
  console.log('PASS mobile map/route layout rules and slope base-bleed guard');
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
