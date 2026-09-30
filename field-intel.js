@@ -73,6 +73,44 @@
 
 
 
+
+  // Feature 06 — stripped-down breadcrumb navigation.
+  let breadcrumbIndex=null,breadcrumbReversed=false;
+  const bearing=(a,b)=>{const r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lon-a.lon)*r);return (Math.atan2(y,x)*180/Math.PI+360)%360};
+  const cardinal=deg=>['N','NE','E','SE','S','SW','W','NW'][Math.round(((deg%360)+360)%360/45)%8];
+  function breadcrumbTrack(){
+    const raw=read('track',[]),clean=(Array.isArray(raw)?raw:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,time:p.time||null}));
+    return breadcrumbReversed?[...clean].reverse():clean;
+  }
+  function computeBreadcrumb(track=breadcrumbTrack(),position=getPosition(),index=breadcrumbIndex){
+    const pts=(Array.isArray(track)?track:[]).filter(validPoint);if(!pts.length||!validPoint(position))return null;
+    let nearest=0,best=Infinity;for(let i=0;i<pts.length;i++){const d=meters(position,pts[i]);if(d<best){best=d;nearest=i}}
+    let targetIndex=index==null?Math.min(pts.length-1,nearest+1):Math.max(0,Math.min(pts.length-1,Number(index)||0));
+    if(targetIndex===nearest&&targetIndex<pts.length-1)targetIndex++;
+    const target=pts[targetIndex],distanceM=meters(position,target),deg=bearing(position,target);
+    return {nearestIndex:nearest,targetIndex,target,distanceM,bearing:deg,cardinal:cardinal(deg),remaining:Math.max(0,pts.length-1-targetIndex),total:pts.length};
+  }
+  function renderBreadcrumb(){
+    const calc=computeBreadcrumb();const state=document.getElementById('breadcrumbState'),arrow=document.getElementById('breadcrumbArrow'),brg=document.getElementById('breadcrumbBearing'),dist=document.getElementById('breadcrumbDistance'),target=document.getElementById('breadcrumbTarget');
+    if(!calc){if(state)state.textContent='NO RECORDED TRACK';if(brg)brg.innerHTML='---° <small>---</small>';if(dist)dist.textContent='---';if(target)target.textContent='RECORD A TRACK OR ADD BREADCRUMBS';return null}
+    breadcrumbIndex=calc.targetIndex;
+    if(state)state.textContent=`TRACK ${breadcrumbReversed?'REVERSED / RETURN':'FORWARD'} // TARGET ${calc.targetIndex+1} OF ${calc.total}`;
+    if(arrow)arrow.style.transform=`rotate(${calc.bearing}deg)`;
+    if(brg)brg.innerHTML=`${Math.round(calc.bearing).toString().padStart(3,'0')}° <small>${calc.cardinal}</small>`;
+    if(dist)dist.textContent=calc.distanceM<160.934?`${Math.round(calc.distanceM*3.28084)} ft`:`${(calc.distanceM/1609.344).toFixed(2)} mi`;
+    if(target)target.textContent=`BREADCRUMB ${calc.targetIndex+1} / ${calc.total}`;
+    const pos=getPosition(),battery=parseBattery();const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    set('breadcrumbElevation',pos.alt==null?'—':`${Math.round(pos.alt)} ft`);set('breadcrumbGps',text('mobileFixState'));set('breadcrumbBattery',battery==null?'—':`${battery}%`);set('breadcrumbRemaining',String(calc.remaining));
+    return calc;
+  }
+  function breadcrumbStep(delta){const pts=breadcrumbTrack();if(!pts.length)return null;const base=breadcrumbIndex==null?(computeBreadcrumb()?.targetIndex||0):breadcrumbIndex;breadcrumbIndex=Math.max(0,Math.min(pts.length-1,base+delta));return renderBreadcrumb()}
+  function breadcrumbNearest(){breadcrumbIndex=null;return renderBreadcrumb()}
+  function breadcrumbReverse(){breadcrumbReversed=!breadcrumbReversed;breadcrumbIndex=null;return renderBreadcrumb()}
+  document.getElementById('breadcrumbPrev')?.addEventListener('click',()=>breadcrumbStep(-1));document.getElementById('breadcrumbNext')?.addEventListener('click',()=>breadcrumbStep(1));document.getElementById('breadcrumbNearest')?.addEventListener('click',breadcrumbNearest);document.getElementById('breadcrumbReverse')?.addEventListener('click',breadcrumbReverse);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#breadcrumb.active'))renderBreadcrumb()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='breadcrumb')renderBreadcrumb()});
+  setInterval(()=>{if(document.querySelector('#breadcrumb.active'))renderBreadcrumb()},1500);
+  window.FIELD_BREADCRUMB={compute:computeBreadcrumb,render:renderBreadcrumb,step:breadcrumbStep,nearest:breadcrumbNearest,reverse:breadcrumbReverse,get reversed(){return breadcrumbReversed}};
+
   // Feature 05 — Off-course rerouting.
   function computeReroute(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},position=getPosition()){
     const pts=cleanPoints(plan.points||[]);if(pts.length<2||!validPoint(position))return null;

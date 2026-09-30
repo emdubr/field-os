@@ -74,6 +74,12 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  await w.FIELD_ROUTE_PLANNER.replaceRoute([{lat:44,lon:-73},{lat:44.001,lon:-73}],{mode:'direct',open:false});await tick();
  assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);w.TEST_ROUTER.clearAll();await tick();
  console.log('PASS feature 05 Off-Course Rerouting computes return/ahead/destination recovery targets and uses the shared route engine');
+ const crumb=w.FIELD_BREADCRUMB.compute([{lat:44,lon:-73},{lat:44.001,lon:-73},{lat:44.002,lon:-73}],{lat:44.0002,lon:-73},null);
+ assert.ok(crumb);assert.equal(crumb.targetIndex,1);assert.equal(crumb.remaining,1);assert.ok(crumb.distanceM>50&&crumb.distanceM<100);assert.match(crumb.cardinal,/N/);
+ w.localStorage.setItem('fieldos-v12-track',JSON.stringify([{lat:44,lon:-73},{lat:44.001,lon:-73},{lat:44.002,lon:-73}]));
+ d.querySelector('[data-open="breadcrumb"]').click();await tick();assert.equal(d.querySelector('.view.active').id,'breadcrumb');assert.match(d.getElementById('breadcrumbState').textContent,/TRACK/);
+ w.FIELD_BREADCRUMB.reverse();assert.equal(w.FIELD_BREADCRUMB.reversed,true);w.FIELD_OPEN_VIEW('route',{history:false});
+ console.log('PASS feature 06 Breadcrumb Navigation computes next breadcrumb, bearing, remaining points, reverse mode, and minimal-screen navigation');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');

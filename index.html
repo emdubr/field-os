@@ -323,7 +323,7 @@
           <article class="panel nav-primary-trail">
             <div class="panel-title"><span>RETURN TO TRAIL</span><span class="tiny">NEAREST SAVED ROUTE</span></div>
             <dl class="readouts large-readouts"><div><dt>OFFSET</dt><dd id="rttDistance">NO ROUTE</dd></div><div><dt>BEARING</dt><dd id="rttBearing">---</dd></div><div><dt>ROUTE</dt><dd id="rttRouteName">---</dd></div><div><dt>POINT</dt><dd id="rttPoint">---</dd></div></dl>
-            <button class="danger-lite" data-open="trailreturn">GUIDE BACK TO TRAIL</button>
+            <button class="danger-lite" data-open="trailreturn">GUIDE BACK TO TRAIL</button><button class="action" data-open="breadcrumb">BREADCRUMB MODE</button>
           </article>
         </div>
         <div class="nav-live-strip" id="navLiveStrip">
@@ -513,6 +513,26 @@
         </article>
       </section>
 
+
+      <section class="view breadcrumb-view" id="breadcrumb" data-view="breadcrumb">
+        <div class="breadcrumb-shell">
+          <div class="breadcrumb-top"><button class="back" data-open="nav">← NAV</button><b>BREADCRUMB NAV</b><button class="ghost" data-open="lost">LOST</button></div>
+          <div id="breadcrumbState" class="breadcrumb-state">NO TRACK</div>
+          <div class="breadcrumb-arrow-wrap"><div id="breadcrumbArrow" class="breadcrumb-arrow">↑</div></div>
+          <div id="breadcrumbBearing" class="breadcrumb-bearing">---° <small>---</small></div>
+          <div id="breadcrumbDistance" class="breadcrumb-distance">---</div>
+          <div id="breadcrumbTarget" class="breadcrumb-target">NEXT BREADCRUMB</div>
+          <div class="breadcrumb-vitals">
+            <div><span>ELEV</span><b id="breadcrumbElevation">---</b></div>
+            <div><span>GPS</span><b id="breadcrumbGps">---</b></div>
+            <div><span>BAT</span><b id="breadcrumbBattery">---</b></div>
+            <div><span>LEFT</span><b id="breadcrumbRemaining">0</b></div>
+          </div>
+          <div class="breadcrumb-actions"><button id="breadcrumbPrev" type="button">PREVIOUS</button><button id="breadcrumbNext" type="button">NEXT</button><button id="breadcrumbNearest" type="button">NEAREST</button><button id="breadcrumbReverse" type="button">REVERSE TRACK</button></div>
+          <p class="breadcrumb-note">Breadcrumb mode follows recorded/local track points only. It does not prove terrain between your position and a target is safe or passable.</p>
+        </div>
+      </section>
+
       <section class="view" id="waypoints" data-view="waypoints">
         <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>WAYPOINTS</h2><button class="ghost" id="addCurrentWaypoint">+ CURRENT</button></div>
         <div class="grid two-col">
@@ -694,6 +714,7 @@
       <div class="tab-sheet-grid">
         <button class="sheet-tab" data-open="route"><span>⌁</span><b>ROUTE</b><small>Plan / difficulty</small></button>
         <button class="sheet-tab" data-open="trailreturn"><span>↶</span><b>RETURN</b><small>Trail / base</small></button>
+        <button class="sheet-tab" data-open="breadcrumb"><span>↑</span><b>BREADCRUMB</b><small>Minimal return nav</small></button>
         <button class="sheet-tab" data-open="waypoints"><span>◆</span><b>WAYPOINTS</b><small>Saved positions</small></button>
         <button class="sheet-tab" data-open="track"><span>⋯</span><b>TRACK</b><small>Breadcrumb log</small></button>
         <button class="sheet-tab" data-open="trip"><span>▣</span><b>TRIP</b><small>Plan / check-in</small></button>
