@@ -72,6 +72,49 @@
 
 
 
+
+  // Feature 05 — Off-course rerouting.
+  function computeReroute(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},position=getPosition()){
+    const pts=cleanPoints(plan.points||[]);if(pts.length<2||!validPoint(position))return null;
+    let nearest=0,best=Infinity;
+    for(let i=0;i<pts.length;i++){const d=meters(position,pts[i]);if(d<best){best=d;nearest=i}}
+    const returnIndex=Math.max(0,nearest-1),returnPoint=pts[returnIndex];
+    let aheadIndex=nearest,aheadM=0;
+    while(aheadIndex<pts.length-1&&aheadM<805){aheadM+=meters(pts[aheadIndex],pts[aheadIndex+1]);aheadIndex++}
+    aheadIndex=Math.max(nearest,Math.min(pts.length-1,aheadIndex));
+    return {offsetM:best,nearestIndex:nearest,return:{index:returnIndex,target:returnPoint,label:'RETURN TO ROUTE'},ahead:{index:aheadIndex,target:pts[aheadIndex],distanceAheadM:aheadM,label:'INTERCEPT AHEAD'},destination:{index:pts.length-1,target:pts.at(-1),label:'ALTERNATE TO DESTINATION'}};
+  }
+  function safePlanClone(plan){try{return JSON.parse(JSON.stringify(plan))}catch{return {points:cleanPoints(plan?.points||[]),anchors:cleanPoints(plan?.anchors||[]),routingMode:plan?.routingMode||'trail',name:plan?.name||'ORIGINAL ROUTE'}}}
+  function saveOriginalForReroute(){if(read('reroute-original',null))return read('reroute-original',null);const plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{};if(cleanPoints(plan.points||[]).length<2)return null;const saved={savedAt:new Date().toISOString(),plan:safePlanClone(plan)};write('reroute-original',saved);return saved}
+  async function applyReroute(kind){
+    const plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},pos=getPosition(),options=computeReroute(plan,pos);if(!options||!options[kind])throw new Error('No valid recovery target.');
+    saveOriginalForReroute();const target=options[kind].target,status=document.getElementById('rerouteStatus');if(status)status.textContent='BUILDING…';
+    try{const result=await window.FIELD_ROUTE_PLANNER?.replaceRoute?.([pos,target],{mode:'trail',open:true});if(status)status.textContent='RECOVERY ROUTE READY';return result}
+    catch(err){if(status)status.textContent='REROUTE FAILED';console.warn('FIELD/OS reroute failed',err);throw err}
+  }
+  function restoreOriginalRoute(){
+    const saved=read('reroute-original',null),plan=saved?.plan;if(!plan)return false;
+    const state=window.FIELD_ROUTE_STATE;if(!state)return false;
+    state.setMeta?.(plan);state.setPoints?.(cleanPoints(plan.points||[]));state.setMeta?.(plan);state.save?.();
+    try{localStorage.removeItem(key('reroute-original'))}catch{}
+    document.dispatchEvent(new CustomEvent('fieldos:rerouterestore',{detail:{restoredAt:new Date().toISOString()}}));
+    window.FIELD_OPEN_VIEW?.('nav');refreshReroute();return true;
+  }
+  function refreshReroute(){
+    const panel=document.getElementById('reroutePanel'),detail=document.getElementById('rerouteDetail'),status=document.getElementById('rerouteStatus');if(!panel)return null;
+    const plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},calc=computeReroute(plan),banner=text('routeDeviationBanner'),off=/DEVIATION|OFF ROUTE/i.test(banner),hasOriginal=!!read('reroute-original',null);
+    panel.hidden=!off&&!hasOriginal;
+    if(calc&&detail)detail.textContent=`Current offset screening: ${Math.round(calc.offsetM*3.28084)} ft. Return targets route point ${calc.return.index+1}; ahead intercept is about ${(calc.ahead.distanceAheadM/1609.344).toFixed(2)} mi farther along the route.`;
+    if(status)status.textContent=hasOriginal?'RECOVERY ACTIVE / ORIGINAL SAVED':off?'RECOVERY OPTIONS READY':'ON ROUTE';
+    const restore=document.getElementById('restoreOriginalRoute');if(restore)restore.disabled=!hasOriginal;
+    return calc;
+  }
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-reroute]');if(!b)return;b.disabled=true;applyReroute(b.dataset.reroute).catch(()=>{}).finally(()=>b.disabled=false)});
+  document.getElementById('restoreOriginalRoute')?.addEventListener('click',restoreOriginalRoute);
+  document.addEventListener('fieldos:positionchange',refreshReroute);document.addEventListener('fieldos:routechange',()=>setTimeout(refreshReroute,0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')refreshReroute()});
+  setInterval(()=>{if(document.querySelector('#nav.active'))refreshReroute()},3000);setTimeout(refreshReroute,150);
+  window.FIELD_REROUTE={compute:computeReroute,apply:applyReroute,restore:restoreOriginalRoute,refresh:refreshReroute,saveOriginal:saveOriginalForReroute};
+
   // Feature 04 — Escape / Bailout Planner.
   const bailoutTypeWeight={TRAILHEAD:.86,PARKING:.88,BASE:.90,SHELTER:.96,HUT:.98,CAMP:1.04,ROUTE_END:1.05,ROUTE_START:1.08,VILLAGE:1.10,TOWN:1.08,ROAD:1.18,JUNCTION:1.15};
   function bailoutType(raw=''){

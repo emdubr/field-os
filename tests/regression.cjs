@@ -68,6 +68,12 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  w.FIELD_BAILOUT.saveCandidate(ranked[0]);await tick();
  const afterWp=JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'));assert.equal(afterWp.length,beforeWp+1);assert.match(afterWp.at(-1).name,/BAILOUT/);
  console.log('PASS feature 04 Bailout Planner ranks realistic exit types, works from local data, and saves exits as offline waypoints');
+ const reroutePlan={points:[{lat:44,lon:-73},{lat:44.005,lon:-73},{lat:44.01,lon:-73},{lat:44.02,lon:-73}]};
+ const recovery=w.FIELD_REROUTE.compute(reroutePlan,{lat:44.004,lon:-73.002});
+ assert.ok(recovery);assert.equal(recovery.destination.index,3);assert.ok(recovery.ahead.index>=recovery.nearestIndex);assert.ok(recovery.offsetM>0);
+ await w.FIELD_ROUTE_PLANNER.replaceRoute([{lat:44,lon:-73},{lat:44.001,lon:-73}],{mode:'direct',open:false});await tick();
+ assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);w.TEST_ROUTER.clearAll();await tick();
+ console.log('PASS feature 05 Off-Course Rerouting computes return/ahead/destination recovery targets and uses the shared route engine');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');

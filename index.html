@@ -340,6 +340,16 @@
           <dl class="readouts large-readouts"><div><dt>PROGRESS</dt><dd id="routeProgress">---</dd></div><div><dt>REMAINING</dt><dd id="routeRemaining">---</dd></div><div><dt>ETA</dt><dd id="routeEta">---</dd></div><div><dt>OFF ROUTE</dt><dd id="routeDeviation">---</dd></div></dl>
           <label class="field-label" for="deviationThreshold">DEVIATION ALERT</label><select id="deviationThreshold" class="terminal-input"><option value="50">50 ft</option><option value="100" selected>100 ft</option><option value="250">250 ft</option><option value="500">500 ft</option></select>
           <div class="button-row"><button class="action" data-open="trailreturn">INTERCEPT TRAIL</button><button class="action" data-open="route">EDIT ROUTE</button></div>
+          <div id="reroutePanel" class="reroute-panel" hidden>
+            <div class="reroute-head"><b>OFF-COURSE REROUTE</b><span id="rerouteStatus">READY</span></div>
+            <p id="rerouteDetail">Choose a recovery strategy. FIELD/OS preserves the original route before replacing it.</p>
+            <div class="reroute-actions">
+              <button type="button" data-reroute="return">RETURN TO ROUTE</button>
+              <button type="button" data-reroute="ahead">INTERCEPT AHEAD</button>
+              <button type="button" data-reroute="destination">ALTERNATE TO DESTINATION</button>
+              <button id="restoreOriginalRoute" type="button">RESTORE ORIGINAL</button>
+            </div>
+          </div>
         </article>
         <article class="panel">
           <div class="panel-title"><span>POSITION SOLUTION</span><span class="tiny" id="navPositionSource">LAST TRUSTED FIX</span></div>

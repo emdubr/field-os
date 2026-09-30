@@ -1660,6 +1660,20 @@
     }finally{if(aborter?.signal===signal)setBusy(false)}
   }
 
+
+  async function replaceRoute(nextAnchors,options={}){
+    const next=sanitizeAnchors(nextAnchors);
+    if(next.length<2)throw rpError('RP-103','Replacement route requires at least two valid control points.');
+    aborter?.abort();setBusy(false);
+    const mode=options.mode==='direct'?'direct':'trail',snap=$('routeSnapMode');if(snap)snap.value=mode;
+    anchors=next;snapped=[];routingResolvedAnchors=0;
+    state()?.setMeta?.({anchors:next.map(p=>({...p})),routedAnchors:[],legs:[],routingMode:mode,routeBuildState:'REROUTE'});
+    updateControls();activate();overlay();
+    if(options.open!==false)window.FIELD_OPEN_VIEW?.('route');
+    await recalculate();
+    return state()?.getPlan?.()||null;
+  }
+
   function routeVisible(){return !!document.querySelector('#route.active')}
   function kickPlanner(){
     if(!routeVisible())return;
@@ -1692,6 +1706,6 @@
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
-  window.FIELD_ROUTE_PLANNER={activate,recalculate,get anchors(){return anchors.map(p=>({...p}))}};
+  window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,get anchors(){return anchors.map(p=>({...p}))}};
 })();
 
