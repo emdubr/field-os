@@ -227,6 +227,7 @@ function headingCardinal(deg){
   return dirs[Math.round(deg / 45) % 8];
 }
 setInterval(()=>{
+  if(document.hidden)return;
   demo.heading = (demo.heading + (Math.random() > .5 ? 1 : -1) + 360) % 360;
   demo.alt += Math.random() > .5 ? 1 : -1;
   demo.press += Math.random() > .58 ? 0.1 : -0.1;
@@ -256,6 +257,7 @@ function updatePositionDisplays(){
 }
 let fixAge=4;
 setInterval(()=>{
+  if(document.hidden)return;
   fixAge++;
   const h=String(Math.floor(fixAge/3600)).padStart(2,'0');
   const m=String(Math.floor((fixAge%3600)/60)).padStart(2,'0');
@@ -385,7 +387,7 @@ function updateSolar(){
   }
   return ev;
 }
-updateSolar(); setInterval(updateSolar,30000);
+updateSolar(); setInterval(()=>{if(!document.hidden)updateSolar()},60000);
 
 const sendDemo=document.getElementById('sendDemo');
 sendDemo?.addEventListener('click', ()=>{
@@ -528,7 +530,7 @@ if('serviceWorker' in navigator){
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.65';
+        const key='fieldos-sw-reloaded-v3.66';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -746,7 +748,7 @@ function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation 
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
-setInterval(()=>{const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
+setInterval(()=>{if(document.hidden||trackWatchId==null)return;const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
 // Local check-in countdown (no background guarantee on iOS)
 let checkinState=loadJSON('checkin',{last:0});if(!checkinState||typeof checkinState!=='object'||Array.isArray(checkinState))checkinState={last:0};checkinState.last=Number(checkinState.last)||0;
@@ -759,7 +761,7 @@ function updateCheckinTimer(){
   if(left<0){clock.textContent=`OVERDUE ${txt}`;clock.className='checkin-clock overdue';if(detail)detail.textContent='Record/send a check-in when safe. This local timer cannot guarantee background alerts on iOS.';if(home)home.textContent='OVERDUE';}
   else{clock.textContent=txt;clock.className=`checkin-clock ${left<600?'soon':''}`;if(detail)detail.textContent=`Next local check-in due ${new Date(due).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}.`;if(home)home.textContent=left<600?'due soon':`${Math.ceil(left/60)}m`;}
 }
-document.getElementById('resetCheckin')?.addEventListener('click',resetCheckinTimer);document.getElementById('checkinNow')?.addEventListener('click',resetCheckinTimer);document.getElementById('saveTrip')?.addEventListener('click',updateCheckinTimer);document.getElementById('checkinInterval')?.addEventListener('change',updateCheckinTimer);document.getElementById('copyCheckin')?.addEventListener('click',async()=>{await copyText(`FIELD/OS CHECK-IN\nTIME: ${new Date().toISOString()}\nPOSITION: ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}\nALT: ${Math.round(currentNavPosition.alt??demo.alt)} ft\nSTATUS: OK`)});setInterval(updateCheckinTimer,1000);updateCheckinTimer();
+document.getElementById('resetCheckin')?.addEventListener('click',resetCheckinTimer);document.getElementById('checkinNow')?.addEventListener('click',resetCheckinTimer);document.getElementById('saveTrip')?.addEventListener('click',updateCheckinTimer);document.getElementById('checkinInterval')?.addEventListener('change',updateCheckinTimer);document.getElementById('copyCheckin')?.addEventListener('click',async()=>{await copyText(`FIELD/OS CHECK-IN\nTIME: ${new Date().toISOString()}\nPOSITION: ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}\nALT: ${Math.round(currentNavPosition.alt??demo.alt)} ft\nSTATUS: OK`)});setInterval(()=>{if(!document.hidden)updateCheckinTimer()},5000);updateCheckinTimer();
 
 updateRouteMonitor();
 
@@ -814,7 +816,7 @@ function updateHandheldStatus(){
     else {const left=Math.floor((checkinState.last+interval*60000-Date.now())/1000);hc.textContent=left<0?'OVERDUE':left<600?'DUE SOON':`${Math.ceil(left/60)}m`;hc.closest('button')?.classList.toggle('status-stale',left<0);hc.closest('button')?.classList.toggle('status-soon',left>=0&&left<600);}
   }
 }
-setInterval(updateHandheldStatus,1000);setTimeout(updateHandheldStatus,50);
+setInterval(()=>{if(!document.hidden)updateHandheldStatus()},5000);setTimeout(updateHandheldStatus,50);
 if(navigator.getBattery){navigator.getBattery().then(b=>{const paint=()=>{const el=document.getElementById('mobileBattery'),ps=document.getElementById('mobilePowerState');if(el)el.textContent=`${Math.round(b.level*100)}%`;const db=document.getElementById('deskBatteryPct');if(db)db.textContent=`${Math.round(b.level*100)}%`;if(ps)ps.textContent=b.charging?'CHARGING':'PHONE';};paint();b.addEventListener('levelchange',paint);b.addEventListener('chargingchange',paint);}).catch(()=>{});}
 
 // v1.2 screen wake lock for active field navigation

@@ -1,4 +1,4 @@
-/* FIELD/OS v3.65: home-style workspaces with density parity across modules. */
+/* FIELD/OS v3.66: home-style workspaces with density parity across modules. */
 (() => {
   const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['mission','MISSION MODE'],['survival','FIELD MANUAL'],['weather','WEATHER INTELLIGENCE'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,7 +10,7 @@
   const note=t=>`<p class="ws-note">${esc(t)}</p>`;
   const card=(title,label,body)=>`<article class="panel ws-card"><div class="panel-title"><span>♙ ${esc(String(title).toUpperCase())}</span><span class="tiny">${esc(label)}</span></div>${body}</article>`;
   const nav=document.createElement('nav');nav.className='workstation-nav';nav.setAttribute('aria-label','Desktop field modules');
-  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.65</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
+  nav.innerHTML=`<div class="ws-brand">TAP V2<span>FIELD / OS <b>3.66</b></span></div><div class="ws-nav-label">WORKSPACE / MODULES</div>${modules.map(([id,label],i)=>`<button data-open="${id}" data-module="${id}"><span>${String(i+1).padStart(2,'0')}</span>${label}</button>`).join('')}<footer>
     <div class="ws-footer-line"><span>POSITION</span><b class="ws-nav-pos">DEMO</b></div>
     <div class="ws-footer-line"><span>ROUTE</span><b class="ws-nav-route">NONE</b></div>
     <div class="ws-footer-line"><span>TRACK</span><b class="ws-nav-track">IDLE</b></div>
@@ -174,11 +174,11 @@
     }
     const consoleBar=document.createElement('div');
     consoleBar.className='module-console-header';
-    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.65</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
+    consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.66</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
-    // v3.65: no implicit first-card hero. Full-width workstation surfaces are explicit in CSS/markup.
+    // v3.66: no implicit first-card hero. Full-width workstation surfaces are explicit in CSS/markup.
   }
   const renderedHtml=new WeakMap();
   function updateHtml(el,html){
@@ -255,7 +255,7 @@
     });
     scheduleRefresh();
   });
-  setInterval(scheduleRefresh,2000);refresh();
+  setInterval(()=>{if(!document.hidden)scheduleRefresh()},5000);refresh();
   window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();});
 })();
 

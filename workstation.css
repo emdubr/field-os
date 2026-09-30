@@ -3636,319 +3636,37 @@ input,select,textarea{
 }
 
 
-/* v3.58 route desktop flow — the route map must not inherit generic 2-column hero sizing. */
-@media(min-width:1024px){
-  #route .module-grid>.route-planner-panel.module-hero{
-    grid-column:1 / -1!important;
-    grid-row:auto!important;
-    width:100%!important;
-    max-width:none!important;
-  }
-  #route .module-grid>.route-performance-panel{
-    grid-column:1 / -1!important;
-    position:static!important;
-    width:100%!important;
-    margin-top:0!important;
-  }
-  #route .route-performance-panel .route-performance-grid{
-    grid-template-columns:repeat(6,minmax(0,1fr))!important;
-  }
-}
-
-
-/* v3.59 QA/UI hardening */
+/* v3.66 CONSOLIDATED UI AUTHORITY
+   Supersedes v3.58-v3.64 desktop/layout overrides. The final v3.65 dense flow below
+   remains the desktop card-packing authority. */
+:root{--ui-space-1:4px;--ui-space-2:8px;--ui-space-3:12px;--ui-space-4:16px;--ui-panel-radius:5px}
+.panel-title{display:flex;align-items:center;gap:8px;min-width:0}
+.panel-title>*{min-width:0}.panel-title>span:first-child,.panel-title>strong:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.readouts>div,.button-row>*{min-width:0}.readouts dd{overflow-wrap:anywhere}
+.status-strip{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}.status-strip::-webkit-scrollbar{display:none}.status-strip>*{white-space:nowrap}
 @media(max-width:767px){
-  /* Operational text must remain legible on a phone without changing desktop density. */
-  .route-performance-grid span,
-  .route-performance-grid small,
-  .weather-current-grid span,
-  .weather-hour-card span,
-  .terrain-risk-item>span,
-  .terrain-risk-item>small,
-  .route-confidence-score small,
-  .route-confidence-factor small,
-  .mesh-node-row small,
-  .store-forward-copy small,
-  .group-member-stat small{
-    font-size:9px!important;
-    line-height:1.35!important;
-  }
-  .route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .weather-current-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .breadcrumb-vitals{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .breadcrumb-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .group-expedition-controls{grid-template-columns:1fr!important}
-  .group-expedition-controls>*{min-width:0!important}
-  .route-confidence-body{grid-template-columns:72px minmax(0,1fr)!important}
-  .route-confidence-score{width:66px!important;height:66px!important}
+ :root{--ui-panel-radius:4px}
+ body #app .screen{padding:6px!important}
+ body .module-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important}
+ body .module-grid>*{grid-column:1!important;min-width:0!important}
+ body .module-grid .panel{padding:9px!important;height:auto!important;min-height:0!important}
+ .panel-title{min-height:34px;margin-bottom:7px}.button-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ .action,.terminal-btn,.micro-btn{min-height:44px!important}.readouts>div{padding:8px 0!important}
+ .route-performance-grid,.weather-current-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ .main-real-map,.route-planner-real-map{width:100%!important;min-height:54dvh!important}
+ .topbar{min-height:46px!important;padding:6px 8px!important;gap:7px!important}.view-head{min-height:44px!important;padding:6px 7px!important;gap:6px!important}
 }
-@media(max-width:390px){
-  .route-performance-grid,
-  .weather-current-grid{grid-template-columns:1fr!important}
-}
-
-
-/* v3.60 desktop workspace: content-sized cards and readable working panels. */
+@media(max-width:390px){.button-row,.route-performance-grid,.weather-current-grid{grid-template-columns:1fr!important}}
 @media(min-width:1024px){
-  body .module-grid{align-items:start!important}
-  body .module-grid>.module-slot>.panel{height:auto!important}
-  body #system .module-grid,body #map .module-grid,body #route .module-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  }
-  #map .module-grid>.route-offline-readiness,
-  #route .module-grid>.route-elevation-panel{grid-column:1 / -1!important}
-  #route .route-elevation-panel .route-elevation-readouts{
-    display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px 20px;
-  }
-  #route .route-elevation-panel .elevation-detail-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-  #system .field-tools-panel .button-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
-  #system .field-tools-panel .button-row>*{min-width:0;width:100%}
-  body .workstation-nav{overscroll-behavior:contain;scrollbar-gutter:stable}
+ :root{--ws-nav-w:224px;--ws-edge:10px}
+ body .workstation-nav{left:var(--ws-edge)!important;top:var(--ws-edge)!important;bottom:var(--ws-edge)!important;width:var(--ws-nav-w)!important;box-sizing:border-box!important;overflow-y:auto!important}
+ body .shell{box-sizing:border-box!important;width:calc(100% - var(--ws-nav-w) - (var(--ws-edge) * 3))!important;max-width:none!important;margin:var(--ws-edge) var(--ws-edge) var(--ws-edge) calc(var(--ws-nav-w) + (var(--ws-edge) * 2))!important;padding:0!important}
+ body #app .screen{width:100%!important;max-width:none!important;box-sizing:border-box!important;padding:12px!important}
+ body .module-console-header{display:grid!important;grid-template-columns:minmax(190px,1.4fr) repeat(4,minmax(90px,.8fr)) minmax(90px,.7fr)!important;align-items:center!important;min-height:48px!important;padding:8px 10px!important;gap:8px!important;overflow:hidden!important}
+ body .module-band{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:center!important;min-height:30px!important;padding:5px 10px!important;gap:8px!important;overflow:hidden!important}
+ body .module-console-header>*,body .module-band>*{min-width:0;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 }
-
-/* v3.61 quick workspace switcher */
-.workstation-nav .ws-launcher{display:flex;justify-content:space-between;gap:6px;border:1px solid var(--line);margin:10px 0 2px;padding:9px 7px;min-height:42px}
-.workstation-nav .ws-launcher span{font-size:10px;color:var(--fg)}
-.ws-launcher kbd{font:9px monospace;color:var(--dim);white-space:nowrap}
-.workspace-switcher{box-sizing:border-box;width:min(580px,calc(100vw - 32px));max-height:calc(100dvh - 48px);margin:auto;padding:22px;border:1px solid var(--fg);border-radius:8px;background:var(--bg);color:var(--fg);font-family:inherit;box-shadow:0 18px 80px #000b;overflow:auto}
-.workspace-switcher::backdrop{background:rgba(0,0,0,.76)}
-.workspace-switcher .switcher-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
-.workspace-switcher h2{font-size:20px;margin:0;letter-spacing:.02em}
-.workspace-switcher label{display:block;font-size:12px;margin-bottom:8px;color:var(--dim)}
-.workspace-switcher input{box-sizing:border-box;display:block;width:100%;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--fg);font-family:inherit;padding:14px;border-radius:4px;font-size:16px}
-.workspace-switcher input:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
-.workspace-switcher .switcher-close{border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:9px;cursor:pointer;min-height:38px}
-#workspaceResults{max-height:min(48dvh,420px);overflow-y:auto;overscroll-behavior:contain}
-#workspaceResults [role=option]{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 10px;min-height:24px;cursor:pointer;border-radius:4px}
-#workspaceResults [role=option][aria-selected=true]{background:var(--fg);color:var(--bg)}
-#workspaceResults strong{font-size:13px;overflow-wrap:anywhere}
-#workspaceResults span{font-size:9px;text-align:right}
-.workspace-switcher .switcher-hint,#workspaceResultStatus{font-size:11px;line-height:1.5;color:var(--dim)}
-@media(max-width:600px){.workspace-switcher{padding:16px}.workspace-switcher h2{font-size:18px}}
-
-
-/* v3.62 UI COHERENCE LAYER — authoritative spacing and panel flow. */
-:root{
-  --ui-space-1:4px;
-  --ui-space-2:8px;
-  --ui-space-3:12px;
-  --ui-space-4:16px;
-  --ui-panel-radius:5px;
-}
-.module-grid{align-items:start!important}
-.module-grid>.module-slot{min-width:0!important;align-self:start!important}
-.module-grid>.module-slot>.panel,
-.module-grid>article.panel{
-  height:auto!important;
-  min-height:0!important;
-  border-radius:var(--ui-panel-radius)!important;
-}
-.panel-title{
-  display:flex!important;
-  align-items:center!important;
-  gap:var(--ui-space-2)!important;
-  min-width:0!important;
-}
-.panel-title>*{min-width:0}
-.panel-title>span:first-child,
-.panel-title>strong:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.button-row{align-items:stretch!important}
-.button-row>*{min-width:0!important}
-.readouts>div{min-width:0}
-.readouts dd{overflow-wrap:anywhere}
-.condition-list,.terminal-log,.mesh-node-roster{overscroll-behavior:contain}
-.view>.module-grid:last-child{margin-bottom:0!important}
-
-@media(min-width:1024px){
-  body #app .screen{padding:var(--ui-space-3)!important}
-  body .module-grid{gap:var(--ui-space-2)!important}
-  body .module-grid .panel{padding:var(--ui-space-3)!important}
-  body #route .module-grid,
-  body #map .module-grid,
-  body #system .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  #route .module-grid>.route-planner-panel.module-hero{grid-column:1/-1!important}
-  #route .module-grid>.route-performance-panel{grid-column:1/-1!important}
-  #route .route-performance-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}
-  #map .terrain-map-card{grid-column:1/-1!important}
-  .main-real-map,.route-planner-real-map{width:100%!important}
-}
-
-@media(max-width:767px){
-  :root{--ui-panel-radius:4px}
-  body #app .screen{padding:6px!important}
-  body .module-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important}
-  body .module-grid>*{grid-column:1!important;min-width:0!important}
-  body .module-grid .panel{padding:9px!important}
-  .panel-title{min-height:34px!important;margin-bottom:7px!important}
-  .panel-title>span:first-child,.panel-title>strong:first-child{font-size:10px!important}
-  .muted,.microcopy,.panel p{line-height:1.45}
-  .button-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
-  .button-row>.wide,.button-row>[data-wide=true]{grid-column:1/-1!important}
-  .action,.terminal-btn,.micro-btn{min-height:44px!important}
-  .readouts>div{padding:8px 0!important}
-  .readouts dt{font-size:9px!important}
-  .readouts dd{font-size:10px!important}
-  .route-performance-grid,.weather-current-grid{gap:7px!important}
-  .route-performance-grid>div,.weather-current-grid>div{padding:9px!important}
-  .route-performance-grid b,.weather-current-grid b{font-size:13px!important}
-  .map-source-bar,.route-planner-toolbar,.route-planner-actions{margin-left:0!important;margin-right:0!important}
-  .main-real-map,.route-planner-real-map{width:100%!important;min-height:54dvh!important}
-}
-@media(max-width:390px){
-  .button-row{grid-template-columns:1fr!important}
-  .button-row>*{grid-column:1!important}
-}
-
-
-/* v3.62 chrome cleanup */
-.topbar,.status-strip,.view-head{box-sizing:border-box}
-.topbar>*{min-width:0}
-.status-strip{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
-.status-strip::-webkit-scrollbar{display:none}
-.status-strip>*{white-space:nowrap}
-@media(min-width:768px){
-  .topbar{padding-left:12px!important;padding-right:12px!important}
-  .status-strip{min-height:34px}
-}
-@media(max-width:767px){
-  .topbar{
-    min-height:46px!important;
-    padding:6px 8px!important;
-    gap:7px!important;
-  }
-  .topbar .brand,.topbar .title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .status-strip{
-    min-height:32px!important;
-    margin:0!important;
-    padding:5px 7px!important;
-    gap:10px!important;
-  }
-  .view-head{
-    min-height:44px!important;
-    padding:6px 7px!important;
-    gap:6px!important;
-  }
-  .view-head h2{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-  .view-head-actions{display:flex!important;gap:5px!important;min-width:0!important}
-  .view-head-actions>*{min-width:40px!important;min-height:40px!important}
-}
-
-
-/* v3.63 WORKSTATION ARCHITECTURE — explicit desktop ownership, no implicit hero geometry. */
-@media(min-width:1024px){
-  :root{--ws-nav-w:224px;--ws-edge:10px;--ws-gap:10px}
-  body .workstation-nav{
-    display:flex!important;
-    left:var(--ws-edge)!important;
-    top:var(--ws-edge)!important;
-    bottom:var(--ws-edge)!important;
-    width:var(--ws-nav-w)!important;
-    box-sizing:border-box!important;
-    padding:10px!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-  }
-  body .shell{
-    box-sizing:border-box!important;
-    width:calc(100% - var(--ws-nav-w) - (var(--ws-edge) * 3))!important;
-    max-width:none!important;
-    margin:var(--ws-edge) var(--ws-edge) var(--ws-edge) calc(var(--ws-nav-w) + (var(--ws-edge) * 2))!important;
-    padding:0!important;
-  }
-  body #app .screen{width:100%!important;max-width:none!important;box-sizing:border-box!important}
-  body .module-grid{
-    display:grid!important;
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    grid-auto-flow:row!important;
-    grid-auto-rows:auto!important;
-    align-items:start!important;
-    gap:10px!important;
-  }
-  body .module-grid>*{
-    min-width:0!important;
-    grid-row:auto!important;
-    align-self:start!important;
-  }
-  body .module-grid>.module-slot{
-    grid-column:auto!important;
-    width:auto!important;
-  }
-  body .module-grid>.module-slot>.panel{height:auto!important;min-height:0!important}
-  /* Retire legacy implicit hero spans. Full-width work areas are named explicitly below. */
-  body .module-grid>.module-hero{
-    grid-column:auto!important;
-    grid-row:auto!important;
-  }
-  body #route .route-planner-panel,
-  body #route .route-performance-panel,
-  body #route .route-elevation-panel,
-  body #map .terrain-map-card,
-  body #map .terrain-controls-below,
-  body #map .offline-map-manager,
-  body #map .route-offline-readiness,
-  body #track .track-map-panel,
-  body #trailreturn .return-map-panel{
-    grid-column:1 / -1!important;
-  }
-  body .module-console-header,
-  body .module-band{width:100%!important;box-sizing:border-box!important}
-  body .module-console-header>*,
-  body .module-band>*{min-width:0}
-}
-@media(min-width:1024px) and (max-width:1280px){
-  :root{--ws-nav-w:196px;--ws-edge:8px}
-  body .workstation-nav button{font-size:12px!important;min-height:38px!important}
-}
-
-
-@media(min-width:1024px){
-  body .module-console-header{
-    display:grid!important;
-    grid-template-columns:minmax(190px,1.4fr) repeat(4,minmax(90px,.8fr)) minmax(90px,.7fr)!important;
-    align-items:center!important;
-    min-height:48px!important;
-    padding:8px 10px!important;
-    gap:8px!important;
-    overflow:hidden!important;
-  }
-  body .module-console-header>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-  body .module-band{
-    display:grid!important;
-    grid-template-columns:repeat(5,minmax(0,1fr))!important;
-    align-items:center!important;
-    min-height:30px!important;
-    padding:5px 10px!important;
-    gap:8px!important;
-    overflow:hidden!important;
-  }
-  body .module-band>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
-}
-
-
-/* v3.64 GAP-FREE WORKSTATION ROWS */
-@media(min-width:1024px){
-  body .module-grid{align-items:stretch!important}
-  body .module-grid>*{align-self:stretch!important}
-  body .module-grid>.module-slot{display:flex!important}
-  body .module-grid>.module-slot>.panel,
-  body .module-grid>article.panel{
-    width:100%!important;
-    height:100%!important;
-    min-height:100%!important;
-    box-sizing:border-box!important;
-  }
-  body #route .route-planner-panel,
-  body #route .route-performance-panel,
-  body #route .route-elevation-panel,
-  body #map .terrain-map-card,
-  body #map .terrain-controls-below,
-  body #map .offline-map-manager,
-  body #map .route-offline-readiness{
-    height:auto!important;
-    min-height:0!important;
-  }
-}
-
+@media(min-width:1024px) and (max-width:1280px){:root{--ws-nav-w:196px;--ws-edge:8px}}
 
 /* v3.65 DENSE DESKTOP FLOW — independent card heights, no paired-row voids. */
 @media(min-width:1024px){
