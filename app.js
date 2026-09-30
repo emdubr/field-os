@@ -1275,6 +1275,35 @@ async function activateBestRoutePack(){
   await activateFieldMapPack(matches[0].id);
   setOfflineMapStatus('ROUTE CORRIDOR PACK ACTIVE',100);
 }
+function corridorTemplateUrl(template,bounds){
+  const raw=String(template||'').trim();if(!raw)throw new Error('Save a PMTiles corridor URL template first.');
+  if(!bounds)throw new Error('Plan a route before building a corridor download.');
+  const replacements={west:bounds.minLon,south:bounds.minLat,east:bounds.maxLon,north:bounds.maxLat,bbox:`${bounds.minLon},${bounds.minLat},${bounds.maxLon},${bounds.maxLat}`};
+  let out=raw;for(const [k,v] of Object.entries(replacements))out=out.replaceAll(`{${k}}`,encodeURIComponent(String(v)));
+  const u=new URL(out,location.href);if(u.protocol!=='https:')throw new Error('Corridor provider template must use HTTPS.');
+  if(u.hostname==='tile.openstreetmap.org')throw new Error('Official OSM raster tiles cannot be used as a corridor download provider.');
+  return u.href;
+}
+function saveCorridorProviderTemplate(){
+  const input=document.getElementById('routeCorridorTemplate'),raw=String(input?.value||'').trim();
+  if(raw&&!/\{(bbox|west|south|east|north)\}/.test(raw))return alert('Template needs {bbox} or coordinate tokens such as {west}, {south}, {east}, {north}.');
+  storageSet(STORE_PREFIX+'corridor-pmtiles-template',raw);
+  const s=document.getElementById('routeCorridorProviderState');if(s)s.textContent=raw?'TEMPLATE SAVED':'TEMPLATE CLEARED';
+}
+async function downloadRouteCorridorPack(){
+  const btn=document.getElementById('downloadRouteCorridor');if(btn)btn.disabled=true;
+  try{
+    const pad=Number(document.getElementById('routeCorridorPadding')?.value||2),bounds=routeCorridorBounds(routePoints,pad);
+    const template=String(document.getElementById('routeCorridorTemplate')?.value||storageGet(STORE_PREFIX+'corridor-pmtiles-template')||'');
+    const url=corridorTemplateUrl(template,bounds);
+    setOfflineMapStatus('BUILDING ROUTE CORRIDOR…',1);
+    const rec=await downloadFieldPmtiles(url);await refreshFieldMapPackUI();await activateFieldMapPack(rec.id);await analyzeRouteOfflineCoverage();
+  }catch(err){setOfflineMapStatus('CORRIDOR DOWNLOAD FAILED');alert(err.message||String(err));}finally{if(btn)btn.disabled=false;}
+}
+const corridorTemplateInput=document.getElementById('routeCorridorTemplate');
+if(corridorTemplateInput)corridorTemplateInput.value=storageGet(STORE_PREFIX+'corridor-pmtiles-template')||'';
+document.getElementById('saveRouteCorridorTemplate')?.addEventListener('click',saveCorridorProviderTemplate);
+document.getElementById('downloadRouteCorridor')?.addEventListener('click',downloadRouteCorridorPack);
 document.getElementById('checkRouteOffline')?.addEventListener('click',analyzeRouteOfflineCoverage);
 document.getElementById('activateRouteOffline')?.addEventListener('click',activateBestRoutePack);
 document.getElementById('routeCorridorPadding')?.addEventListener('change',analyzeRouteOfflineCoverage);
