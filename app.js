@@ -93,7 +93,7 @@ function openView(name,{history=true,focus=true}={}){
   if(focus)document.getElementById('screen')?.focus({preventScroll:true});
   window.scrollTo({top:0, behavior:'auto'});
   if(history&&previous!==name){
-    try{history.pushState({fieldosView:name},'',name==='home'?location.pathname+location.search:`#${name}`)}catch{}
+    try{window.history.pushState({fieldosView:name},'',name==='home'?location.pathname+location.search:`#${name}`)}catch{}
   }
   document.dispatchEvent(new CustomEvent('fieldos:viewchange',{detail:{view:name,previous}}));
   return true;
@@ -398,11 +398,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.25',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.26',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.25';
+        const key='fieldos-sw-reloaded-v3.26';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
