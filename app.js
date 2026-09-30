@@ -197,9 +197,14 @@ function drawSensorSeries(canvasId,series,title){
   const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
   ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
   const all=series.flatMap(s=>s.data).filter(Number.isFinite);if(!all.length)return;let min=Math.min(...all),max=Math.max(...all);if(max-min<1){min-=.5;max+=.5}const pad=(max-min)*.12;min-=pad;max+=pad;
-  series.forEach((s,si)=>{ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.68;ctx.beginPath();s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-20-(v-min)/(max-min)*(h-44);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});ctx.globalAlpha=1;
-  ctx.fillStyle=fg;ctx.font='15px monospace';ctx.fillText(title,12,19);ctx.fillStyle=dim;ctx.font='11px monospace';
-  series.forEach((s,i)=>ctx.fillText(`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`,12+i*180,h-5));
+  series.forEach((s,si)=>{ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.68;ctx.beginPath();s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-34-(v-min)/(max-min)*(h-62);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});ctx.globalAlpha=1;
+  ctx.fillStyle=fg;ctx.font='15px monospace';ctx.fillText(title,12,19);
+  ctx.fillStyle=dim;ctx.font='11px monospace';
+  const slot=w/Math.max(1,series.length);
+  series.forEach((s,idx)=>{
+    const label=`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`;
+    ctx.fillText(label,12+idx*slot,h-9);
+  });
 }
 function drawAllSensorCharts(){
   drawSensorSeries('gnssSignalChart',[{label:'SAT',data:sensorHistory.gnssSats,decimals:0},{label:'ACC',data:sensorHistory.gnssAcc,unit:'m'}],'GNSS SIGNAL / FIX');
@@ -269,29 +274,58 @@ function solarPosition(date, lat, lon){
   const az=normalizeDeg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(dec)*Math.cos(phi))*deg+180);
   return {az,el:elev*deg};
 }
-function solarEventsForDate(date,lat,lon){
-  const threshold=-0.833;
+function findSolarCrossing(a,b,lat,lon,threshold,rising){
+  let lo=a.getTime(),hi=b.getTime();
+  for(let n=0;n<18;n++){
+    const mid=(lo+hi)/2,el=solarPosition(new Date(mid),lat,lon).el;
+    if(rising ? el>threshold : el<=threshold) hi=mid; else lo=mid;
+  }
+  return new Date((lo+hi)/2);
+}
+function findSolarEvents(date,lat,lon,threshold){
   const start=new Date(date);start.setHours(0,0,0,0);
   const end=new Date(start);end.setDate(end.getDate()+1);
-  const step=2*60*1000;
-  let prevT=start,prevEl=solarPosition(prevT,lat,lon).el,sunrise=null,sunset=null;
-  const crossing=(aT,aEl,bT,bEl)=>{
-    const den=bEl-aEl||1e-9,frac=Math.max(0,Math.min(1,(threshold-aEl)/den));
-    return new Date(aT.getTime()+(bT.getTime()-aT.getTime())*frac);
-  };
+  const step=5*60*1000;
+  let prevT=start,prevEl=solarPosition(prevT,lat,lon).el,rise=null,set=null;
   for(let ms=start.getTime()+step;ms<=end.getTime();ms+=step){
     const t=new Date(ms),el=solarPosition(t,lat,lon).el;
-    if(!sunrise&&prevEl<=threshold&&el>threshold)sunrise=crossing(prevT,prevEl,t,el);
-    if(!sunset&&prevEl>threshold&&el<=threshold)sunset=crossing(prevT,prevEl,t,el);
+    if(!rise&&prevEl<=threshold&&el>threshold)rise=findSolarCrossing(prevT,t,lat,lon,threshold,true);
+    if(!set&&prevEl>threshold&&el<=threshold)set=findSolarCrossing(prevT,t,lat,lon,threshold,false);
     prevT=t;prevEl=el;
   }
+  return {rise,set,start,end};
+}
+function findSolarNoon(start,end,lat,lon){
+  let bestT=start.getTime(),bestEl=-90;
+  for(let ms=start.getTime();ms<=end.getTime();ms+=10*60*1000){
+    const el=solarPosition(new Date(ms),lat,lon).el;
+    if(el>bestEl){bestEl=el;bestT=ms}
+  }
+  let lo=Math.max(start.getTime(),bestT-20*60*1000),hi=Math.min(end.getTime(),bestT+20*60*1000);
+  for(let n=0;n<18;n++){
+    const m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;
+    if(solarPosition(new Date(m1),lat,lon).el<solarPosition(new Date(m2),lat,lon).el)lo=m1;else hi=m2;
+  }
+  const time=new Date((lo+hi)/2);
+  return {time,elevation:solarPosition(time,lat,lon).el};
+}
+function solarEventsForDate(date,lat,lon){
+  const standard=findSolarEvents(date,lat,lon,-0.833);
+  const civil=findSolarEvents(date,lat,lon,-6);
+  const noon=findSolarNoon(standard.start,standard.end,lat,lon);
+  const sunrise=standard.rise,sunset=standard.set;
   let daylightMs=0,state='NORMAL';
   if(sunrise&&sunset)daylightMs=Math.max(0,sunset-sunrise);
   else{
-    const noon=new Date(start.getTime()+(end-start)/2),above=solarPosition(noon,lat,lon).el>threshold;
-    daylightMs=above?(end-start):0;state=above?'POLAR DAY':'POLAR NIGHT';
+    const above=noon.elevation>-0.833;
+    daylightMs=above?(standard.end-standard.start):0;
+    state=above?'POLAR DAY':'POLAR NIGHT';
   }
-  return {sunrise,sunset,daylightMs,start,end,state};
+  return {
+    sunrise,sunset,civilDawn:civil.rise,civilDusk:civil.set,
+    solarNoon:noon.time,solarNoonElevation:noon.elevation,
+    daylightMs,start:standard.start,end:standard.end,state
+  };
 }
 function fmtClock(t){return t?t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'---'}
 function fmtDurationMs(ms){
@@ -304,27 +338,46 @@ function updateSolar(){
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
   set('sunAz',`${p.az.toFixed(1)}°`);
   set('sunEl',`${p.el.toFixed(1)}°`);
+  set('civilDawnTime',ev.civilDawn?fmtClock(ev.civilDawn):'---');
   set('sunriseTime',ev.sunrise?fmtClock(ev.sunrise):(ev.state==='POLAR DAY'?'NO SUNRISE':'NONE'));
+  set('solarNoonTime',fmtClock(ev.solarNoon));
+  set('solarNoonElevation',Number.isFinite(ev.solarNoonElevation)?`${ev.solarNoonElevation.toFixed(1)}°`:'---');
   set('sunsetTime',ev.sunset?fmtClock(ev.sunset):(ev.state==='POLAR DAY'?'NO SUNSET':'NONE'));
+  set('civilDuskTime',ev.civilDusk?fmtClock(ev.civilDusk):'---');
   set('daylightDuration',fmtDurationMs(ev.daylightMs));
-  let remaining='0h 00m';
-  if(ev.state==='POLAR DAY')remaining='24h 00m';
-  else if(ev.sunrise&&now<ev.sunrise)remaining=`STARTS ${fmtClock(ev.sunrise)}`;
-  else if(ev.sunset&&now<ev.sunset)remaining=fmtDurationMs(ev.sunset-now);
-  else remaining='DARK';
-  set('daylightRemaining',remaining);
-  set('solarLocation',`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+
+  const isDay=p.el>-0.833,isCivil=p.el>-6;
+  const stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':'NIGHT';
+  set('sunState',stateText);
+
+  let remaining='0h 00m',next='NO UPCOMING SOLAR EVENT';
+  if(ev.state==='POLAR DAY'){remaining='24h 00m';next='POLAR DAY'}
+  else if(ev.state==='POLAR NIGHT'){remaining='0h 00m';next='POLAR NIGHT'}
+  else if(ev.sunrise&&now<ev.sunrise){
+    remaining='0h 00m';next=`SUNRISE IN ${fmtDurationMs(ev.sunrise-now)}`;
+  }else if(ev.sunset&&now<ev.sunset){
+    remaining=fmtDurationMs(ev.sunset-now);next=`SUNSET IN ${remaining}`;
+  }else if(ev.civilDusk&&now<ev.civilDusk){
+    remaining='0h 00m';next=`CIVIL DUSK IN ${fmtDurationMs(ev.civilDusk-now)}`;
+  }else{
+    const tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);
+    const nextDay=solarEventsForDate(tomorrow,lat,lon);
+    next=nextDay.civilDawn?`CIVIL DAWN ${fmtClock(nextDay.civilDawn)}`:'NIGHT';
+  }
+  set('daylightRemaining',remaining);set('sunNextEvent',next);
+  set('solarLocation',`${lat.toFixed(4)}, ${lon.toFixed(4)} · DEVICE LOCAL TIME`);
   set('solarPositionSource',hasTrustedMapPosition?.()?(currentNavPosition.source||'LIVE POSITION'):'DEMO POSITION');
+
   const marker=document.getElementById('sunArcMarker');
   if(marker){
     const daylight=ev.sunrise&&ev.sunset?ev.sunset-ev.sunrise:0;
-    const frac=daylight?Math.max(0,Math.min(1,(now-ev.sunrise)/daylight)):(p.el>-0.833?0.5:0);
+    const frac=daylight?Math.max(0,Math.min(1,(now-ev.sunrise)/daylight)):(isDay?0.5:0);
     marker.style.left=`${(frac*100).toFixed(1)}%`;
-    marker.classList.toggle('below-horizon',p.el<=-0.833);
+    marker.classList.toggle('below-horizon',!isDay);
   }
   return ev;
 }
-updateSolar(); setInterval(updateSolar,60000);
+updateSolar(); setInterval(updateSolar,30000);
 
 const sendDemo=document.getElementById('sendDemo');
 sendDemo?.addEventListener('click', ()=>{
@@ -444,11 +497,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.32',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.33',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.32';
+        const key='fieldos-sw-reloaded-v3.33';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
