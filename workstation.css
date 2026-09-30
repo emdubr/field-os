@@ -3725,3 +3725,76 @@ input,select,textarea{
 #workspaceResults span{font-size:9px;text-align:right}
 .workspace-switcher .switcher-hint,#workspaceResultStatus{font-size:11px;line-height:1.5;color:var(--dim)}
 @media(max-width:600px){.workspace-switcher{padding:16px}.workspace-switcher h2{font-size:18px}}
+
+
+/* v3.62 UI COHERENCE LAYER — authoritative spacing and panel flow. */
+:root{
+  --ui-space-1:4px;
+  --ui-space-2:8px;
+  --ui-space-3:12px;
+  --ui-space-4:16px;
+  --ui-panel-radius:5px;
+}
+.module-grid{align-items:start!important}
+.module-grid>.module-slot{min-width:0!important;align-self:start!important}
+.module-grid>.module-slot>.panel,
+.module-grid>article.panel{
+  height:auto!important;
+  min-height:0!important;
+  border-radius:var(--ui-panel-radius)!important;
+}
+.panel-title{
+  display:flex!important;
+  align-items:center!important;
+  gap:var(--ui-space-2)!important;
+  min-width:0!important;
+}
+.panel-title>*{min-width:0}
+.panel-title>span:first-child,
+.panel-title>strong:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.button-row{align-items:stretch!important}
+.button-row>*{min-width:0!important}
+.readouts>div{min-width:0}
+.readouts dd{overflow-wrap:anywhere}
+.condition-list,.terminal-log,.mesh-node-roster{overscroll-behavior:contain}
+.view>.module-grid:last-child{margin-bottom:0!important}
+
+@media(min-width:1024px){
+  body #app .screen{padding:var(--ui-space-3)!important}
+  body .module-grid{gap:var(--ui-space-2)!important}
+  body .module-grid .panel{padding:var(--ui-space-3)!important}
+  body #route .module-grid,
+  body #map .module-grid,
+  body #system .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #route .module-grid>.route-planner-panel.module-hero{grid-column:1/-1!important}
+  #route .module-grid>.route-performance-panel{grid-column:1/-1!important}
+  #route .route-performance-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+  #map .terrain-map-card{grid-column:1/-1!important}
+  .main-real-map,.route-planner-real-map{width:100%!important}
+}
+
+@media(max-width:767px){
+  :root{--ui-panel-radius:4px}
+  body #app .screen{padding:6px!important}
+  body .module-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important}
+  body .module-grid>*{grid-column:1!important;min-width:0!important}
+  body .module-grid .panel{padding:9px!important}
+  .panel-title{min-height:34px!important;margin-bottom:7px!important}
+  .panel-title>span:first-child,.panel-title>strong:first-child{font-size:10px!important}
+  .muted,.microcopy,.panel p{line-height:1.45}
+  .button-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+  .button-row>.wide,.button-row>[data-wide=true]{grid-column:1/-1!important}
+  .action,.terminal-btn,.micro-btn{min-height:44px!important}
+  .readouts>div{padding:8px 0!important}
+  .readouts dt{font-size:9px!important}
+  .readouts dd{font-size:10px!important}
+  .route-performance-grid,.weather-current-grid{gap:7px!important}
+  .route-performance-grid>div,.weather-current-grid>div{padding:9px!important}
+  .route-performance-grid b,.weather-current-grid b{font-size:13px!important}
+  .map-source-bar,.route-planner-toolbar,.route-planner-actions{margin-left:0!important;margin-right:0!important}
+  .main-real-map,.route-planner-real-map{width:100%!important;min-height:54dvh!important}
+}
+@media(max-width:390px){
+  .button-row{grid-template-columns:1fr!important}
+  .button-row>*{grid-column:1!important}
+}
