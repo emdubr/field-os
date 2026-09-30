@@ -282,6 +282,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(const id of ['browserPersist','browserInstall','browserCapabilityList','fieldCoordConvert','fieldNavCalculate','fieldScratchSave','fieldAddMark','recoverySnapshot','recoveryRestore','browserRunAudit','browserLaunchPreflight','browserDiagLog'])assert.ok(html.includes('id="'+id+'"'),'missing feature 40-70 control '+id);
  assert.ok(readme.includes('Web feature registry through 70'));assert.ok(readme.includes('Features 40–49'));assert.ok(readme.includes('Features 50–59'));assert.ok(readme.includes('Features 60–70'));
  console.log('PASS web feature registry 40-70 browser reliability, utility, resilience, and preflight wiring');
+ assert.ok(fieldToolsJs.includes("fieldos-v12-active-map-pack"));assert.ok(!fieldToolsJs.includes("fieldos-v12-map-pack"));
+ const qaCss=fs.readFileSync(dir+'/styles.css','utf8');assert.ok(qaCss.includes('v3.50 QA/UI stabilization'));assert.ok(qaCss.includes('#system .field-tools-panel .button-row'));assert.ok(qaCss.includes('@media(max-width:390px)'));
+ console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
+
 
 
 

@@ -693,3 +693,31 @@ body[data-theme="red"]{
   --grid:rgba(255,75,55,.11);--warn:#ffb36b;--danger:#ff3b30;--cyan:#ff9e8e;
   --shadow:0 0 18px rgba(255,70,50,.08),inset 0 0 0 1px rgba(255,110,90,.025);
 }
+
+
+/* v3.50 QA/UI stabilization — dense field tools stay readable on phone and desktop. */
+#system .field-tools-panel{padding:0 10px 10px;overflow:hidden}
+#system .field-tools-panel>.panel-title{margin-left:-10px;margin-right:-10px}
+#system .field-tools-panel .button-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+#system .field-tools-panel .button-row>button{flex:1 1 180px;min-width:0}
+#system .field-tools-panel .grid{gap:10px}
+#system .field-tools-panel .terminal-input,
+#system .field-tools-panel .terminal-area{width:100%;box-sizing:border-box;margin:4px 0 8px}
+#system .field-tools-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+#system .field-tools-panel .condition-list{max-height:360px;overflow:auto;overscroll-behavior:contain}
+#system .readouts dd{overflow-wrap:anywhere;text-align:right}
+@media(max-width:760px){
+  #system .field-tools-panel{padding:0 8px 8px}
+  #system .field-tools-panel>.panel-title{margin-left:-8px;margin-right:-8px}
+  #system .field-tools-panel .grid.two-col{grid-template-columns:1fr!important}
+  #system .field-tools-panel .button-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  #system .field-tools-panel .button-row>button{width:100%;min-height:46px;font-size:8px;line-height:1.25;padding:7px 5px}
+  #system .field-tools-panel .readouts{grid-template-columns:1fr!important}
+  #system .field-tools-panel .readouts>div{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);align-items:start;gap:8px}
+  #system .field-tools-panel .condition-row{grid-template-columns:minmax(0,1fr);gap:3px}
+  #system .field-tools-panel .condition-row span,#system .field-tools-panel .condition-row em{white-space:normal;overflow-wrap:anywhere}
+}
+@media(max-width:390px){
+  #system .field-tools-panel .button-row{grid-template-columns:1fr}
+  #system .field-tools-panel .button-row>button{min-height:48px}
+}
