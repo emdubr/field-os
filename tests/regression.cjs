@@ -287,6 +287,14 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
+ const workstationCss=fs.readFileSync(dir+'/workstation.css','utf8');
+ assert.ok(workstationCss.includes('v3.51 FINAL RESPONSIVE NORMALIZATION'));
+ assert.ok(workstationCss.includes('.tab-sheet,.tab-sheet-backdrop{display:none!important}'));
+ assert.ok(workstationCss.includes('@media(max-width:767px)'));
+ assert.ok(workstationCss.includes('position:fixed!important'));
+ assert.ok(workstationCss.includes('@media(max-width:430px)'));
+ console.log('PASS final responsive layer separates desktop/mobile navigation and constrains overflow');
+
 
 
 
