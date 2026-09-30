@@ -1637,3 +1637,28 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   position:relative!important;
   z-index:800!important;
 }
+
+
+/* v3.27 smooth Route Layer zoom + restore arrows */
+.route-planner-real-map .leaflet-fieldRouteDirection-pane{
+  z-index:760!important;
+  pointer-events:none!important;
+}
+.route-planner-real-map .gaia-route-direction-wrap{
+  z-index:761!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:none!important;
+}
+.route-planner-real-map .gaia-route-direction{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+.route-planner-real-map .planner-dom-route-layer{
+  will-change:opacity;
+  transition:opacity .10s linear;
+}
+.route-planner-real-map .planner-dom-route-layer.route-zooming{
+  opacity:.18!important;
+}
