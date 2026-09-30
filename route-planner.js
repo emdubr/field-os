@@ -205,6 +205,16 @@
       if(st){
         loadAnchors();
         const pts=st.getPoints?.()||[];
+        const plan=st.getPlan?.()||{};
+        const savedProfile=Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1?{
+          samples:plan.elevationProfile,
+          gainFt:Number(plan.elevationGainFt)||0,
+          lossFt:Number(plan.elevationLossFt)||0,
+          minFt:Number(plan.elevationMinFt)||0,
+          maxFt:Number(plan.elevationMaxFt)||0,
+          maxGrade:Number(plan.grade)||0
+        }:null;
+        applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
           overlay(pts);
@@ -311,7 +321,7 @@
     aborter?.abort();setBusy(false);
     anchors=[];snapped=[];lastSuccessfulAnchors=[];
     state()?.setMeta?.({anchors:[],routingMode:routeMode()});
-    state()?.setPoints?.([]);overlay([]);
+    state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');
     status('TAP MAP TO SET START','ready');
   }
 
@@ -587,30 +597,39 @@
     ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,14,27);
   }
 
-  function applyRouteStats(points,profile){
+  function applyRouteStats(points,profile,elevationState='auto'){
     const pts=(Array.isArray(points)?points:[]).filter(valid),dist=routeDistanceMiles(pts);
     const set=(id,val)=>{const el=$(id);if(el)el.textContent=val};
-    set('routeDistance',`${dist.toFixed(2)} mi`);
-    set('routePointCount',String(pts.length));
+    const distText=`${dist.toFixed(2)} mi`;
+    set('routeDistance',distText);set('plannerRouteDistance',distText);
+    set('routePointCount',String(pts.length));set('plannerRoutePoints',String(pts.length));
     if(profile){
       const gain=Math.round(profile.gainFt),loss=Math.round(profile.lossFt),min=Math.round(profile.minFt),max=Math.round(profile.maxFt);
-      set('routeGainOut',`${gain.toLocaleString()} ft`);
-      set('routeLossOut',`${loss.toLocaleString()} ft`);
-      set('routeElevRange',`${min.toLocaleString()}–${max.toLocaleString()} ft`);
+      const gainText=`${gain.toLocaleString()} ft`,lossText=`${loss.toLocaleString()} ft`,rangeText=`${min.toLocaleString()}–${max.toLocaleString()} ft`;
+      set('routeGainOut',gainText);set('plannerRouteGain',gainText);
+      set('routeLossOut',lossText);set('plannerRouteLoss',lossText);
+      set('routeElevRange',rangeText);set('plannerRouteElevRange',rangeText);
+      set('plannerElevationSource','ELEVATION // COPERNICUS GLO-90 DEM');
       const gainInput=$('routeGain'),gradeInput=$('routeGrade');
       if(gainInput)gainInput.value=String(gain);
       if(gradeInput)gradeInput.value=String(Math.round(profile.maxGrade));
       gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
       drawElevationProfile(profile,dist);
     }else{
-      set('routeGainOut','N/A');
-      set('routeLossOut','---');set('routeElevRange','---');
+      const hasRoute=pts.length>1;
+      const loading=elevationState==='loading'&&hasRoute;
+      const unavailable=elevationState==='unavailable'&&hasRoute;
+      const placeholder=loading?'LOADING…':unavailable?'N/A':'---';
+      set('routeGainOut',placeholder);set('plannerRouteGain',placeholder);
+      set('routeLossOut',placeholder);set('plannerRouteLoss',placeholder);
+      set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
+      set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
     }
     return dist;
   }
 
   async function enrichRoute(points,signal,baseStatus){
-    const dist=applyRouteStats(points,null);
+    const dist=applyRouteStats(points,null,'loading');
     status(`${baseStatus} -- ${dist.toFixed(2)} MI // ELEVATION LOADING — YOU CAN KEEP EDITING`,'loading');
     try{
       const profile=await fetchElevationProfile(points,signal);
@@ -631,7 +650,7 @@
     }catch(err){
       if(signal?.aborted)throw err;
       console.warn('FIELD/OS elevation lookup failed',err);
-      applyRouteStats(points,null);
+      applyRouteStats(points,null,'unavailable');
       state()?.setMeta?.({distanceMiles:dist,elevationSource:'UNAVAILABLE'});
       state()?.save?.();
       return {dist,profile:null,elevationError:String(err?.message||err)};
