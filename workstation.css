@@ -1938,3 +1938,25 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   .solar-panel .sun-state-strip{align-items:flex-start;flex-direction:column}
   .solar-panel .sun-state-strip span{text-align:left}
 }
+
+
+/* v3.34 UI hardening after stress pass */
+#map .view-head{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:10px!important;align-items:center!important}
+#map .view-head h2{min-width:0;overflow-wrap:anywhere}
+#map .view-head-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:6px!important}
+#map .view-head-actions .ghost{min-height:38px!important}
+#sensors .sensor-chart-card{display:flex;flex-direction:column}
+#sensors .sensor-chart-card .sensor-chart{margin-top:auto}
+#sensors .sensor-chart-card .panel-title{min-height:42px!important;align-items:center!important}
+#sensors .sensor-chart-card .panel-title span:first-child{min-width:0;overflow-wrap:anywhere}
+#sensors .sensor-chart-card .panel-title .tiny{text-align:right}
+#sensors .sensor-dashboard-grid{margin-top:2px}
+#sensors .sensor-dashboard-grid+.sensor-source-note{margin-top:10px!important}
+.elevation-profile-wrap{overflow:hidden}
+@media(max-width:620px){
+  #map .view-head{grid-template-columns:auto 1fr!important}
+  #map .view-head-actions{grid-column:1/-1;justify-content:stretch!important}
+  #map .view-head-actions .ghost{flex:1 1 0}
+  #sensors .sensor-chart-card .panel-title{align-items:flex-start!important}
+  #sensors .sensor-chart-card .panel-title .tiny{text-align:left}
+}
