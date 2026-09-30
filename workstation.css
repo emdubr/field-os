@@ -1940,7 +1940,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 }
 
 
-/* v3.35 UI hardening after stress pass */
+/* v3.36 UI hardening after stress pass */
 #map .view-head{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:10px!important;align-items:center!important}
 #map .view-head h2{min-width:0;overflow-wrap:anywhere}
 #map .view-head-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:6px!important}
@@ -1959,4 +1959,118 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   #map .view-head-actions .ghost{flex:1 1 0}
   #sensors .sensor-chart-card .panel-title{align-items:flex-start!important}
   #sensors .sensor-chart-card .panel-title .tiny{text-align:left}
+}
+
+
+/* v3.36 terrain rollback + stable control layout */
+#map .terrain-map-layout,
+#map .terrain-map-main,
+#map .terrain-control-rail{display:contents!important}
+
+#map .terrain-map-card{
+  display:block!important;
+  width:100%!important;
+  margin:0 0 10px!important;
+  min-width:0!important;
+}
+#map .main-real-map{
+  display:block!important;
+  width:100%!important;
+  height:clamp(430px,60vh,700px)!important;
+  min-height:430px!important;
+  position:relative!important;
+  overflow:hidden!important;
+}
+#map .map-quick-actions{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
+  gap:8px!important;
+  width:100%!important;
+  margin:0 0 10px!important;
+}
+#map .map-quick-actions .action{
+  width:100%!important;
+  min-width:0!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:8px 6px!important;
+}
+
+#map .terrain-controls-below,
+#map .map-source-bar.terrain-controls-below{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:0 0 12px!important;
+  padding:10px!important;
+  position:static!important;
+  overflow:visible!important;
+  border:1px solid var(--line)!important;
+  background:var(--panel2)!important;
+}
+#map .terrain-controls-below .map-control-group{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:9px!important;
+  border:1px solid var(--line)!important;
+  background:var(--panel)!important;
+}
+#map .terrain-controls-below .map-control-group-title{
+  display:block!important;
+  margin:0 0 8px!important;
+  color:var(--dim)!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+#map .terrain-controls-below .map-control-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:7px!important;
+  width:100%!important;
+}
+#map .terrain-controls-below .map-source-btn{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:8px 7px!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+  white-space:normal!important;
+}
+#map .terrain-controls-below #mapLiveLocation{
+  grid-column:span 2!important;
+}
+#map .terrain-controls-below #mapSourceDiag{
+  grid-column:1/-1!important;
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  padding:8px 10px!important;
+  border:1px solid var(--line)!important;
+  background:var(--panel)!important;
+  overflow-wrap:anywhere!important;
+}
+
+@media(max-width:1050px){
+  #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #map .terrain-controls-below .map-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  #map .main-real-map{height:50vh!important;min-height:340px!important}
+  #map .terrain-controls-below,
+  #map .map-source-bar.terrain-controls-below{
+    grid-template-columns:1fr!important;
+  }
+  #map .terrain-controls-below #mapLiveLocation{grid-column:auto!important}
+}
+@media(max-width:500px){
+  #map .map-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #map .terrain-controls-below .map-control-grid{grid-template-columns:1fr!important}
+  #map .main-real-map{height:44vh!important;min-height:300px!important}
 }
