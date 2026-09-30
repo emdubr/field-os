@@ -218,6 +218,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
+ const appJs=app,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),readme=fs.readFileSync(dir+'/README.md','utf8');
  const sosBtn=d.getElementById('meshSos');
  sosBtn.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
  sosBtn.dispatchEvent(new w.Event('pointercancel',{bubbles:true}));
@@ -277,6 +278,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS cached browser environmental intelligence is wired to air-quality and earthquake sources');
  assert.ok(fieldIntelJs.includes("read('environment-intel-cache'"));assert.ok(fieldIntelJs.includes('routeCorridorStatus'));assert.ok(fieldIntelJs.includes('forecastCache:weatherCache'));
  console.log('PASS mission pack bundles cached forecast, environmental intel, and offline corridor readiness');
+ assert.ok(fieldToolsJs.includes('FIELD_BROWSER_TOOLKIT'));assert.ok(fieldToolsJs.includes('FIELD_UTILITY'));assert.ok(fieldToolsJs.includes('FIELD_BROWSER_RESILIENCE'));
+ for(const id of ['browserPersist','browserInstall','browserCapabilityList','fieldCoordConvert','fieldNavCalculate','fieldScratchSave','fieldAddMark','recoverySnapshot','recoveryRestore','browserRunAudit','browserLaunchPreflight','browserDiagLog'])assert.ok(html.includes('id="'+id+'"'),'missing feature 40-70 control '+id);
+ assert.ok(readme.includes('Web feature registry through 70'));assert.ok(readme.includes('Features 40–49'));assert.ok(readme.includes('Features 50–59'));assert.ok(readme.includes('Features 60–70'));
+ console.log('PASS web feature registry 40-70 browser reliability, utility, resilience, and preflight wiring');
+
 
 
 
