@@ -2114,3 +2114,438 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   background:#35ff9c!important;
   border:0!important;
 }
+
+
+/* v3.38 mobile field UI + slope overlay hardening */
+.route-planner-real-map .planner-dom-route-layer.has-slope-overlay .route-dom-main{
+  stroke:transparent!important;
+  stroke-opacity:0!important;
+  filter:none!important;
+}
+.route-planner-real-map .planner-dom-route-layer.has-slope-overlay .route-dom-highlight{
+  stroke-width:1.5!important;
+  stroke-opacity:.55!important;
+}
+.route-planner-real-map .route-dom-slope-easy,
+.route-planner-real-map .route-dom-slope-medium,
+.route-planner-real-map .route-dom-slope-hard{
+  stroke-width:9px!important;
+  stroke-linecap:round!important;
+}
+.route-planner-real-map .route-dom-slope-easy{
+  filter:drop-shadow(0 0 2px rgba(53,255,156,.28))!important;
+}
+
+@media(max-width:760px){
+  html,body,#app,.shell,.screen,.view{
+    max-width:100%!important;
+  }
+  body,#app,.shell,.screen,.view{
+    overflow-x:hidden!important;
+  }
+  body .screen{
+    padding-left:6px!important;
+    padding-right:6px!important;
+    padding-bottom:calc(var(--tabbar-h,58px) + env(safe-area-inset-bottom) + 12px)!important;
+  }
+
+  /* Mobile page header: readable, thumb-sized controls, no squeezed title. */
+  body .view>.view-head{
+    display:grid!important;
+    grid-template-columns:minmax(72px,auto) minmax(0,1fr) minmax(72px,auto)!important;
+    gap:6px!important;
+    min-height:52px!important;
+    padding:6px!important;
+    margin-bottom:6px!important;
+  }
+  body .view>.view-head h2{
+    font-size:14px!important;
+    line-height:1.15!important;
+    letter-spacing:.08em!important;
+    overflow-wrap:anywhere!important;
+  }
+  body .view>.view-head .back,
+  body .view>.view-head .ghost,
+  body .view>.view-head button{
+    min-height:42px!important;
+    padding:7px 8px!important;
+    font-size:10px!important;
+    line-height:1.15!important;
+    white-space:normal!important;
+  }
+
+  /* Panels use the whole phone width without desktop-density spacing. */
+  body .module-grid,
+  body .grid.two-col,
+  body .grid.three-col,
+  body .grid.four-col{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:6px!important;
+  }
+  body .module-grid>*,
+  body .grid.two-col>*,
+  body .grid.three-col>*,
+  body .grid.four-col>*{
+    grid-column:1!important;
+    min-width:0!important;
+  }
+  body .panel,
+  body .module-grid .panel{
+    min-width:0!important;
+    padding:9px!important;
+  }
+  body .panel-title,
+  body .module-grid .panel-title{
+    min-height:34px!important;
+    margin:-9px -9px 8px!important;
+    padding:6px 8px!important;
+    font-size:10px!important;
+    line-height:1.2!important;
+    gap:7px!important;
+  }
+  body .panel-title .tiny{
+    font-size:8px!important;
+    text-align:right!important;
+    overflow-wrap:anywhere!important;
+  }
+
+  /* Inputs and primary actions are touch targets rather than desktop micro-controls. */
+  body .action,
+  body .ghost,
+  body .danger-lite,
+  body .micro-btn,
+  body .terminal-input,
+  body .terminal-area,
+  body select,
+  body input,
+  body textarea{
+    min-height:44px;
+  }
+  body .action,
+  body .danger-lite{
+    font-size:10px!important;
+    line-height:1.2!important;
+    white-space:normal!important;
+  }
+  body .terminal-input,
+  body .terminal-area,
+  body select,
+  body input,
+  body textarea{
+    font-size:16px!important; /* prevents iOS focus zoom */
+    line-height:1.25!important;
+  }
+  body .field-label{
+    font-size:9px!important;
+    margin-top:8px!important;
+  }
+  body .muted{
+    font-size:10px!important;
+    line-height:1.45!important;
+  }
+
+  /* Bottom navigation remains usable around iPhone home indicator / Android gesture bar. */
+  body .tabbar{
+    height:calc(62px + env(safe-area-inset-bottom))!important;
+    min-height:62px!important;
+    padding:5px 5px max(6px,env(safe-area-inset-bottom))!important;
+    gap:4px!important;
+  }
+  body .tabbar .tab-btn{
+    min-width:0!important;
+    height:48px!important;
+    min-height:48px!important;
+    padding:3px 2px!important;
+  }
+  body .tabbar .tab-btn span{
+    font-size:18px!important;
+    line-height:18px!important;
+  }
+  body .tabbar .tab-btn small{
+    font-size:8px!important;
+    line-height:10px!important;
+    letter-spacing:.04em!important;
+  }
+  body .tab-sheet{
+    max-height:min(76dvh,690px)!important;
+    overflow-y:auto!important;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  }
+  body .tab-sheet-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+  body .sheet-tab{
+    min-height:64px!important;
+    padding:8px!important;
+  }
+
+  /* Terrain map: map stays dominant; controls stay compact and reachable. */
+  #map .view-head{
+    grid-template-columns:minmax(72px,auto) minmax(0,1fr)!important;
+  }
+  #map .view-head h2{
+    text-align:right!important;
+  }
+  #map .view-head-actions{
+    grid-column:1/-1!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    width:100%!important;
+    gap:6px!important;
+  }
+  #map .view-head-actions .ghost{
+    width:100%!important;
+    min-width:0!important;
+  }
+  #map .terrain-map-card{
+    margin-bottom:6px!important;
+  }
+  #map .main-real-map{
+    height:clamp(320px,52dvh,520px)!important;
+    min-height:320px!important;
+    border-width:1px!important;
+  }
+  #map .map-quick-actions{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:5px!important;
+    margin-bottom:6px!important;
+  }
+  #map .map-quick-actions .action{
+    min-height:44px!important;
+    font-size:9px!important;
+    padding:6px 3px!important;
+  }
+  #map .terrain-controls-below,
+  #map .map-source-bar.terrain-controls-below{
+    grid-template-columns:1fr!important;
+    gap:6px!important;
+    padding:7px!important;
+    margin-bottom:7px!important;
+  }
+  #map .terrain-controls-below .map-control-group{
+    padding:7px!important;
+  }
+  #map .terrain-controls-below .map-control-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:5px!important;
+  }
+  #map .terrain-controls-below .map-source-btn{
+    min-height:44px!important;
+    padding:6px 5px!important;
+    font-size:9px!important;
+  }
+  #map .terrain-controls-below #mapLiveLocation{
+    grid-column:1/-1!important;
+  }
+  #map .offline-map-grid{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+  #map .offline-map-status .readouts{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  /* Route planner gets a phone-specific control hierarchy instead of one long desktop row. */
+  #route .route-planner-panel{
+    padding:7px!important;
+  }
+  #route .route-planner-panel>.panel-title{
+    margin:-7px -7px 7px!important;
+  }
+  #route .route-planner-toolbar{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:6px!important;
+  }
+  #route .route-planner-mode,
+  #route .route-anchor-readout{
+    grid-column:1/-1!important;
+  }
+  #route .route-planner-toolbar .action,
+  #route .route-planner-toolbar button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+  }
+  #route .route-planner-real-map{
+    height:clamp(330px,50dvh,520px)!important;
+    min-height:330px!important;
+  }
+  #route .route-diagnostic-strip,
+  #route .gaia-route-layer-bar{
+    gap:5px!important;
+    padding:6px!important;
+    overflow-wrap:anywhere!important;
+  }
+  #route .gaia-route-layer-bar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  #route .route-planner-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:5px!important;
+  }
+  #route .route-planner-actions>*{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    margin:0!important;
+  }
+  #route .route-live-telemetry{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:1px!important;
+  }
+  #route .route-live-telemetry>div{
+    min-width:0!important;
+    padding:7px!important;
+  }
+  #route .trail-intel-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #route .route-saved-row{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    gap:6px!important;
+    align-items:end!important;
+  }
+  #route .route-saved-row label{
+    min-width:0!important;
+  }
+  #route .route-saved-row .route-anchor-readout{
+    grid-column:1/-1!important;
+  }
+  #route .route-planner-helpbar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:3px!important;
+    font-size:9px!important;
+  }
+
+  /* Elevation/graph content: no page-wide sideways scroll. */
+  #route .elevation-profile-wrap{
+    width:100%!important;
+    overflow:hidden!important;
+  }
+  #route .elevation-profile-chart,
+  #route #routeProfile{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:auto!important;
+    min-height:170px!important;
+  }
+  #route .route-profile-hover{
+    min-width:0!important;
+    width:min(260px,calc(100% - 12px))!important;
+    max-width:calc(100% - 12px)!important;
+    grid-template-columns:1fr 1fr!important;
+    transform:translateX(-50%)!important;
+  }
+  #route .elevation-detail-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #route .elevation-detail-grid>div{
+    min-width:0!important;
+  }
+  #route .slope-legend{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:6px!important;
+    font-size:9px!important;
+  }
+  #route .elevation-table-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  #route .elevation-breakdown-table{
+    min-width:790px!important;
+  }
+
+  /* Sensor graphs stack cleanly and remain readable on narrow screens. */
+  #sensors .sensor-list{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+  #sensors .sensor-dashboard-grid{
+    display:block!important;
+  }
+  #sensors .sensor-chart-card{
+    margin-bottom:7px!important;
+  }
+  #sensors .sensor-chart{
+    width:100%!important;
+    max-width:100%!important;
+    min-height:180px!important;
+    max-height:none!important;
+    aspect-ratio:16/7!important;
+  }
+
+  /* Long status/readout values wrap inside cards rather than widening the viewport. */
+  body .readouts,
+  body .large-readouts,
+  body .sensor-list,
+  body .sunlight-summary{
+    min-width:0!important;
+  }
+  body .readouts dd,
+  body .large-readouts dd,
+  body .readouts dt,
+  body .large-readouts dt{
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+  }
+}
+
+@media(max-width:430px){
+  body .screen{
+    padding-left:4px!important;
+    padding-right:4px!important;
+  }
+  body .view>.view-head{
+    grid-template-columns:68px minmax(0,1fr) 68px!important;
+    padding:4px!important;
+  }
+  body .view>.view-head h2{
+    font-size:12px!important;
+  }
+  #map .view-head{
+    grid-template-columns:68px minmax(0,1fr)!important;
+  }
+  #map .map-quick-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #route .route-live-telemetry,
+  #route .trail-intel-grid,
+  #route .elevation-detail-grid{
+    grid-template-columns:1fr 1fr!important;
+  }
+  #route .route-profile-hover{
+    grid-template-columns:1fr!important;
+    font-size:8px!important;
+  }
+  #sensors .sensor-list{
+    grid-template-columns:1fr!important;
+  }
+}
+
+@media(max-width:350px){
+  body .view>.view-head{
+    grid-template-columns:62px minmax(0,1fr) 62px!important;
+  }
+  body .view>.view-head .back,
+  body .view>.view-head .ghost,
+  body .view>.view-head button{
+    font-size:8px!important;
+    padding:5px 4px!important;
+  }
+  #map .view-head{
+    grid-template-columns:62px minmax(0,1fr)!important;
+  }
+  #route .route-planner-actions{
+    grid-template-columns:1fr!important;
+  }
+}
