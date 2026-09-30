@@ -1562,8 +1562,16 @@ function fieldNativeEnsure(id,fallbackId,labelId){
   st.onWheel=e=>{
     if(!st.active)return;
     e.preventDefault();
-    const max=fieldMapMode==='osm'?19:17,next=Math.max(2,Math.min(max,st.zoom+(e.deltaY<0?1:-1)));
-    if(next!==st.zoom){st.zoom=next;fieldNativeRender(st);}
+    const max=fieldMapMode==='osm'?19:17;
+    if(!Number.isFinite(st.renderedZoom))st.renderedZoom=Math.round(st.zoom);
+    const dy=Math.max(-120,Math.min(120,e.deltaY));
+    st.zoom=Math.max(2,Math.min(max,st.zoom-dy/520));
+    const scale=Math.pow(2,st.zoom-st.renderedZoom),ox=Math.max(0,Math.min(st.el.clientWidth,e.offsetX)),oy=Math.max(0,Math.min(st.el.clientHeight,e.offsetY));
+    const origin=ox+'px '+oy+'px';
+    st.base.style.transformOrigin=origin;st.trails.style.transformOrigin=origin;st.overlay.style.transformOrigin=origin;
+    const visual='scale('+scale.toFixed(5)+')';st.base.style.transform=visual;st.trails.style.transform=visual;st.overlay.style.transform=visual;
+    clearTimeout(st.zoomSettleTimer);
+    st.zoomSettleTimer=setTimeout(()=>{if(!st.active)return;st.zoom=Math.max(2,Math.min(max,Math.round(st.zoom)));st.renderedZoom=st.zoom;fieldNativeResetDrag(st);fieldNativeRender(st);},110);
   };
   st.onDbl=e=>{if(!st.active)return;e.preventDefault();const max=fieldMapMode==='osm'?19:17;st.zoom=Math.min(max,st.zoom+1);fieldNativeRender(st);};
   el.addEventListener('pointerdown',st.onDown);
