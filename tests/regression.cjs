@@ -44,6 +44,13 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  ]}}]);
  assert.equal(merged.length,1);assert.equal(merged[0].distanceM,1750);
  console.log('PASS named trail display merges surface changes into one total-distance row');
+ const filtered=r.displayTrailSections([{result:{trailSections:[
+   {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:80},
+   {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:220},
+   {label:'Long Trail',name:'Long Trail',ref:null,distanceM:20}
+ ]}}]);
+ assert.equal(filtered.length,2);assert.ok(filtered.some(x=>x.name==='Long Trail'));assert.ok(filtered.some(x=>!x.name&&x.distanceM>=160.9344));
+ console.log('PASS short unnamed connector paths are hidden from the trail list');
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
