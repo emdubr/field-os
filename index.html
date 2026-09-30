@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.41" />
-  <link rel="stylesheet" href="workstation.css?v=3.41">
+  <link rel="stylesheet" href="styles.css?v=3.42" />
+  <link rel="stylesheet" href="workstation.css?v=3.42">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.41</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.42</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.41</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.42</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.41</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.42</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -233,6 +233,16 @@
 
           <span id="mapSourceDiag">MAP ENGINE STARTING…</span>
         </div>
+        <article class="panel field-tools-panel">
+          <div class="panel-title"><span>OFFLINE PLACE SEARCH</span><span class="tiny" id="offlinePlaceCount"></span></div>
+          <label for="offlinePlaceQuery">SEARCH SAVED PLACES OR LATITUDE, LONGITUDE</label>
+          <input id="offlinePlaceQuery" type="search" placeholder="Trailhead, spring, or 44.48, -73.21" autocomplete="off" />
+          <div id="offlinePlaceResults" class="offline-place-results"></div>
+          <p class="muted">Searches imported points, saved waypoints and cached water sources without a network. Results are limited to 50. Map imagery needs a separately saved map pack.</p>
+          <div class="button-row"><label class="action" for="offlinePlaceFile">IMPORT POIs</label><input id="offlinePlaceFile" type="file" accept=".json,.geojson,application/json,application/geo+json" hidden /><button class="action" id="offlinePlaceExport">EXPORT POIs</button><button class="action" id="offlinePlaceClear">CLEAR IMPORTS</button></div>
+          <p id="offlinePlaceStatus" class="muted" role="status">Import a GeoJSON point collection or JSON array with name, type, lat and lon.</p>
+        </article>
+        <article class="panel field-tools-panel"><div class="panel-title"><span>MAP LAYER PRESETS</span><span class="tiny" id="mapPresetState">ONE-TAP SETUP</span></div><div class="button-row"><button class="action" data-layer-preset="hike">HIKING</button><button class="action" data-layer-preset="street">STREET</button><button class="action" data-layer-preset="terrain">TERRAIN</button></div></article>
         <article class="panel offline-map-manager" id="offlineMapManager">
           <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
           <div class="offline-map-grid">
@@ -507,7 +517,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.41 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.42 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -859,6 +869,7 @@
           <div class="button-row"><button class="action theme-btn" data-theme-choice="green">FIELD GREEN</button><button class="action theme-btn" data-theme-choice="amber">AMBER NAV</button><button class="action theme-btn" data-theme-choice="mono">MONO</button><button class="action theme-btn" data-theme-choice="red">RED NIGHT</button></div>
         </article>
         <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">FUSION WATCH</span></div><dl class="readouts large-readouts"><div><dt>GNSS</dt><dd class="good-text">TRUSTED</dd></div><div><dt>IMU</dt><dd>ONLINE</dd></div><div><dt>BARO</dt><dd>ONLINE</dd></div><div><dt>DR MODE</dt><dd>STANDBY</dd></div></dl></article>
+        <article class="panel field-tools-panel"><div class="panel-title"><span>TOUCH CONTROLS</span><span class="tiny">PHONE / FIELD USE</span></div><div class="button-row"><button class="action" id="gloveToggle" aria-pressed="false">GLOVE MODE</button><button class="action" id="onehandToggle" aria-pressed="false">ONE-HANDED MODE</button></div><p class="muted">Glove mode enlarges touch targets. One-handed mode keeps primary tabs and map controls within reach at the bottom of the phone screen.</p></article>
         <article class="panel"><div class="panel-title"><span>PRIVACY / STORAGE</span><span class="tiny">LOCAL FIRST</span></div><p class="muted">Prototype stores trip plans, checklists, field logs, theme and preferences locally in your browser. External sync remains disabled until explicitly configured.</p><div class="button-row"><button id="wipeLocal" class="action">WIPE LOCAL DATA</button><button id="exportState" class="action">EXPORT STATE</button></div></article>
       </section>
     </main>
@@ -893,14 +904,15 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.41"></script>
-  <script src="app.js?v=3.41"></script>
-  <script src="workstation.js?v=3.41"></script>
-  <script src="map-engine.js?v=3.41"></script>
+  <script src="route-state.js?v=3.42"></script>
+  <script src="app.js?v=3.42"></script>
+  <script src="workstation.js?v=3.42"></script>
+  <script src="map-engine.js?v=3.42"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.41"></script>
-  <script src="field-intel.js?v=3.41"></script>
-  <script src="field-ops.js?v=3.41"></script>
+  <script src="route-planner.js?v=3.42"></script>
+  <script src="field-intel.js?v=3.42"></script>
+  <script src="field-ops.js?v=3.42"></script>
+  <script src="field-tools.js?v=3.42"></script>
 </body>
 </html>
 

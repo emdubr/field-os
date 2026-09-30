@@ -97,8 +97,8 @@
     return {downloadedAt:new Date().toISOString(),position:validPoint(position)?{lat:Number(position.lat),lon:Number(position.lon)}:null,timezone:String(data.timezone||''),source:'Open-Meteo',current:{time:cur.time||null,tempF:Number(cur.temperature_2m),humidity:Number(cur.relative_humidity_2m),precipIn:Number(cur.precipitation),snowfallIn:Number(cur.snowfall)*0.393701,snowDepthIn:Number(cur.snow_depth)*39.3701,freezingFt:Number(cur.freezing_level_height)*3.28084,weatherCode:Number(cur.weather_code),windMph:Number(cur.wind_speed_10m),windDir:Number(cur.wind_direction_10m),gustMph:Number(cur.wind_gusts_10m),visibilityM:Number(cur.visibility),pressureHpa:Number(cur.surface_pressure)},hourly,alerts:(Array.isArray(alerts)?alerts:[]).slice(0,20).map(a=>({id:String(a.id||a.properties?.id||''),event:String(a.event||a.properties?.event||'WEATHER ALERT'),severity:String(a.severity||a.properties?.severity||'Unknown'),headline:String(a.headline||a.properties?.headline||a.event||'Weather alert'),description:String(a.description||a.properties?.description||'').slice(0,600),expires:String(a.expires||a.properties?.expires||'')}))};
   }
   function weatherHazards(cache=weatherState.cache){
-    if(!cache)return [];const flags=[],next=(cache.hourly||[]).slice(0,12),push=(id,level,title,detail)=>{if(!flags.some(x=>x.id===id))flags.push({id,level,title,detail})};
-    for(const a of cache.alerts||[]){const sev=String(a.severity||'').toLowerCase(),level=/extreme|severe/.test(sev)?'high':'warn';push('alert-'+a.id,level,a.event||'OFFICIAL WEATHER ALERT',a.headline||a.description||'Active alert')}
+    if(!cache)return [];const flags=[],next=(cache.hourly||[]).filter(x=>{const t=Date.parse(x.time);return t>=Date.now()-3600000&&t<=Date.now()+12*3600000}).slice(0,12),push=(id,level,title,detail)=>{if(!flags.some(x=>x.id===id))flags.push({id,level,title,detail})};
+    for(const a of cache.alerts||[]){if(a.expires&&Date.parse(a.expires)<Date.now())continue;const sev=String(a.severity||'').toLowerCase(),level=/extreme|severe/.test(sev)?'high':'warn';push('alert-'+a.id,level,a.event||'OFFICIAL WEATHER ALERT',a.headline||a.description||'Active alert')}
     const thunder=next.find(x=>Number(x.weatherCode)>=95);if(thunder)push('thunder','high','THUNDERSTORM SIGNAL','Forecast weather code indicates thunderstorm conditions in the next 12 hours.');
     const gust=Math.max(0,...next.map(x=>Number.isFinite(x.gustMph)?x.gustMph:0));if(gust>=50)push('gust','high','VERY STRONG WIND GUSTS',`Forecast gusts reach about ${Math.round(gust)} mph in the next 12 hours.`);else if(gust>=35)push('gust','warn','STRONG WIND GUSTS',`Forecast gusts reach about ${Math.round(gust)} mph in the next 12 hours.`);
     const lowVis=Math.min(Infinity,...next.map(x=>Number.isFinite(x.visibilityM)?x.visibilityM:Infinity));if(lowVis<=1609)push('visibility','warn','LOW VISIBILITY',`Forecast visibility falls to about ${(lowVis/1609.344).toFixed(1)} mi.`);
@@ -108,7 +108,7 @@
   function localWeatherPressureTrend(now=Date.now()){
     const recent=weatherState.pressureHistory.filter(x=>now-x.t<=3*60*60*1000&&Number.isFinite(x.v));if(recent.length<2)return null;return recent.at(-1).v-recent[0].v;
   }
-  function setWeatherCache(cache){weatherState.cache=cache;write('weather-cache',cache);renderWeather();return cache}
+  function setWeatherCache(cache){weatherState.cache=cache;write('weather-cache',cache);renderWeather();document.dispatchEvent(new CustomEvent('fieldos:weatherchange'));return cache}
   async function fetchWeather(){
     const pos=getPosition();if(!validPoint(pos))throw new Error('A valid position is required to download weather.');
     const button=document.getElementById('weatherRefresh'),head=document.getElementById('weatherHeadState');if(button)button.disabled=true;if(head)head.textContent='DOWNLOADING…';

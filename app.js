@@ -524,11 +524,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.41',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.42',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.41';
+        const key='fieldos-sw-reloaded-v3.42';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -657,7 +657,8 @@ window.FIELD_ROUTE_STATE={
     if('anchors' in safe)safe.anchors=cleanSharedRoutePoints(safe.anchors,30);
     if('routedAnchors' in safe)safe.routedAnchors=cleanSharedRoutePoints(safe.routedAnchors,30);
     routePlan={...routePlan,...safe,points:cleanSharedRoutePoints(routePoints)};
-    saveJSON('routePlan',routePlan)
+    saveJSON('routePlan',routePlan);
+    document.dispatchEvent(new CustomEvent('fieldos:routemetadatachange'));
   },
   save:()=>saveRoutePlan(),
   current:()=>({lat:Number(currentNavPosition.lat),lon:Number(currentNavPosition.lon),alt:currentNavPosition.alt??null,source:currentNavPosition.source||'POSITION'})
@@ -975,8 +976,11 @@ async function fieldMapDb(mode,action){
       const tx=db.transaction(FIELD_MAP_STORE,mode),store=tx.objectStore(FIELD_MAP_STORE);
       let req;
       try{req=action(store);}catch(err){reject(err);return;}
-      if(req){req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);}
-      else{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);}
+      let result;
+      if(req){req.onsuccess=()=>{result=req.result};req.onerror=()=>reject(req.error);}
+      tx.oncomplete=()=>resolve(result);
+      tx.onerror=()=>reject(tx.error||new Error('Map storage failed'));
+      tx.onabort=()=>reject(tx.error||new Error('Map storage transaction aborted'));
     });
   }finally{db.close();}
 }

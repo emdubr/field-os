@@ -2,7 +2,7 @@ const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs'),vm=require(
 const dir=require('path').resolve(__dirname,'..');const errors=[],alerts=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
 const dom=new JSDOM(fs.readFileSync(dir+'/index.html','utf8'),{url:'https://test.local/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc}),w=dom.window,d=w.document;
 w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:100}),createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});
-w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
+w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
 async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out waiting for async UI state')}
@@ -10,6 +10,7 @@ for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','m
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
 let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
@@ -363,6 +364,50 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.equal(iso.window.FIELD_ROUTE_STATE.getPlan().name,'FIELD ROUTE 01');
  iso.window.close();
  console.log('PASS corrupted persisted route state recovery');
+
+ // Sparse routes must advance continuously and preserve trail changes before later geometry turns.
+ const sparse={points:[{lat:44,lon:-73},{lat:44.04,lon:-73}]};
+ w.FIELD_TURNS.generate(sparse);
+ const sparseCue=w.FIELD_TURNS.next({lat:44.01,lon:-73},sparse);
+ assert.ok(sparseCue.progressM>1000&&sparseCue.progressM<1200);
+ assert.ok(sparseCue.distanceToCueM>3200&&sparseCue.distanceToCueM<3500);
+ const named=w.FIELD_TURNS.generate(turnPlan);
+ assert.ok(named.some(c=>c.type==='trail'&&c.trail==='East Link'));
+ assert.ok(named.some(c=>c.type==='trail'&&c.trail==='Summit Trail'));
+ console.log('PASS continuous sparse-route turn progress and unsuppressed trail-name changes');
+
+ const poly={type:'Feature',properties:{name:'Crossing'},geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,1],[0,0]],[[.2,.2],[.8,.2],[.8,.8],[.2,.8],[.2,.2]]]}};
+ w.FIELD_HAZARDS.ingest({features:[poly]});
+ assert.equal(w.FIELD_HAZARDS.screen({points:[{lat:.1,lon:-1},{lat:.1,lon:2}]}).length,1);
+ assert.equal(w.FIELD_HAZARDS.screen({points:[{lat:.4,lon:.4},{lat:.6,lon:.6}]}).length,0);
+ assert.equal(w.FIELD_HAZARDS.screen({points:[{lat:2,lon:-1},{lat:2,lon:2}]}).length,0);
+ assert.equal(w.FIELD_HAZARDS.contains(poly,{lat:null,lon:null}),false);
+ console.log('PASS hazard crossings between sparse vertices, polygon holes and invalid coordinates');
+
+ const previousFetch=w.fetch;w.fetch=async()=>{throw new Error('test outage')};
+ click('waterSearchOnline');await tick();assert.equal(d.getElementById('waterSearchOnline').disabled,false);
+ assert.match(d.getElementById('waterIntelState').textContent,/SEARCH FAILED/);w.fetch=previousFetch;
+ await w.FIELD_WATER.searchOnline(async(url,init)=>{assert.match(decodeURIComponent(init.body),/out body/);return {ok:true,json:async()=>({elements:[{id:1,lat:44,lon:-73,tags:{natural:'spring'}}]})}});
+ assert.equal(w.FIELD_WATER.state.cache.items.length,1);
+ console.log('PASS failed water lookup unlocks button and successful query requests coordinates');
+
+ const oldFlags=w.FIELD_WEATHER.hazards({hourly:[{time:new Date(Date.now()-86400000).toISOString(),weatherCode:95}],alerts:[{id:'expired',expires:new Date(Date.now()-3600000).toISOString(),event:'Expired storm'}]});
+ assert.equal(oldFlags.length,0);
+ let weatherChanges=0;d.addEventListener('fieldos:weatherchange',()=>weatherChanges++);w.FIELD_WEATHER.setCache(null);assert.equal(weatherChanges,1);
+ console.log('PASS weather screening excludes expired data and notifies dependent panels');
+
+ const imported=w.FIELD_PLACES.import([{name:'Cedar Spring',type:'WATER',lat:44.5,lon:-73.2},{name:'Bad',lat:null,lon:null},{name:'Bad range',lat:91,lon:0},{name:'<img src=x onerror=alert(1)>',lat:44,lon:-73}]);
+ assert.equal(imported.accepted,2);assert.equal(w.FIELD_PLACES.search('cedar water').length,1);
+ assert.equal(w.FIELD_PLACES.search('44.5, -73.2')[0].lat,44.5);assert.equal(w.FIELD_PLACES.search('99, 180').length,0);
+ assert.equal(w.FIELD_PLACES.import(w.FIELD_PLACES.export()).total,2);
+ assert.throws(()=>w.FIELD_PLACES.import({hello:'world'}));assert.equal(w.FIELD_PLACES.export().features.length,2);
+ assert.equal(d.querySelector('#offlinePlaceResults img'),null);
+ const firstResult=d.querySelector('#offlinePlaceResults button');assert.ok(firstResult);
+ const oldSet=w.FIELD_MAP_ENGINE.setView;let placeCentered=false;w.FIELD_MAP_ENGINE.setView=()=>{placeCentered=true};firstResult.click();assert.ok(placeCentered);w.FIELD_MAP_ENGINE.setView=oldSet;
+ click('gloveToggle');assert.ok(d.body.classList.contains('field-glove'));assert.equal(w.localStorage.getItem('fieldos-v12-touch-glove'),'true');click('gloveToggle');
+ click('onehandToggle');assert.equal(d.getElementById('onehandToggle').getAttribute('aria-pressed'),'true');click('onehandToggle');
+ assert.equal(w.FIELD_PRESETS.apply('hike'),true);assert.equal(w.FIELD_MAP_ENGINE.mode,'topo');assert.equal(w.FIELD_MAP_ENGINE.trails,true);assert.equal(w.FIELD_PRESETS.apply('invalid'),false);
+ console.log('PASS offline POI round trip, filtering, invalid imports, escaping, map selection, layer presets and persisted touch modes');
 
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});

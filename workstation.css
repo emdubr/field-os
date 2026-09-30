@@ -3181,3 +3181,20 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .turn-nav-panel{margin-top:7px}.turn-nav-hero{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;align-items:center;border:1px solid var(--line);background:var(--panel2);padding:8px;margin-bottom:8px}.turn-nav-arrow{font-size:58px;line-height:1;text-align:center;transform-origin:center;transition:transform .18s ease}.turn-nav-hero strong{font-size:13px;line-height:1.25}.turn-nav-distance{font-size:18px;margin-top:3px}.turn-nav-hero small{display:block;color:var(--dim);font-size:8px;line-height:1.35;margin-top:3px}
 @media(max-width:900px){.route-performance-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.turn-nav-hero{grid-template-columns:58px minmax(0,1fr)}.turn-nav-arrow{font-size:46px}.turn-nav-hero strong{font-size:11px}.condition-row small{font-size:9px}}
+
+/* Offline tools and optional larger field controls. */
+.field-tools-panel { min-width:0; }
+.field-tools-panel>label,.field-tools-panel>input { display:block; margin:12px; }
+.field-tools-panel>input { width:calc(100% - 24px); min-width:0; min-height:44px; background:var(--panel2); color:var(--fg); border:1px solid var(--line); padding:10px; font:inherit; }
+.offline-place-results { display:grid; gap:6px; padding:12px; max-height:330px; overflow:auto; }
+.offline-place-result { display:grid; gap:6px; text-align:left; width:100%; min-width:0; padding:12px; background:var(--panel2); border:1px solid var(--line); overflow-wrap:anywhere; }
+.offline-place-result span,.offline-place-result small { color:var(--dim); }
+.field-tools-panel [aria-pressed="true"] { background:var(--fg); color:var(--bg); }
+body.field-glove button,body.field-glove .action,body.field-glove input:not([type="checkbox"]):not([type="radio"]),body.field-glove select { min-height:56px!important; }
+body.field-glove .button-row { gap:10px; flex-wrap:wrap; }
+body.field-glove .tabbar { min-height:76px; }
+@media(max-width:767px){
+  body.field-onehand #map .map-quick-actions { position:sticky; bottom:calc(78px + env(safe-area-inset-bottom)); z-index:40; padding:8px; background:var(--panel); border:1px solid var(--line); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  body.field-onehand .tabbar { padding-left:max(8px,env(safe-area-inset-left)); padding-right:max(8px,env(safe-area-inset-right)); }
+  body.field-glove .shell { padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
+}
