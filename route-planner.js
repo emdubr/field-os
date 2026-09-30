@@ -342,7 +342,14 @@
       attributionControl:true,
       preferCanvas:false,
       doubleClickZoom:false,
-      tap:true
+      tap:true,
+      zoomAnimation:true,
+      fadeAnimation:true,
+      markerZoomAnimation:true,
+      zoomSnap:.25,
+      zoomDelta:.5,
+      wheelDebounceTime:24,
+      wheelPxPerZoomLevel:100
     }).setView([here.lat,here.lon],14);
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
