@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.17" />
-  <link rel="stylesheet" href="workstation.css?v=3.17">
+  <link rel="stylesheet" href="styles.css?v=3.18" />
+  <link rel="stylesheet" href="workstation.css?v=3.18">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.17</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.18</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.17</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.18</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.17</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.18</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -113,7 +113,41 @@
               <article class="terminal-panel nav-console detailed-nav" data-open="nav">
                 <div class="terminal-title">♙ NAVIGATION <span>POSITION SOURCE BELOW</span></div>
                 <div class="nav-toprow"><div class="nav-readout">N 44.4759°<br>W 73.2121°<br>ELEV 3,420 ft<br>ACC ±4 m</div><div class="nav-fix">FIX<br><b>3D</b><br>HDOP 0.9</div></div>
-                <div class="compass-dial detailed-compass"><b>N</b><em>E</em><i class="compass-needle"></i><strong id="heading">245°</strong><small>SW</small></div>
+                <div class="home-compass-cluster">
+                  <div class="field-compass home-field-compass" id="homeCompass" role="img" aria-label="Home navigation compass">
+                    <svg class="field-compass-svg" viewBox="0 0 200 200" aria-hidden="true">
+                      <circle class="compass-svg-outer" cx="100" cy="100" r="92"/>
+                      <circle class="compass-svg-inner" cx="100" cy="100" r="68"/>
+                      <g class="compass-svg-cross">
+                        <line x1="100" y1="17" x2="100" y2="31"/><line x1="183" y1="100" x2="169" y2="100"/>
+                        <line x1="100" y1="183" x2="100" y2="169"/><line x1="17" y1="100" x2="31" y2="100"/>
+                        <line x1="158.7" y1="41.3" x2="149" y2="51"/><line x1="158.7" y1="158.7" x2="149" y2="149"/>
+                        <line x1="41.3" y1="158.7" x2="51" y2="149"/><line x1="41.3" y1="41.3" x2="51" y2="51"/>
+                      </g>
+                      <g id="homeCompassTicks" class="compass-svg-ticks"></g>
+                      <text class="compass-svg-cardinal north" x="100" y="28">N</text>
+                      <text class="compass-svg-cardinal" x="173" y="104">E</text>
+                      <text class="compass-svg-cardinal" x="100" y="181">S</text>
+                      <text class="compass-svg-cardinal" x="27" y="104">W</text>
+                      <text class="compass-svg-intercardinal" x="151" y="54">NE</text>
+                      <text class="compass-svg-intercardinal" x="151" y="155">SE</text>
+                      <text class="compass-svg-intercardinal" x="49" y="155">SW</text>
+                      <text class="compass-svg-intercardinal" x="49" y="54">NW</text>
+                      <g id="homeCompassRotor" class="compass-svg-rotor">
+                        <path class="compass-svg-north-needle" d="M100 96 L94 42 L100 28 L106 42 Z"/>
+                        <path class="compass-svg-south-needle" d="M100 104 L95 153 L100 166 L105 153 Z"/>
+                      </g>
+                      <circle class="compass-svg-center" cx="100" cy="100" r="7"/>
+                      <path class="compass-svg-lubber" d="M100 4 L94 16 L106 16 Z"/>
+                    </svg>
+                  </div>
+                  <div class="home-compass-readout">
+                    <strong id="homeHeading">245°</strong><small id="homeHeadingCardinal">SW</small>
+                    <span id="homeCompassSource">DEMO</span>
+                  </div>
+                  <button id="homeEnableCompass" class="compass-enable-btn home-compass-enable" type="button">ENABLE DEVICE COMPASS</button>
+                  <small id="homeCompassPermissionState" class="compass-permission-state">Same heading source as NAV CORE.</small>
+                </div>
                 <div class="nav-stats"><span>SPEED <b id="speed">2.4 mph</b></span><span>BEARING <b>245°</b></span><span>DIST NEXT <b>2.4 mi</b></span><span>ETA <b>1h 02m</b></span><span>VERT SPD <b>+380 ft/h</b></span><span>COURSE <b>238°</b></span></div>
               </article>
               <article class="terminal-panel sensors-console detailed-sensors" data-open="sensors">
@@ -320,7 +354,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.17 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.18 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -555,12 +589,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.17"></script>
-  <script src="app.js?v=3.17"></script>
-  <script src="workstation.js?v=3.17"></script>
-  <script src="map-engine.js?v=3.17"></script>
+  <script src="route-state.js?v=3.18"></script>
+  <script src="app.js?v=3.18"></script>
+  <script src="workstation.js?v=3.18"></script>
+  <script src="map-engine.js?v=3.18"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.17"></script>
+  <script src="route-planner.js?v=3.18"></script>
 </body>
 </html>
 
