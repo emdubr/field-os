@@ -23,6 +23,7 @@
   let plannerPreviewLayer=null;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
+  let plannerDirectionLayer=null;
   let plannerUserLayer=null;
   let plannerBaseFallbackActive=false;
   let hasActivated=false;
@@ -31,7 +32,9 @@
   let followWatchId=null;
   let followEnabled=false;
   let latestFollowPosition=null;
+  let gaiaRouteEnabled=true;
   const SAVED_ROUTES_KEY='fieldos-v12-saved-routes';
+  const GAIA_LAYER_KEY='fieldos-v12-gaia-route-layer';
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -78,7 +81,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.16',
+      'BUILD: v3.21',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -116,6 +119,8 @@
     return (Array.isArray(list)?list:[]).filter(valid).slice(0,30).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
   }
   function loadAnchors(){
+    try{gaiaRouteEnabled=localStorage.getItem(GAIA_LAYER_KEY)!=='off'}catch{gaiaRouteEnabled=true}
+    updateGaiaLayerButton();
     const plan=planMeta(),pts=state()?.getPoints?.()||[];
     anchors=sanitizeAnchors(plan.anchors);
     if(!anchors.length&&pts.length>=2)anchors=[{lat:+pts[0].lat,lon:+pts[0].lon},{lat:+pts.at(-1).lat,lon:+pts.at(-1).lon}];
@@ -132,6 +137,75 @@
     $('undoRoutePoint')?.toggleAttribute('disabled',count===0||busy);
     $('reverseRoute')?.toggleAttribute('disabled',count<2||busy);
     $('clearRoute')?.toggleAttribute('disabled',count===0);
+  }
+
+  function geometryFromLegs(legs){
+    const out=[];
+    for(const leg of Array.isArray(legs)?legs:[]){
+      const pts=(leg?.result?.points||[]).filter(valid).map(p=>({lat:+p.lat,lon:+p.lon}));
+      if(pts.length<2)continue;
+      if(!out.length)out.push(...pts);
+      else{
+        const join=meters(out.at(-1),pts[0]);
+        if(join>2){
+          // Geometry should normally be continuous; preserve the actual snapped
+          // points rather than inventing a straight anchor-to-anchor shortcut.
+          out.push(pts[0]);
+        }
+        out.push(...pts.slice(1));
+      }
+    }
+    return dedupe(out);
+  }
+  function authoritativeGeometry(route=state()?.getPoints?.()||[]){
+    const plan=planMeta();
+    if(plan.routingMode==='trail'){
+      const fromLegs=geometryFromLegs(plan.legs);
+      if(fromLegs.length>1)return fromLegs;
+    }
+    return dedupe((Array.isArray(route)?route:[]).filter(valid));
+  }
+  function routeBearing(a,b){
+    const r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r);
+    const x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lon-a.lon)*r);
+    return (Math.atan2(y,x)*180/Math.PI+360)%360;
+  }
+  function updateGaiaLayerButton(){
+    const btn=$('gaiaRouteLayer');
+    if(!btn)return;
+    btn.classList.toggle('active',gaiaRouteEnabled);
+    btn.setAttribute('aria-pressed',gaiaRouteEnabled?'true':'false');
+    btn.textContent=gaiaRouteEnabled?'GAIA ROUTE LAYER // ON':'GAIA ROUTE LAYER // OFF';
+  }
+  function toggleGaiaRouteLayer(){
+    gaiaRouteEnabled=!gaiaRouteEnabled;
+    try{localStorage.setItem(GAIA_LAYER_KEY,gaiaRouteEnabled?'on':'off')}catch{}
+    updateGaiaLayerButton();
+    overlay(state()?.getPoints?.()||[]);
+  }
+  function drawRouteDirections(points,c){
+    if(!plannerDirectionLayer||!gaiaRouteEnabled)return;
+    const pts=(Array.isArray(points)?points:[]).filter(valid);
+    if(pts.length<2)return;
+    const cumulative=[0];let total=0;
+    for(let i=1;i<pts.length;i++){total+=meters(pts[i-1],pts[i]);cumulative.push(total)}
+    if(total<80)return;
+    const count=clamp(Math.floor(total/450),2,10);
+    for(let k=1;k<=count;k++){
+      const target=total*(k/(count+1));
+      let i=1;while(i<cumulative.length&&cumulative[i]<target)i++;
+      if(i>=pts.length)i=pts.length-1;
+      const a=pts[i-1],b=pts[i],seg=Math.max(1,cumulative[i]-cumulative[i-1]);
+      const t=clamp((target-cumulative[i-1])/seg,0,1);
+      const p={lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t};
+      const deg=routeBearing(a,b);
+      const icon=L.divIcon({
+        className:'gaia-route-direction-wrap',
+        html:`<span class="gaia-route-direction" style="transform:rotate(${deg}deg)">▲</span>`,
+        iconSize:[18,18],iconAnchor:[9,9]
+      });
+      L.marker([p.lat,p.lon],{pane:'fieldRouteDirectionPane',icon,interactive:false}).addTo(plannerDirectionLayer);
+    }
   }
 
   function plannerColors(){
@@ -205,11 +279,15 @@
     snapPane.style.pointerEvents='none';
     const anchorPane=plannerMap.createPane('fieldRouteAnchorPane');
     anchorPane.style.zIndex='630';
+    const directionPane=plannerMap.createPane('fieldRouteDirectionPane');
+    directionPane.style.zIndex='625';
+    directionPane.style.pointerEvents='none';
 
     plannerRouteLayer=L.layerGroup().addTo(plannerMap);
     plannerPreviewLayer=L.layerGroup().addTo(plannerMap);
     plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
     plannerSnapLayer=L.layerGroup().addTo(plannerMap);
+    plannerDirectionLayer=L.layerGroup().addTo(plannerMap);
     plannerUserLayer=L.layerGroup().addTo(plannerMap);
 
     plannerMap.on('click',e=>{if(!busy)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
@@ -237,14 +315,16 @@
 
   function overlay(route=state()?.getPoints?.()||[]){
     const map=ensurePlannerMap();
-    if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer){
+    if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer&&plannerDirectionLayer){
       const c=plannerColors();
-      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
-      const pts=(Array.isArray(route)?route:[]).filter(valid);
-      $('routePlannerMap')?.classList.toggle('route-has-line',pts.length>1);
+      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();plannerDirectionLayer.clearLayers();
+      const pts=authoritativeGeometry(route);
+      $('routePlannerMap')?.classList.toggle('route-has-line',gaiaRouteEnabled&&pts.length>1);
+      const geometryState=$('routeGeometryState');
+      if(geometryState)geometryState.textContent=pts.length>1?`SNAPPED GEOMETRY // ${pts.length} PTS`:'SNAPPED GEOMETRY // NONE';
 
       // Gaia-style routed line: dark casing underneath a bright route line.
-      if(pts.length>1){
+      if(gaiaRouteEnabled&&pts.length>1){
         const latlngs=pts.map(p=>[p.lat,p.lon]);
         L.polyline(latlngs,{
           pane:'fieldRoutePane',color:'#050807',weight:11,opacity:.92,lineCap:'round',lineJoin:'round',interactive:false
@@ -252,6 +332,10 @@
         L.polyline(latlngs,{
           pane:'fieldRoutePane',color:c.route,weight:6,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
+        L.polyline(latlngs,{
+          pane:'fieldRoutePane',color:'#ffffff',weight:2,opacity:.82,lineCap:'round',lineJoin:'round',interactive:false
+        }).addTo(plannerRouteLayer);
+        drawRouteDirections(pts,c);
       }
 
       // While planning, always show the unresolved leg(s) immediately as a dashed guide.
@@ -314,8 +398,13 @@
       const st=state(),firstOpen=!hasActivated;
       if(st){
         loadAnchors();
-        const pts=st.getPoints?.()||[];
+        const rawPts=st.getPoints?.()||[];
         const plan=st.getPlan?.()||{};
+        const pts=authoritativeGeometry(rawPts);
+        if(plan.routingMode==='trail'&&pts.length>1&&pts.length!==rawPts.length){
+          st.setPoints?.(pts);
+          st.setMeta?.({...plan,points:pts});
+        }
         const savedProfile=Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1?{
           samples:plan.elevationProfile,
           gainFt:Number(plan.elevationGainFt)||0,
@@ -325,7 +414,7 @@
           maxGrade:Number(plan.grade)||0
         }:null;
         applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
-        renderSavedRoutes();updateFollowButton();
+        renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();
         if(latestFollowPosition)drawPlannerPosition(latestFollowPosition);
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
@@ -371,6 +460,7 @@
       else if(action==='recenter')recenter();
       else if(action==='follow')toggleFollow();
       else if(action==='load-saved')loadSelectedRoute();
+      else if(action==='gaia-layer')toggleGaiaRouteLayer();
     }));
     $('routeSnapMode')?.addEventListener('change',()=>{
       state()?.setMeta?.({routingMode:routeMode()});
@@ -1002,13 +1092,15 @@
         return;
       }
       status(`LOADING OSM TRAILS -- LEG 1 / ${anchors.length-1}`,'loading');
-      const full=[],legs=[];let maxSnap=0;
+      const full=[],legs=[];let maxSnap=0,carrySnap=null;
       for(let i=1;i<anchors.length;i++){
         if(signal.aborted)return;
         status(`SNAPPING TO TRAILS -- LEG ${i} / ${anchors.length-1}`,'loading');
-        const leg=await routeLeg(anchors[i-1],anchors[i],signal);
+        const routeStart=carrySnap?{lat:carrySnap.lat,lon:carrySnap.lon}:anchors[i-1];
+        const leg=await routeLeg(routeStart,anchors[i],signal);
+        carrySnap={lat:leg.endSnap.lat,lon:leg.endSnap.lon};
         if(signal.aborted)return;
-        legs.push({a:{...anchors[i-1]},b:{...anchors[i]},result:leg});
+        legs.push({a:{...anchors[i-1]},b:{...anchors[i]},routeStart:{...routeStart},result:leg});
         if(leg.diagnostics){
           diagnostic('RP-000',`LEG ${i} OK`,`SNAP ${leg.diagnostics.startSnapM}m → ${leg.diagnostics.endSnapM}m | GRAPH ${leg.diagnostics.nodes}N/${leg.diagnostics.segments}S`,leg.diagnostics);
         }
