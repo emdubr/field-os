@@ -527,7 +527,7 @@ console.log('PASS v3.61 route planner and ETA reclaim full desktop width without
 
 assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
-assert.ok(workstationCss.includes('v3.65 QA/UI hardening'));
+assert.ok(workstationCss.includes('v3.66 QA/UI hardening'));
 assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
 assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
 console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
@@ -571,32 +571,40 @@ console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime b
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
-assert.ok(workstationCss.includes('v3.65 UI COHERENCE LAYER'));
+assert.ok(workstationCss.includes('v3.66 UI COHERENCE LAYER'));
 assert.ok(workstationCss.includes('body .module-grid>*{grid-column:1!important;min-width:0!important}'));
 assert.ok(workstationCss.includes('height:auto!important'));
-assert.ok(workstationCss.includes('v3.65 chrome cleanup'));
+assert.ok(workstationCss.includes('v3.66 chrome cleanup'));
 assert.ok(workstationCss.includes('.status-strip{overflow-x:auto'));
-console.log('PASS v3.65 coherent panel flow, mobile layout, and chrome overflow handling');
+console.log('PASS v3.66 coherent panel flow, mobile layout, and chrome overflow handling');
 
 assert.ok(workstationJs.includes('no implicit first-card hero'));
 assert.ok(!workstationJs.includes("grid.querySelector(':scope > .panel');hero?.classList.add('module-hero')"));
-assert.ok(workstationCss.includes('v3.65 WORKSTATION ARCHITECTURE'));
+assert.ok(workstationCss.includes('v3.66 WORKSTATION ARCHITECTURE'));
 assert.ok(workstationCss.includes('--ws-nav-w:224px'));
 assert.ok(workstationCss.includes('body .module-grid>.module-hero{'));
 assert.ok(workstationCss.includes('grid-column:auto!important'));
-console.log('PASS v3.65 workstation uses explicit shell/grid/full-width ownership without implicit hero cards');
+console.log('PASS v3.66 workstation uses explicit shell/grid/full-width ownership without implicit hero cards');
 
-assert.ok(workstationCss.includes('v3.65 GAP-FREE WORKSTATION ROWS'));
+assert.ok(workstationCss.includes('v3.66 GAP-FREE WORKSTATION ROWS'));
 assert.ok(workstationCss.includes('body .module-grid>.module-slot{display:flex!important}'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(appJs.includes("fieldActivePackId=rec.id;fieldActivePackRecord=rec"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-65'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-66'"));
 assert.ok(swJs.includes("./app.js?v=3.64"));
-console.log('PASS v3.65 fills workstation rows and hardens offline map/cache recovery');
+console.log('PASS v3.66 fills workstation rows and hardens offline map/cache recovery');
 
-assert.ok(workstationCss.includes('v3.65 DENSE DESKTOP FLOW'));
+assert.ok(workstationCss.includes('v3.66 DENSE DESKTOP FLOW'));
 assert.ok(workstationCss.includes('columns:2!important'));
 assert.ok(workstationCss.includes('break-inside:avoid!important'));
 assert.ok(workstationCss.includes('column-span:all!important'));
-console.log('PASS v3.65 desktop cards pack independently without paired-row empty space');
+console.log('PASS v3.66 desktop cards pack independently without paired-row empty space');
+
+assert.ok(workstationCss.includes('v3.66 CONSOLIDATED UI AUTHORITY'));
+assert.ok(!workstationCss.includes('v3.64 GAP-FREE WORKSTATION ROWS'));
+assert.ok(appJs.includes("if(document.hidden)return;\n  demo.heading"));
+assert.ok(appJs.includes("setInterval(()=>{if(!document.hidden)updateHandheldStatus()},5000)"));
+assert.ok(fieldIntelJs.includes("setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))renderPositionConfidence()},5000)"));
+assert.ok(workstationJs.includes("setInterval(()=>{if(!document.hidden)scheduleRefresh()},5000)"));
+console.log('PASS v3.66 consolidates UI overrides and throttles idle runtime work');
