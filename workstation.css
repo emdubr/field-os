@@ -1218,3 +1218,62 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   #map .map-control-group{padding:6px}
   #map .map-quick-actions .action{min-height:44px!important}
 }
+
+
+/* v3.15 terrain map spacious control dock */
+#map .map-source-bar{
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+  padding:10px!important;
+}
+#map .map-control-group{
+  width:100%;
+  padding:10px!important;
+}
+#map .map-control-group-title{
+  margin-bottom:8px!important;
+  font-size:12px!important;
+}
+#map .map-control-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+#map .map-control-grid .map-source-btn{
+  min-height:48px!important;
+  padding:10px 8px!important;
+  font-size:13px!important;
+  line-height:1.3!important;
+}
+#map .map-quick-actions{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:10px 0!important;
+}
+#map .map-quick-actions .action{
+  min-height:46px!important;
+  padding:9px 10px!important;
+  font-size:13px!important;
+}
+#map #mapSourceDiag{
+  padding:8px 10px!important;
+  font-size:11px!important;
+}
+@media(max-width:760px){
+  #map .map-control-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #map .map-quick-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  #map .map-control-grid .map-source-btn,
+  #map .map-quick-actions .action{
+    min-height:50px!important;
+    font-size:13px!important;
+  }
+}
+@media(max-width:420px){
+  #map .map-source-bar{padding:8px!important}
+  #map .map-control-group{padding:8px!important}
+  #map .map-control-grid{gap:7px!important}
+  #map .map-quick-actions{gap:7px!important}
+}
