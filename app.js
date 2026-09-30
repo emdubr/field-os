@@ -1011,6 +1011,8 @@ async function saveFieldMapPackBlob(blob,name,source='import'){
   const id='map-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
   const rec={id,name:safeName,size:file.size,blob:file,created:new Date().toISOString(),source,minZoom:header.minZoom,maxZoom:header.maxZoom,bounds:[header.minLon,header.minLat,header.maxLon,header.maxLat],center:[header.centerLat,header.centerLon,header.centerZoom]};
   await fieldMapDb('readwrite',s=>s.put(rec));
+  fieldActivePackId=rec.id;fieldActivePackRecord=rec;storageSet(STORE_PREFIX+'map-pack',rec.id);
+  if(navigator.onLine===false||fieldMapMode==='offline'){fieldMapMode='offline';storageSet(STORE_PREFIX+'map-source','offline');}
   return rec;
 }
 async function refreshFieldMapPackUI(){
@@ -1162,7 +1164,10 @@ function drawFieldMapOverlays(state){
   });
 }
 async function resolveActiveFieldPack(){
-  if(!fieldActivePackId)return null;
+  if(!fieldActivePackId){
+    try{const packs=await listFieldMapPacks();if(packs.length){packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)));fieldActivePackId=packs[0].id;fieldActivePackRecord=packs[0];storageSet(STORE_PREFIX+'map-pack',fieldActivePackId);if(navigator.onLine===false){fieldMapMode='offline';storageSet(STORE_PREFIX+'map-source','offline');}return fieldActivePackRecord;}}catch{}
+    return null;
+  }
   if(fieldActivePackRecord?.id===fieldActivePackId)return fieldActivePackRecord;
   try{fieldActivePackRecord=await getFieldMapPack(fieldActivePackId);return fieldActivePackRecord;}catch{return null;}
 }
