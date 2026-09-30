@@ -1062,6 +1062,37 @@
     }
     return out;
   }
+  function displayTrailSections(legs=[]){
+    const out=[],named=new Map();
+    for(const leg of Array.isArray(legs)?legs:[]){
+      for(const sec of leg?.result?.trailSections||[]){
+        const distanceM=Number(sec.distanceM)||0;
+        const name=String(sec.name||'').trim();
+        const ref=String(sec.ref||'').trim();
+        // Named trails/routes are one logical display item even when OSM
+        // changes surface/highway tags along the same trail.
+        if(name||ref){
+          const identity=(name||ref).trim().toLocaleLowerCase();
+          if(named.has(identity)){
+            named.get(identity).distanceM+=distanceM;
+          }else{
+            const item={...sec,label:trailLabel(sec),distanceM};
+            named.set(identity,item);
+            out.push(item);
+          }
+          continue;
+        }
+        // Keep unnamed geometry sequential instead of incorrectly combining
+        // separate unnamed paths that happen to share generic OSM tags.
+        const last=out.at(-1);
+        if(last&&!String(last.name||'').trim()&&!String(last.ref||'').trim()&&last.label===sec.label){
+          last.distanceM+=distanceM;
+        }else out.push({...sec,distanceM});
+      }
+    }
+    return out;
+  }
+
   function roughnessScore(section={}){
     const surface=String(section.surface||'').toLowerCase();
     const smooth=String(section.smoothness||'').toLowerCase();
@@ -1126,15 +1157,16 @@
   function renderTrailNames(legs=planMeta().legs||[]){
     const box=$('routeTrailNames'),count=$('routeTrailNameCount');
     if(!box)return;
-    const sections=combinedTrailSections(legs);
+    const sections=displayTrailSections(legs);
     if(count)count.textContent=String(sections.length);
     if(!sections.length){
       box.innerHTML='<div class="route-trail-empty">TRAIL NAMES // WAITING FOR SNAPPED ROUTE</div>';
       return;
     }
     box.innerHTML=sections.map((s,i)=>{
-      const detail=[s.highway?String(s.highway).replaceAll('_',' ').toUpperCase():'',s.surface?String(s.surface).replaceAll('_',' ').toUpperCase():'',s.sacScale?String(s.sacScale).replaceAll('_',' ').toUpperCase():''].filter(Boolean).join(' // ');
-      return `<div class="route-trail-row"><b>${i+1}</b><span><strong>${escapeHtml(s.label)}</strong><small>${detail||'OSM WALKABLE WAY'}</small></span><em>${(s.distanceM/1609.344).toFixed(2)} mi</em></div>`;
+      const named=String(s.name||s.ref||'').trim();
+      const detail=named?'TOTAL ON THIS TRAIL':'UNNAMED OSM SEGMENT';
+      return `<div class="route-trail-row"><b>${i+1}</b><span><strong>${escapeHtml(s.label)}</strong><small>${detail}</small></span><em>${(s.distanceM/1609.344).toFixed(2)} mi</em></div>`;
     }).join('');
   }
   function escapeHtml(value=''){
