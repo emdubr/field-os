@@ -3259,3 +3259,109 @@ input,select,textarea,button{max-width:100%;box-sizing:border-box}
   .tab-btn{height:38px!important;min-height:38px!important}
   .shell{padding-bottom:calc(var(--mobile-tab-h) + 5px)!important}
 }
+
+
+/* v3.53 UI refinement — hierarchy, touch ergonomics, and coherent field-console surfaces. */
+:root{
+  --ui-radius:6px;
+  --ui-gap:10px;
+  --ui-touch:42px;
+}
+.panel,.terminal-panel,.console-shell,.detail-console{
+  border-radius:var(--ui-radius);
+}
+.panel-title{
+  min-height:28px;
+  align-items:center;
+  letter-spacing:.055em;
+}
+.action,.micro-btn,.terminal-btn,.map-quick-actions button{
+  transition:transform 90ms ease,border-color 120ms ease,background-color 120ms ease,opacity 120ms ease;
+}
+.action:active,.micro-btn:active,.terminal-btn:active,.map-quick-actions button:active{
+  transform:translateY(1px);
+}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+input,select,textarea{
+  border-radius:3px;
+}
+.muted,.tiny,.microcopy{
+  line-height:1.45;
+}
+.readouts dt,.readouts dd{
+  line-height:1.3;
+}
+.condition-list{
+  scrollbar-gutter:stable;
+}
+.map-shell,.map-stage,#routePlannerMap{
+  border-radius:var(--ui-radius);
+  overflow:hidden;
+}
+.leaflet-control-zoom a{
+  width:34px!important;
+  height:34px!important;
+  line-height:34px!important;
+}
+.leaflet-control-attribution{
+  max-width:min(72vw,520px);
+  white-space:normal;
+}
+.weather-hourly-strip,.waypoint-table-rich,.terminal-table{
+  scrollbar-width:thin;
+}
+
+@media(min-width:1000px){
+  .view{max-width:1600px;margin-left:auto;margin-right:auto}
+  .grid.two-col{gap:var(--ui-gap)}
+  .panel,.terminal-panel{min-width:0}
+  .panel-title{padding-top:6px;padding-bottom:6px}
+  .button-row{gap:7px}
+  .action,.terminal-btn{min-height:34px}
+  .map-shell,.map-stage,#routePlannerMap{min-height:420px}
+}
+
+@media(max-width:767px){
+  :root{--ui-radius:5px;--ui-gap:7px;--ui-touch:46px}
+  .topbar{min-height:48px}
+  .panel,.terminal-panel,.console-shell,.detail-console{border-radius:var(--ui-radius)}
+  .panel-title{min-height:32px;padding-top:7px!important;padding-bottom:7px!important}
+  .action,.micro-btn,.terminal-btn,.map-quick-actions button,.sheet-tab{
+    min-height:var(--ui-touch);
+  }
+  input,select,textarea{
+    min-height:42px;
+    font-size:max(16px,1em);
+  }
+  textarea{min-height:88px}
+  .button-row{gap:7px}
+  .readouts{gap:0}
+  .readouts>div{padding-top:7px;padding-bottom:7px}
+  .condition-list{max-height:min(42vh,360px)}
+  .map-shell,.map-stage,#routePlannerMap{min-height:52vh;max-height:68vh}
+  .leaflet-control-zoom a{
+    width:40px!important;
+    height:40px!important;
+    line-height:40px!important;
+  }
+  .leaflet-control-attribution{font-size:8px!important;max-width:78vw}
+  .tab-btn{min-height:48px!important}
+  .tab-btn span{font-size:17px}
+  .tab-btn small{font-size:8px;letter-spacing:.04em}
+  .tab-sheet{max-height:min(78dvh,680px);overflow-y:auto;overscroll-behavior:contain}
+  .tab-sheet-grid{gap:7px}
+  .sheet-tab{padding:8px 6px}
+}
+
+@media(max-width:430px){
+  .panel-title{font-size:9px}
+  .action,.terminal-btn{font-size:9px}
+  .muted,.microcopy{font-size:max(9px,inherit)}
+  .map-shell,.map-stage,#routePlannerMap{min-height:50vh}
+  .leaflet-control-container .leaflet-top{top:4px}
+  .leaflet-control-container .leaflet-left{left:4px}
+  .leaflet-control-container .leaflet-right{right:4px}
+}
