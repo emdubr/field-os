@@ -25,6 +25,16 @@ self.addEventListener('fetch',e=>{
     e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(r=>{if(r.ok||r.type==='opaque'){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,copy)));}return r;})));
     return;
   }
+  if(e.request.mode==='navigate'){
+    e.respondWith(fetch(e.request).then(r=>{
+      if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put('./index.html',copy)));}
+      return r;
+    }).catch(async()=>{
+      const cache=await caches.open(CACHE);
+      return (await cache.match('./index.html'))||(await cache.match('./'))||Response.error();
+    }));
+    return;
+  }
   const shellAsset=ASSETS.some(path=>new URL(path,self.location.href).href===url.href)&&url.pathname!==new URL('./',self.location.href).pathname&&!url.pathname.endsWith('/index.html');
   if(shellAsset){
     e.respondWith(caches.open(CACHE).then(async c=>{const hit=await c.match(e.request);if(hit)return hit;const r=await fetch(e.request);if(r.ok){const copy=r.clone();e.waitUntil(c.put(e.request,copy));}return r;}));
