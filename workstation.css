@@ -3618,3 +3618,19 @@ input,select,textarea{
   .tabbar .tab-btn{height:var(--mobile-dock-buttons)!important;min-height:var(--mobile-dock-buttons)!important}
   .tab-sheet{bottom:var(--mobile-dock-h)!important;max-height:calc(100dvh - var(--mobile-dock-h) - 8px)!important}
 }
+
+
+/* v3.56 map interaction performance */
+.field-real-map.field-map-zooming .route-dom-overlay,
+#routePlannerMap.field-map-zooming .route-dom-overlay{
+  pointer-events:none!important;
+  will-change:transform;
+}
+@media(max-width:767px){
+  .field-real-map,.route-planner-real-map{
+    contain:layout paint;
+  }
+  .leaflet-zoom-animated{
+    will-change:transform;
+  }
+}
