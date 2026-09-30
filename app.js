@@ -178,6 +178,37 @@ updateClock(); setInterval(updateClock,1000);
 
 let demo = {alt:3420, heading:37, speed:2.4, temp:31, press:898, hum:64, sats:18, mesh:7};
 const pressureHistory = Array.from({length:36},(_,i)=>899.4 - i*0.035 + Math.sin(i/4)*0.18);
+const SENSOR_HISTORY_MAX=60;
+const sensorHistory={
+  gnssSats:Array.from({length:36},(_,i)=>16+Math.round(Math.sin(i/5)*2)),
+  gnssAcc:Array.from({length:36},(_,i)=>4.5+Math.sin(i/4)*1.1),
+  meshRssi:Array.from({length:36},(_,i)=>-82+Math.sin(i/4)*7),
+  meshSnr:Array.from({length:36},(_,i)=>8+Math.sin(i/5)*3),
+  meshNodes:Array.from({length:36},(_,i)=>7+Math.round(Math.sin(i/7))),
+  temp:Array.from({length:36},(_,i)=>31+Math.sin(i/8)*1.8),
+  humidity:Array.from({length:36},(_,i)=>64+Math.sin(i/7)*4),
+  pitch:Array.from({length:36},(_,i)=>2+Math.sin(i/3)*2.5),
+  roll:Array.from({length:36},(_,i)=>-1+Math.cos(i/4)*2.1),
+  battery:Array.from({length:36},(_,i)=>64-i*.05)
+};
+function pushSensorHistory(key,value){if(!Number.isFinite(Number(value))||!sensorHistory[key])return;sensorHistory[key].push(Number(value));if(sensorHistory[key].length>SENSOR_HISTORY_MAX)sensorHistory[key].shift()}
+function drawSensorSeries(canvasId,series,title){
+  const c=document.getElementById(canvasId);if(!c)return;
+  const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
+  ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
+  const all=series.flatMap(s=>s.data).filter(Number.isFinite);if(!all.length)return;let min=Math.min(...all),max=Math.max(...all);if(max-min<1){min-=.5;max+=.5}const pad=(max-min)*.12;min-=pad;max+=pad;
+  series.forEach((s,si)=>{ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.68;ctx.beginPath();s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-20-(v-min)/(max-min)*(h-44);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});ctx.globalAlpha=1;
+  ctx.fillStyle=fg;ctx.font='15px monospace';ctx.fillText(title,12,19);ctx.fillStyle=dim;ctx.font='11px monospace';
+  series.forEach((s,i)=>ctx.fillText(`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`,12+i*180,h-5));
+}
+function drawAllSensorCharts(){
+  drawSensorSeries('gnssSignalChart',[{label:'SAT',data:sensorHistory.gnssSats,decimals:0},{label:'ACC',data:sensorHistory.gnssAcc,unit:'m'}],'GNSS SIGNAL / FIX');
+  drawSensorSeries('meshSignalChart',[{label:'RSSI',data:sensorHistory.meshRssi,unit:'dBm',decimals:0},{label:'SNR',data:sensorHistory.meshSnr,unit:'dB'},{label:'NODES',data:sensorHistory.meshNodes,decimals:0}],'MESH LINK QUALITY');
+  drawSensorSeries('environmentChart',[{label:'TEMP',data:sensorHistory.temp,unit:'°F'},{label:'RH',data:sensorHistory.humidity,unit:'%'}],'ENVIRONMENT');
+  drawSensorSeries('imuChart',[{label:'PITCH',data:sensorHistory.pitch,unit:'°'},{label:'ROLL',data:sensorHistory.roll,unit:'°'}],'IMU MOTION');
+  drawSensorSeries('batteryChart',[{label:'BAT',data:sensorHistory.battery,unit:'%'}],'POWER TREND');
+}
+document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);drawAllSensorCharts()});
 function headingCardinal(deg){
   const dirs = ['N','NE','E','SE','S','SW','W','NW'];
   return dirs[Math.round(deg / 45) % 8];
@@ -187,6 +218,10 @@ setInterval(()=>{
   demo.alt += Math.random() > .5 ? 1 : -1;
   demo.press += Math.random() > .58 ? 0.1 : -0.1;
   pressureHistory.push(demo.press); if(pressureHistory.length>36) pressureHistory.shift();
+  pushSensorHistory('gnssSats',demo.sats);pushSensorHistory('gnssAcc',4+Math.random()*2);
+  pushSensorHistory('meshRssi',-84+Math.random()*12-6);pushSensorHistory('meshSnr',8+Math.random()*6-3);pushSensorHistory('meshNodes',demo.mesh);
+  pushSensorHistory('temp',demo.temp);pushSensorHistory('humidity',demo.hum);pushSensorHistory('pitch',2+Math.random()*4-2);pushSensorHistory('roll',-1+Math.random()*4-2);pushSensorHistory('battery',64-Math.random()*.25);
+  drawAllSensorCharts();
   document.getElementById('altitude').textContent = `${demo.alt} ft`;
   document.getElementById('pressure').textContent = `${demo.press.toFixed(1)} hPa`;
   updateLiveNavigationUI?.();
@@ -409,11 +444,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.31',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.32',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.31';
+        const key='fieldos-sw-reloaded-v3.32';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -456,7 +491,10 @@ function updateRouteMetrics(){
   const dist=routeMiles(),gain=Math.max(0,Number(document.getElementById('routeGain')?.value??routePlan.gain??0)),grade=Math.max(0,Number(document.getElementById('routeGrade')?.value??routePlan.grade??0)),terrain=document.getElementById('routeTerrain')?.value||routePlan.terrain||'maintained';
   const score=dist*.7+(gain/1000)*1.3+grade*.08+({maintained:0,rough:1.2,offtrail:2.4,scramble:4})[terrain];
   let label='EASY',cls='easy';if(score>=4){label='MODERATE';cls='moderate'}if(score>=7.5){label='HARD';cls='hard'}if(score>=12){label='VERY HARD';cls='very-hard'}
-  const hours=(dist/3 + gain/2000)*routeTerrainFactor(terrain);const totalMinutes=Math.max(0,Math.round(hours*60)),hr=Math.floor(totalMinutes/60),min=totalMinutes%60;
+  const baseHours=dist/3 + gain/2000;
+  const researched=routePlan?.trailIntelligence;
+  const hours=Number.isFinite(Number(researched?.estimatedHours))&&Number(researched.estimatedHours)>0?Number(researched.estimatedHours):baseHours*routeTerrainFactor(terrain);
+  const totalMinutes=Math.max(0,Math.round(hours*60)),hr=Math.floor(totalMinutes/60),min=totalMinutes%60;
   const set=(id,val)=>{const e=document.getElementById(id);if(e)e.textContent=val};
   set('routeDistance',`${dist.toFixed(2)} mi`);set('routeGainOut',routePoints.length<2?'—':routePlan.elevationSource==='UNAVAILABLE'&&gain===0?'N/A':`${Math.round(gain)} ft`);set('routeTime',hours?`${hr}h ${String(min).padStart(2,'0')}m`:'---');set('routePointCount',routePoints.length);
   const badge=document.getElementById('routeDifficulty');if(badge){badge.textContent=routePoints.length<2?'PLOT ROUTE':label;badge.className=`route-grade-badge ${cls}`}
@@ -510,7 +548,7 @@ document.getElementById('gpxImport')?.addEventListener('change',async e=>{
   e.target.value='';
 });
 
-function saveOfflineRoutePack(){if(routePoints.length<2)return alert('Plot or import a route first.');saveRoutePlan();const metrics=updateRouteMetrics(),radius=Number(document.getElementById('corridorRadius')?.value||1),detail=document.getElementById('offlineDetail')?.value||'medium',lats=routePoints.map(p=>p.lat),lons=routePoints.map(p=>p.lon),pack={version:'0.5.1',name:routePlan.name,created:new Date().toISOString(),route:routePoints.map(({lat,lon})=>({lat,lon})),corridorMiles:radius,detail,bounds:{north:Math.max(...lats),south:Math.min(...lats),east:Math.max(...lons),west:Math.min(...lons)},metrics};saveJSON('offlineRoutePack',pack);const st=document.getElementById('offlineStatus');if(st){st.textContent='ROUTE + CORRIDOR SAVED';st.className='route-pack-saved'};return pack}
+function saveOfflineRoutePack(){if(routePoints.length<2)return alert('Plot or import a route first.');saveRoutePlan();const metrics=updateRouteMetrics(),intel=routePlan.trailIntelligence||null;if(routePlan.routingMode==='trail'&&!intel)return alert('Trail research is not ready yet. Wait for the snapped route and elevation analysis before downloading the offline route pack.');const radius=Number(document.getElementById('corridorRadius')?.value||1),detail=document.getElementById('offlineDetail')?.value||'medium',lats=routePoints.map(p=>p.lat),lons=routePoints.map(p=>p.lon),pack={version:'0.6.0',name:routePlan.name,created:new Date().toISOString(),route:routePoints.map(({lat,lon})=>({lat,lon})),trailIntelligence:intel,corridorMiles:radius,detail,bounds:{north:Math.max(...lats),south:Math.min(...lats),east:Math.max(...lons),west:Math.min(...lons)},metrics};saveJSON('offlineRoutePack',pack);const st=document.getElementById('offlineStatus');if(st){st.textContent='ROUTE + CORRIDOR SAVED';st.className='route-pack-saved'};return pack}
 document.getElementById('saveOfflinePack')?.addEventListener('click',()=>{if(!saveOfflineRoutePack())return;alert('Route and corridor plan saved locally. Basemap tile caching will be connected to the production offline map source.')});
 document.getElementById('exportRoutePack')?.addEventListener('click',()=>{const pack=saveOfflineRoutePack();if(!pack)return;const geo={type:'FeatureCollection',properties:{fieldOSPack:pack},features:[{type:'Feature',properties:{name:pack.name},geometry:{type:'LineString',coordinates:pack.route.map(p=>[p.lon,p.lat])}}]};downloadJSON('fieldos-route-pack.geojson',geo)});
 function nearestPointOnRoute(pos){if(routePoints.length<2)return null;const lat0=pos.lat*Math.PI/180,MX=111320*Math.cos(lat0),MY=110540;let best=null;for(let i=0;i<routePoints.length-1;i++){const a=routePoints[i],b=routePoints[i+1],ax=(a.lon-pos.lon)*MX,ay=(a.lat-pos.lat)*MY,bx=(b.lon-pos.lon)*MX,by=(b.lat-pos.lat)*MY,dx=bx-ax,dy=by-ay,den=dx*dx+dy*dy,t=den?clamp(-(ax*dx+ay*dy)/den,0,1):0,qx=ax+t*dx,qy=ay+t*dy,meters=Math.hypot(qx,qy),q={lat:pos.lat+qy/MY,lon:pos.lon+qx/MX};if(!best||meters<best.meters)best={meters,point:q,leg:i+1,t}}return best}
@@ -523,9 +561,7 @@ window.FIELD_ROUTE_STATE={
   getPoints:()=>routePoints.map(p=>({lat:Number(p.lat),lon:Number(p.lon)})).filter(validLatLon),
   setPoints:(pts=[])=>{
     routePoints=(Array.isArray(pts)?pts:[]).filter(validLatLon).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
-    routePlan={...routePlan,points:routePoints,gain:0,grade:0,elevationSource:'UNAVAILABLE',elevationProfile:null,elevationGainFt:null,elevationLossFt:null,elevationMinFt:null,elevationMaxFt:null};
-    document.getElementById('routeGain').value='0';document.getElementById('routeGrade').value='0';
-    for(const id of ['routeLossOut','routeElevRange'])document.getElementById(id).textContent='—';
+    routePlan={...routePlan,points:routePoints};
     saveJSON('routePlan',routePlan);drawRoute()
   },
   getPlan:()=>({...routePlan,anchors:Array.isArray(routePlan.anchors)?routePlan.anchors.map(p=>({...p})):[]}),
