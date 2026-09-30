@@ -23,6 +23,8 @@
   let plannerPreviewLayer=null;
   let plannerRouteRenderer=null;
   let plannerPreviewRenderer=null;
+  let plannerDomRouteSvg=null;
+  let plannerDomRouteGeometry=[];
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -83,7 +85,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.24',
+      'BUILD: v3.25',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -184,6 +186,7 @@
     try{localStorage.setItem(GAIA_LAYER_KEY,gaiaRouteEnabled?'on':'off')}catch{}
     updateGaiaLayerButton();
     overlay(state()?.getPoints?.()||[]);
+    refreshDomRouteLayer();
   }
   function drawRouteDirections(points,c){
     if(!plannerDirectionLayer||!gaiaRouteEnabled)return;
@@ -209,6 +212,36 @@
       L.marker([p.lat,p.lon],{pane:'fieldRouteDirectionPane',icon,interactive:false}).addTo(plannerDirectionLayer);
     }
   }
+
+  function ensureDomRouteLayer(){
+    const host=$(MAP_ID);
+    if(!host)return null;
+    if(plannerDomRouteSvg?.isConnected)return plannerDomRouteSvg;
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('class','planner-dom-route-layer');
+    svg.setAttribute('aria-hidden','true');
+    svg.innerHTML='<polyline class="route-dom-casing"/><polyline class="route-dom-main"/><polyline class="route-dom-highlight"/>';
+    host.appendChild(svg);
+    plannerDomRouteSvg=svg;
+    return svg;
+  }
+  function drawDomRouteLayer(points=[]){
+    const svg=ensureDomRouteLayer();
+    if(!svg||!plannerMap)return;
+    const pts=(Array.isArray(points)?points:[]).filter(valid);
+    plannerDomRouteGeometry=pts.map(p=>({lat:+p.lat,lon:+p.lon}));
+    const rect=plannerMap.getContainer().getBoundingClientRect();
+    const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+    svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    svg.setAttribute('width',String(w));svg.setAttribute('height',String(h));
+    const poly=gaiaRouteEnabled&&pts.length>1
+      ?pts.map(p=>{const q=plannerMap.latLngToContainerPoint([p.lat,p.lon]);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`}).join(' ')
+      :'';
+    svg.querySelectorAll('polyline').forEach(el=>el.setAttribute('points',poly));
+    svg.classList.toggle('has-route',!!poly);
+  }
+  function refreshDomRouteLayer(){drawDomRouteLayer(plannerDomRouteGeometry)}
 
   function plannerColors(){
     const st=getComputedStyle(document.body);
@@ -307,7 +340,9 @@
       hoverPoint=null;
       overlay(state()?.getPoints?.()||[]);
     });
-    plannerMap.on('load',()=>requestAnimationFrame(()=>plannerMap?.invalidateSize(false)));
+    plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
+    plannerMap.on('move zoom resize',refreshDomRouteLayer);
+    plannerMap.on('moveend zoomend',refreshDomRouteLayer);
     return plannerMap;
   }
 
@@ -329,23 +364,10 @@
       const geometryState=$('routeGeometryState');
       if(geometryState)geometryState.textContent=pts.length>1?`SNAPPED GEOMETRY // ${pts.length} PTS`:'SNAPPED GEOMETRY // NONE';
 
-      // Gaia-style routed line: dark casing underneath a bright route line.
-      if(gaiaRouteEnabled&&pts.length>1){
-        const latlngs=pts.map(p=>[p.lat,p.lon]);
-        L.polyline(latlngs,{
-          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-casing',
-          color:'#050807',weight:12,opacity:.96,lineCap:'round',lineJoin:'round',interactive:false
-        }).addTo(plannerRouteLayer);
-        L.polyline(latlngs,{
-          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-main',
-          color:c.route,weight:7,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
-        }).addTo(plannerRouteLayer);
-        L.polyline(latlngs,{
-          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-highlight',
-          color:'#ffffff',weight:2.5,opacity:.88,lineCap:'round',lineJoin:'round',interactive:false
-        }).addTo(plannerRouteLayer);
-        drawRouteDirections(pts,c);
-      }
+      // Route Layer: draw the authoritative geometry in a dedicated DOM SVG
+      // above Leaflet. This avoids Canvas/SVG pane renderer differences.
+      drawDomRouteLayer(pts);
+      if(gaiaRouteEnabled&&pts.length>1)drawRouteDirections(pts,c);
 
       // While planning, always show the unresolved leg(s) immediately as a dashed guide.
       if(anchors.length){
@@ -478,6 +500,7 @@
       else status(routeMode()==='trail'?'SNAP TO TRAILS READY':'DIRECT / OFF-TRAIL MODE','ready');
     });
     $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
+    $('routeSaveTop')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('copyRouteDiag')?.addEventListener('click',copyRouteDiagnostic);
     renderSavedRoutes();
   }
@@ -493,6 +516,7 @@
     overlay();
     if(anchors.length>=2)recalculate();
     else{
+      state()?.setMeta?.({anchors:[anchors[0]],routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'START'});
       state()?.setPoints?.([anchors[0]]);
       overlay([anchors[0]]);
       status('START SET -- TAP DESTINATION','ready');
@@ -504,7 +528,7 @@
     if(!anchors.length)return;
     aborter?.abort();setBusy(false);
     anchors=anchors.slice(0,-1);snapped=[];
-    state()?.setMeta?.({anchors,routingMode:routeMode()});
+    state()?.setMeta?.({anchors,routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'EDITING'});
     if(anchors.length>=2)recalculate();
     else{
       const pts=anchors.length?[anchors[0]]:[];
@@ -527,7 +551,7 @@
       gainFt:plan.elevationLossFt,lossFt:plan.elevationGainFt,minFt:plan.elevationMinFt,maxFt:plan.elevationMaxFt,maxGrade:Number(plan.elevationMaxGrade??plan.grade)||0
     }:null;
     state()?.setPoints?.(points);
-    state()?.setMeta?.({...plan,anchors:reversedAnchors,routedAnchors:reversedAnchors,points,
+    state()?.setMeta?.({...plan,anchors:reversedAnchors,routedAnchors:reversedAnchors,points,legs:[],routeBuildState:'REVERSED',
       elevationProfile:profile?.samples||null,elevationGainFt:profile?.gainFt??null,elevationLossFt:profile?.lossFt??null,
       gain:profile?.gainFt||0,grade:plan.grade||0});
     // setPoints emits a route event; restore the newly reversed control points.
@@ -540,13 +564,13 @@
   function clearAll(){
     aborter?.abort();setBusy(false);
     anchors=[];snapped=[];lastSuccessfulAnchors=[];
-    state()?.setMeta?.({anchors:[],routingMode:routeMode()});
+    state()?.setMeta?.({anchors:[],routedAnchors:[],legs:[],routingMode:routeMode(),routingSource:null,routeBuildState:'EMPTY',routeBuildLeg:0});
     state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');
     status('TAP MAP TO SET START','ready');
   }
 
   function recenter(){
-    const pts=state()?.getPoints?.()||[];
+    const pts=authoritativeGeometry(state()?.getPoints?.()||[]);
     if(pts.length>1)fitPlanner(pts,16);
     else if(anchors.length)fitPlanner(anchors,16);
     else{
@@ -645,6 +669,15 @@
       points:points.map(p=>({lat:+p.lat,lon:+p.lon})),
       anchors:sanitizeAnchors(anchors),
       routedAnchors:sanitizeAnchors(plan.routedAnchors||anchors),
+      legs:Array.isArray(plan.legs)?plan.legs.map(leg=>({
+        a:valid(leg?.a)?{lat:+leg.a.lat,lon:+leg.a.lon}:null,
+        b:valid(leg?.b)?{lat:+leg.b.lat,lon:+leg.b.lon}:null,
+        routeStart:valid(leg?.routeStart)?{lat:+leg.routeStart.lat,lon:+leg.routeStart.lon}:null,
+        result:leg?.result&&Array.isArray(leg.result.points)?{
+          ...leg.result,
+          points:leg.result.points.filter(valid).map(p=>({lat:+p.lat,lon:+p.lon}))
+        }:null
+      })).filter(leg=>leg.a&&leg.b&&leg.result?.points?.length>1):[],
       routingMode:plan.routingMode||routeMode(),
       routingSource:plan.routingSource||'FIELD/OS',
       distanceMiles:routeDistanceMiles(points),
@@ -676,7 +709,7 @@
     anchors=sanitizeAnchors(saved.anchors);
     if(!anchors.length)anchors=[points[0],points.at(-1)];
     lastSuccessfulAnchors=anchors.map(p=>({...p}));routingResolvedAnchors=anchors.length;snapped=[];
-    st?.setMeta?.({...saved,anchors,routedAnchors:anchors});st?.setPoints?.(points);st?.save?.();
+    st?.setMeta?.({...saved,anchors,routedAnchors:anchors,legs:Array.isArray(saved.legs)?saved.legs:[]});st?.setPoints?.(points);st?.save?.();
     const profile=Array.isArray(saved.elevationProfile)&&saved.elevationProfile.length>1?{
       samples:saved.elevationProfile,gainFt:Number(saved.elevationGainFt)||0,lossFt:Number(saved.elevationLossFt)||0,
       minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.elevationMaxGrade??saved.grade)||0
