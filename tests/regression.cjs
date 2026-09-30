@@ -9,7 +9,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -251,6 +251,24 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  ]}}]);
  assert.equal(merged.length,1);assert.equal(merged[0].distanceM,1750);
  console.log('PASS named trail display merges surface changes into one total-distance row');
+ const continuity=r.displayTrailSections([{result:{trailSections:[
+   {label:'Long Trail',name:'Long Trail',ref:null,distanceM:900},
+   {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:45},
+   {label:'Long Trail',name:'Long Trail',ref:null,distanceM:600},
+   {label:'Side Trail',name:'Side Trail',ref:null,distanceM:400},
+   {label:'Long Trail',name:'Long Trail',ref:null,distanceM:300}
+ ]}}]);
+ assert.equal(continuity.length,3);assert.equal(continuity[0].name,'Long Trail');assert.equal(continuity[0].distanceM,1545);assert.equal(continuity[0].continuityBridged,1);assert.equal(continuity[1].name,'Side Trail');assert.equal(continuity[2].name,'Long Trail');
+ console.log('PASS trail-name continuity bridges only short unnamed connectors between the same adjacent named trail');
+ const jGraph=r.buildGraph([
+   {type:'way',id:10,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44.001,lon:-73},{lat:44.002,lon:-73}],tags:{highway:'path',name:'Main Trail'}},
+   {type:'way',id:11,nodes:[2,4],geometry:[{lat:44.001,lon:-73},{lat:44.001,lon:-72.999}],tags:{highway:'path',name:'Side Trail'}}
+ ]);
+ const jPath=[jGraph.nodes.get(1),jGraph.nodes.get(2),jGraph.nodes.get(3)];
+ const jWarn=r.junctionWarningsForPath(jPath,[{highway:'path',name:'Main Trail'},{highway:'path',name:'Main Trail'}],jGraph);
+ assert.equal(jWarn.length,1);assert.equal(jWarn[0].alternates,1);assert.ok(jWarn[0].options.some(x=>/Side Trail/.test(x)));
+ console.log('PASS mapped branch intersections generate junction-topology warnings with alternate trail labels');
+
  const filtered=r.displayTrailSections([{result:{trailSections:[
    {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:80},
    {label:'UNNAMED OSM PATH',name:null,ref:null,distanceM:220},

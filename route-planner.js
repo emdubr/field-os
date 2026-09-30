@@ -1084,6 +1084,36 @@
     }
     return sections.map(({key,...s})=>s);
   }
+  function junctionWarningsForPath(path,edgeTags=[],graph){
+    const warnings=[];
+    if(!graph?.adj||!Array.isArray(path)||path.length<3)return warnings;
+    for(let i=1;i<path.length-1;i++){
+      const node=path[i],prev=path[i-1],next=path[i+1],edges=graph.adj.get(node.id)||[];
+      const alternates=edges.filter(e=>e.to!==prev.id&&e.to!==next.id);
+      if(!alternates.length)continue;
+      const routeTag=edgeTags[i]||edgeTags[i-1]||{};
+      const routeLabel=trailLabel(routeTag);
+      const options=[...new Set(alternates.map(e=>trailLabel(e.tags||{})).filter(Boolean))].slice(0,5);
+      warnings.push({
+        lat:Number(node.lat),lon:Number(node.lon),pathIndex:i,degree:edges.length,
+        routeLabel,alternates:alternates.length,options
+      });
+    }
+    return warnings;
+  }
+  function combinedJunctionWarnings(legs=[]){
+    const out=[];
+    for(const leg of Array.isArray(legs)?legs:[]){
+      for(const j of leg?.result?.junctionWarnings||[]){
+        if(!valid(j))continue;
+        const last=out.at(-1);
+        if(last&&meters(last,j)<8)continue;
+        out.push({...j,lat:Number(j.lat),lon:Number(j.lon)});
+      }
+    }
+    return out;
+  }
+
   function combinedTrailSections(legs=[]){
     const out=[];
     for(const leg of Array.isArray(legs)?legs:[]){
@@ -1098,39 +1128,33 @@
   }
   const UNNAMED_TRAIL_DISPLAY_MIN_M=160.9344; // 0.10 mi
   function displayTrailSections(legs=[]){
-    const out=[],named=new Map();
-    for(const leg of Array.isArray(legs)?legs:[]){
-      for(const sec of leg?.result?.trailSections||[]){
-        const distanceM=Number(sec.distanceM)||0;
-        const name=String(sec.name||'').trim();
-        const ref=String(sec.ref||'').trim();
-        // Named trails/routes are one logical display item even when OSM
-        // changes surface/highway tags along the same trail.
-        if(name||ref){
-          const identity=(name||ref).trim().toLocaleLowerCase();
-          if(named.has(identity)){
-            named.get(identity).distanceM+=distanceM;
-          }else{
-            const item={...sec,label:trailLabel(sec),distanceM};
-            named.set(identity,item);
-            out.push(item);
-          }
+    const raw=[];
+    for(const leg of Array.isArray(legs)?legs:[])for(const sec of leg?.result?.trailSections||[])raw.push({...sec,distanceM:Number(sec.distanceM)||0});
+    const identity=s=>String(s?.name||s?.ref||'').trim().toLocaleLowerCase();
+    const bridged=[];
+    for(let i=0;i<raw.length;i++){
+      const sec=raw[i],id=identity(sec);
+      if(!id&&sec.distanceM<UNNAMED_TRAIL_DISPLAY_MIN_M&&bridged.length){
+        const prev=bridged.at(-1),next=raw[i+1],prevId=identity(prev),nextId=identity(next);
+        if(prevId&&prevId===nextId){
+          prev.distanceM+=sec.distanceM+(Number(next.distanceM)||0);
+          prev.continuityBridged=(prev.continuityBridged||0)+1;
+          i++;
           continue;
         }
-        // Keep unnamed geometry sequential instead of incorrectly combining
-        // separate unnamed paths that happen to share generic OSM tags.
-        const last=out.at(-1);
-        if(last&&!String(last.name||'').trim()&&!String(last.ref||'').trim()&&last.label===sec.label){
-          last.distanceM+=distanceM;
-        }else out.push({...sec,distanceM});
       }
+      const last=bridged.at(-1),lastId=identity(last);
+      if(id&&lastId===id){
+        last.distanceM+=sec.distanceM;
+        continue;
+      }
+      if(!id&&!lastId&&last&&last.label===sec.label){
+        last.distanceM+=sec.distanceM;
+        continue;
+      }
+      bridged.push({...sec,label:trailLabel(sec)});
     }
-    // Tiny unnamed connectors are useful for routing but noisy in the
-    // human-facing trail list. Keep them in geometry/intelligence, hide here.
-    return out.filter(sec=>{
-      const named=String(sec.name||'').trim()||String(sec.ref||'').trim();
-      return named||Number(sec.distanceM||0)>=UNNAMED_TRAIL_DISPLAY_MIN_M;
-    });
+    return bridged.filter(sec=>identity(sec)||Number(sec.distanceM||0)>=UNNAMED_TRAIL_DISPLAY_MIN_M);
   }
 
   function roughnessScore(section={}){
@@ -1197,17 +1221,19 @@
   function renderTrailNames(legs=planMeta().legs||[]){
     const box=$('routeTrailNames'),count=$('routeTrailNameCount');
     if(!box)return;
-    const sections=displayTrailSections(legs);
+    const sections=displayTrailSections(legs),junctions=combinedJunctionWarnings(legs);
     if(count)count.textContent=String(sections.length);
     if(!sections.length){
       box.innerHTML='<div class="route-trail-empty">TRAIL NAMES // WAITING FOR SNAPPED ROUTE</div>';
       return;
     }
-    box.innerHTML=sections.map((s,i)=>{
+    const warningHtml=junctions.length?`<div class="route-trail-row route-junction-summary"><b>!</b><span><strong>${junctions.length} JUNCTION WARNING${junctions.length===1?'':'S'}</strong><small>Mapped intersections with one or more alternate trail branches. Verify signs/heading in the field.</small></span><em>TOPOLOGY</em></div>`:'';
+    const rows=sections.map((s,i)=>{
       const named=String(s.name||s.ref||'').trim();
-      const detail=named?'TOTAL ON THIS TRAIL':'UNNAMED OSM SEGMENT';
+      const detail=named?(s.continuityBridged?`TRAIL CONTINUITY // ${s.continuityBridged} SHORT UNNAMED CONNECTOR${s.continuityBridged===1?'':'S'} BRIDGED`:'TOTAL ON THIS TRAIL'):'UNNAMED OSM SEGMENT';
       return `<div class="route-trail-row"><b>${i+1}</b><span><strong>${escapeHtml(s.label)}</strong><small>${detail}</small></span><em>${(s.distanceM/1609.344).toFixed(2)} mi</em></div>`;
     }).join('');
+    box.innerHTML=warningHtml+rows;
   }
   function escapeHtml(value=''){
     return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1216,7 +1242,7 @@
   async function routeLeg(a,b,signal,retry=false){
     const cached=legCache.get(legKey(a,b));if(cached)return {...cached,cached:true};
     const back=legCache.get(legKey(b,a));
-    if(back)return {...back,points:[...back.points].reverse(),trailSections:[...(back.trailSections||[])].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
+    if(back)return {...back,points:[...back.points].reverse(),trailSections:[...(back.trailSections||[])].reverse(),junctionWarnings:[...(back.junctionWarnings||[])].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
     const legMi=miles(a,b);
     if(legMi>35)throw rpError('RP-301','Snapped leg is over 35 miles. Add an intermediate point.',{legMiles:+legMi.toFixed(2)});
 
@@ -1256,6 +1282,7 @@
     const result={
       points:search.path.map(p=>({lat:p.lat,lon:p.lon})),
       trailSections:trailSectionsForPath(search.path,search.edgeTags||[]),
+      junctionWarnings:junctionWarningsForPath(search.path,search.edgeTags||[],graph),
       startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},
       endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d},
       diagnostics:{retry,snapRadius,startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d),nodes:graph.nodes.size,segments:graph.segments.length,visits:search.visits}
@@ -1640,7 +1667,7 @@
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       if(signal.aborted)return;
       const intelligence=trailIntelligence(legs,enriched.dist,Number(enriched.profile?.gainFt||0));
-      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),trailIntelligence:intelligence,estimatedHours:intelligence.estimatedHours,snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),junctionWarnings:combinedJunctionWarnings(legs),trailIntelligence:intelligence,estimatedHours:intelligence.estimatedHours,snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
       state()?.save?.();
       renderTrailNames(legs);renderTrailIntelligence(intelligence);
       setBusy(false);
