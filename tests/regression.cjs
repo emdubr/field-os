@@ -105,6 +105,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
    assert.equal(w.FIELD_ROUTE_STATE.getPlan().anchors.length,1);
  }
  console.log('PASS 100x route-state sanitize/write cycles');
+ r.clearAll();await tick();
 
  // Direct-route edit/clear churn with elevation service available.
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
