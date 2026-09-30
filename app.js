@@ -197,13 +197,21 @@ function drawSensorSeries(canvasId,series,title){
   const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
   ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
   const all=series.flatMap(s=>s.data).filter(Number.isFinite);if(!all.length)return;let min=Math.min(...all),max=Math.max(...all);if(max-min<1){min-=.5;max+=.5}const pad=(max-min)*.12;min-=pad;max+=pad;
-  series.forEach((s,si)=>{ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.68;ctx.beginPath();s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-34-(v-min)/(max-min)*(h-62);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});ctx.globalAlpha=1;
+  const dashSets=[[],[9,5],[2,4]];
+  series.forEach((s,si)=>{
+    ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.72;
+    ctx.setLineDash(dashSets[si%dashSets.length]);ctx.beginPath();
+    s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-34-(v-min)/(max-min)*(h-62);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);ctx.globalAlpha=1;
   ctx.fillStyle=fg;ctx.font='15px monospace';ctx.fillText(title,12,19);
   ctx.fillStyle=dim;ctx.font='11px monospace';
   const slot=w/Math.max(1,series.length);
   series.forEach((s,idx)=>{
-    const label=`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`;
-    ctx.fillText(label,12+idx*slot,h-9);
+    const x=12+idx*slot,label=`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`;
+    ctx.strokeStyle=fg;ctx.lineWidth=2;ctx.setLineDash(dashSets[idx%dashSets.length]);ctx.beginPath();ctx.moveTo(x,h-11);ctx.lineTo(x+18,h-11);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=dim;ctx.fillText(label,x+24,h-7);
   });
 }
 function drawAllSensorCharts(){
@@ -497,11 +505,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.33',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.34',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.33';
+        const key='fieldos-sw-reloaded-v3.34';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
