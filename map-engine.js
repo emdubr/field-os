@@ -331,6 +331,15 @@
     states.forEach(st=>{st.routeFitted=false});refresh(false);
   });
 
+  function setLayers(settings){
+    if(['osm','topo','satellite'].includes(settings.mode))mode=settings.mode;
+    if(typeof settings.trails==='boolean')trails=settings.trails;
+    if(typeof settings.terrain==='boolean')terrain=settings.terrain;
+    if(typeof settings.grid==='boolean')grid=settings.grid;
+    localStorage.setItem(STORE_PREFIX+'map-source',mode);
+    for(const [key,value] of [['hiking-routes',trails],['terrain-shade',terrain],['map-grid',grid]])localStorage.setItem(STORE_PREFIX+key,value?'on':'off');
+    refresh(false);
+  }
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
@@ -456,7 +465,7 @@
   setInterval(updateLocationLabels,1000);
 
   window.FIELD_MAP_ENGINE={
-    refresh,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
+    refresh,setLayers,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
     mount,setView,fitBounds,setTapHandler,setGeoOverlay,getView,
     get mode(){return mode},get trails(){return trails},get terrain(){return terrain},get grid(){return grid},get live(){return liveEnabled}
   };

@@ -88,7 +88,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.41',
+      'BUILD: v3.42',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
