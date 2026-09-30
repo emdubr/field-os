@@ -20,6 +20,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('waypointName').value='QA Base';click('setBaseWaypoint');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'))[0].name,'QA Base');assert.match(d.getElementById('waypointList').textContent,/QA Base/);
  d.getElementById('tripName').value='QA Hike';click('saveTrip');assert.match(w.localStorage.getItem('fieldos-v12-trip'),/QA Hike/);
  console.log('PASS waypoint/base and trip persistence');
+
+ const sosBtn=d.getElementById('meshSos');
+ sosBtn.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
+ sosBtn.dispatchEvent(new w.Event('pointercancel',{bubbles:true}));
+ await new Promise(resolve=>setTimeout(resolve,1700));
+ assert.notEqual(sosBtn.textContent,'MESH SOS ARMED — DEMO');
+ assert.match(app,/pointercancel',cancelSos/);
+ assert.match(app,/max-height: 600px\) and \(min-width: 1001px\)/);
+ console.log('PASS interrupted mobile SOS hold cancels and phone landscape avoids desktop scaling');
  d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
  const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await waitFor(()=>!d.getElementById('routeGainOut').textContent.includes('LOADING'));
