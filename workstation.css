@@ -1302,3 +1302,43 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   .route-diagnostic-strip{align-items:stretch;flex-direction:column}
   .route-diagnostic-strip .micro-btn{width:100%}
 }
+
+
+/* v3.17 unified main-menu navigation */
+#home .console-rail [data-open]{
+  transition:background .12s ease,color .12s ease,border-color .12s ease;
+}
+#home .console-rail [data-open].rail-active{
+  background:var(--fg2)!important;
+  color:var(--bg)!important;
+  border-color:var(--fg2)!important;
+  box-shadow:inset 3px 0 var(--warn);
+}
+.tabbar .tab-btn.active,
+.tab-sheet .sheet-tab.active{
+  background:var(--panel3)!important;
+  color:var(--fg2)!important;
+  box-shadow:inset 0 3px var(--fg2);
+}
+#moreTabs.active{
+  background:var(--panel3)!important;
+  color:var(--fg2)!important;
+  box-shadow:inset 0 3px var(--fg2);
+}
+.workstation-nav [data-module].selected{
+  position:relative;
+}
+.workstation-nav [data-module].selected:after{
+  content:"";
+  position:absolute;
+  right:7px;
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--fg2);
+  box-shadow:0 0 7px color-mix(in srgb,var(--fg2) 65%,transparent);
+}
+@media(max-width:1023px){
+  .tabbar{z-index:120!important}
+  .tab-sheet{z-index:130!important}
+  .tab-sheet-backdrop{z-index:125!important}
+}
