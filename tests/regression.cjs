@@ -146,6 +146,13 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  const firstGroupAlertCount=w.FIELD_INBOX.state.items.filter(x=>/^group-/.test(x.id)).length;w.FIELD_GROUP.render(groupResult);await tick();const secondGroupAlertCount=w.FIELD_INBOX.state.items.filter(x=>/^group-/.test(x.id)).length;assert.equal(secondGroupAlertCount,firstGroupAlertCount);
  w.FIELD_GROUP.setConfig({enabled:false});
  console.log('PASS feature 15 Group Expedition Mode evaluates separation, stale position, movement and battery while emitting transition-based group alerts');
+ const recoveryNow=Date.now(),recoveryTarget={id:'person-1',name:'PERSON-1',role:'CLIENT',lat:44.48,lon:-73.22,lastHeard:recoveryNow-60000};
+ const recoveryStart=w.FIELD_RECOVERY.activate(recoveryTarget,{lat:44.47,lon:-73.21},recoveryNow);assert.equal(recoveryStart.active,true);assert.equal(w.FIELD_RECOVERY.state.target.lat,44.48);assert.equal(w.FIELD_RECOVERY.state.breadcrumbs.length,1);
+ w.FIELD_MESH.ingest([{id:'person-1',name:'PERSON-1',lat:44.6,lon:-73.5,lastHeard:recoveryNow+1000}]);await tick();assert.equal(w.FIELD_RECOVERY.state.target.lat,44.48);assert.equal(w.FIELD_RECOVERY.state.target.lon,-73.22);
+ w.FIELD_RECOVERY.addBreadcrumb({lat:44.472,lon:-73.212},recoveryNow+60000);const recoveryGuide=w.FIELD_RECOVERY.guidance({lat:44.472,lon:-73.212});assert.ok(recoveryGuide.distanceM>0);assert.ok(Number.isFinite(recoveryGuide.bearing));w.FIELD_RECOVERY.render();assert.ok(d.querySelectorAll('#recoveryRelativeMap .recovery-map-target').length===1);assert.ok(w.FIELD_RECOVERY.state.breadcrumbs.length>=2);
+ const frozenStorage=JSON.parse(w.localStorage.getItem('fieldos-v12-recovery-active'));assert.equal(frozenStorage.target.lat,44.48);w.FIELD_RECOVERY.clear();assert.equal(w.localStorage.getItem('fieldos-v12-recovery-active'),null);
+ console.log('PASS feature 16 Separated-Person Recovery freezes last-known coordinates, keeps search breadcrumbs, renders group context, and ignores later target movement');
+
 
 
 

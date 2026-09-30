@@ -300,6 +300,22 @@
           <div id="groupExpeditionSummary" class="group-expedition-summary">Enable group monitoring to track member separation, position age, movement, and battery.</div>
           <div id="groupExpeditionRoster" class="group-expedition-roster"><p class="muted">No mesh members available.</p></div>
         </article>
+        <article class="panel recovery-person-panel">
+          <div class="panel-title"><span>SEPARATED-PERSON RECOVERY</span><span class="tiny" id="recoveryPersonState">INACTIVE</span></div>
+          <div class="recovery-person-controls">
+            <select id="recoveryTargetSelect" class="terminal-input" aria-label="Recovery target"><option value="">SELECT GROUP MEMBER</option></select>
+            <button id="recoveryFreezeTarget" class="danger-lite" type="button">FREEZE LAST LOCATION</button>
+            <button id="recoveryClear" class="action" type="button">END RECOVERY</button>
+          </div>
+          <div class="recovery-person-hero">
+            <div id="recoveryArrow" class="recovery-arrow">↑</div>
+            <div><strong id="recoveryTargetName">NO TARGET</strong><div id="recoveryBearing" class="recovery-bearing">---° ---</div><div id="recoveryDistance" class="recovery-distance">---</div></div>
+          </div>
+          <dl class="readouts"><div><dt>FROZEN AT</dt><dd id="recoveryFrozenAt">—</dd></div><div><dt>LAST HEARD</dt><dd id="recoveryLastHeard">—</dd></div><div><dt>COORD</dt><dd id="recoveryCoord">—</dd></div><div><dt>SEARCH BREADCRUMBS</dt><dd id="recoveryBreadcrumbCount">0</dd></div></dl>
+          <svg id="recoveryRelativeMap" class="recovery-relative-map" viewBox="0 0 800 320" role="img" aria-label="Relative separated-person recovery map"></svg>
+          <div class="button-row"><button id="recoverySaveWaypoint" class="action" type="button">SAVE RECOVERY POINT</button><button class="action" data-open="nav">OPEN NAV CORE</button></div>
+          <p class="muted">The target coordinate is frozen at activation and does not move when later mesh updates arrive. Verify terrain, access, and emergency procedures before moving.</p>
+        </article>
         <article class="panel mesh-coverage-panel">
           <div class="panel-title"><span>MESH COVERAGE HEATMAP</span><span class="tiny" id="meshCoverageState">NO SAMPLES</span></div>
           <div class="mesh-coverage-wrap">
