@@ -275,6 +275,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS provider-safe automatic route corridor download workflow is wired');
  assert.ok(fieldIntelJs.includes('FIELD_ENVIRONMENT_INTEL'));assert.ok(fieldIntelJs.includes('air-quality-api.open-meteo.com'));assert.ok(fieldIntelJs.includes('earthquake.usgs.gov'));assert.ok(html.includes('id="environmentIntelRefresh"'));assert.ok(html.includes('id="environmentAqi"'));
  console.log('PASS cached browser environmental intelligence is wired to air-quality and earthquake sources');
+ assert.ok(fieldIntelJs.includes("read('environment-intel-cache'"));assert.ok(fieldIntelJs.includes('routeCorridorStatus'));assert.ok(fieldIntelJs.includes('forecastCache:weatherCache'));
+ console.log('PASS mission pack bundles cached forecast, environmental intel, and offline corridor readiness');
+
 
 
  assert.ok(routePlannerJs.includes("fieldos-route-cache-v1"));assert.ok(routePlannerJs.includes('offlineTrailGraph'));assert.ok(routePlannerJs.includes('persistTrailNetwork'));
