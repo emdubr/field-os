@@ -294,6 +294,14 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('position:fixed!important'));
  assert.ok(workstationCss.includes('@media(max-width:430px)'));
  console.log('PASS final responsive layer separates desktop/mobile navigation and constrains overflow');
+ const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
+ assert.ok(html.includes('styles.css?v=3.52')&&html.includes('workstation.css?v=3.52')&&html.includes('field-tools.js?v=3.52'));
+ assert.ok(appJs.includes("sw.js?v=3.52")&&appJs.includes("fieldos-sw-reloaded-v3.52"));
+ assert.ok(swJs.includes("field-os-v3-52")&&swJs.includes("field-tools.js?v=3.52"));
+ assert.ok(manifest.includes("index.html?v=3.52"));
+ assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
+ console.log('PASS v3.52 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+
 
 
 
