@@ -82,7 +82,7 @@
           <div class="console-main-grid detail-main-grid">
             <nav class="console-rail terminal-panel" aria-label="Field modules">
               <div class="terminal-title">FIELD MODULES <span>?</span></div>
-              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="mission">▷ MISSION MODE</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
+              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="mission">▷ MISSION MODE</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="weather">▷ WEATHER INTELLIGENCE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
               <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
             </nav>
 
@@ -257,6 +257,30 @@
             </div>
           </div>
           <p class="muted">Official OpenStreetMap raster tiles are used for normal interactive online viewing only. Offline packs use PMTiles sources that permit downloading; FIELD/OS does not bulk-prefetch tile.openstreetmap.org.</p>
+        </article>
+      </section>
+
+      <section class="view" id="weather" data-view="weather">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>WEATHER INTELLIGENCE</h2><span id="weatherHeadState">CACHE EMPTY</span></div>
+        <article class="panel weather-current-panel">
+          <div class="panel-title"><span>CURRENT / MOST RECENT</span><span class="tiny" id="weatherCacheAge">NO DOWNLOAD</span></div>
+          <div class="weather-current-grid">
+            <div><span>CONDITION</span><b id="weatherCondition">—</b></div><div><span>TEMP</span><b id="weatherTemp">—</b></div><div><span>PRECIP</span><b id="weatherPrecip">—</b></div><div><span>WIND</span><b id="weatherWind">—</b></div><div><span>GUST</span><b id="weatherGust">—</b></div><div><span>VISIBILITY</span><b id="weatherVisibility">—</b></div><div><span>PRESSURE</span><b id="weatherPressure">—</b></div><div><span>LOCAL BARO TREND</span><b id="weatherLocalPressure">—</b></div>
+          </div>
+          <div class="button-row"><button id="weatherRefresh" class="action" type="button">DOWNLOAD / REFRESH FORECAST</button></div>
+          <p class="muted">Forecast data is cached locally after download and remains readable offline. Official alert availability depends on the forecast service and location.</p>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>FORECAST HAZARD FLAGS</span><span class="tiny" id="weatherHazardCount">0 FLAGS</span></div>
+          <div id="weatherHazards" class="weather-hazard-list"><p class="muted">No cached forecast to screen.</p></div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>NEXT 12 HOURS</span><span class="tiny">OFFLINE AFTER DOWNLOAD</span></div>
+          <div id="weatherHourly" class="weather-hourly-strip"><p class="muted">Download a forecast to populate this timeline.</p></div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>SOURCES / CACHE</span><span class="tiny">TRACEABILITY</span></div>
+          <dl class="readouts"><div><dt>FORECAST</dt><dd id="weatherSource">OPEN-METEO / NOT DOWNLOADED</dd></div><div><dt>ALERTS</dt><dd id="weatherAlertSource">NWS WHEN AVAILABLE</dd></div><div><dt>POSITION</dt><dd id="weatherPosition">—</dd></div><div><dt>DOWNLOADED</dt><dd id="weatherDownloaded">—</dd></div></dl>
         </article>
       </section>
 

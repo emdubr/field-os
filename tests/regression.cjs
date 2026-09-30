@@ -161,6 +161,11 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  const lowConfidence=w.FIELD_ROUTE_CONFIDENCE.compute({points:[{lat:44,lon:-73},{lat:44.01,lon:-73}],routingMode:'direct',routeBuildState:'COMPLETE',trailSections:[],elevationProfile:[]});
  assert.ok(lowConfidence.score<65);assert.ok(['limited','low'].includes(lowConfidence.level));w.FIELD_ROUTE_CONFIDENCE.render(lowConfidence);assert.match(d.getElementById('routeConfidenceSummary').textContent,/not snapped|OSM|elevation/i);
  console.log('PASS original feature 03 Route Confidence Meter scores data completeness and exposes confidence gaps without treating score as safety');
+ const weatherBase=Date.now(),weatherHours=Array.from({length:12},(_,i)=>({time:new Date(weatherBase+i*3600000).toISOString(),tempF:45+i,precipProbability:i===2?85:10,precipIn:i===2?.12:0,weatherCode:i===4?95:1,windMph:12,gustMph:i===5?42:18,visibilityM:i===6?1200:12000,pressureHpa:1008-i*.4}));
+ const weatherCache={downloadedAt:new Date(weatherBase).toISOString(),position:{lat:44.47,lon:-73.21},source:'TEST FORECAST',current:{tempF:45,precipIn:0,weatherCode:1,windMph:12,gustMph:18,visibilityM:12000,pressureHpa:1008},hourly:weatherHours,alerts:[{id:'a1',event:'Winter Weather Advisory',severity:'Moderate',headline:'Test advisory',description:'Test',expires:''}]};
+ w.FIELD_WEATHER.setCache(weatherCache);const weatherFlags=w.FIELD_WEATHER.hazards(weatherCache);assert.ok(weatherFlags.some(x=>x.id==='thunder'));assert.ok(weatherFlags.some(x=>x.id==='gust'));assert.ok(weatherFlags.some(x=>x.id==='visibility'));assert.ok(weatherFlags.some(x=>x.id==='precip'));assert.ok(weatherFlags.some(x=>x.id==='alert-a1'));w.FIELD_WEATHER.render();assert.match(d.getElementById('weatherCondition').textContent,/PARTLY CLOUDY/);assert.equal(d.querySelectorAll('#weatherHazards .weather-hazard').length,weatherFlags.length);assert.ok(d.querySelectorAll('#weatherHourly .weather-hour-card').length>0);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-weather-cache')).hourly.length===12);
+ console.log('PASS original feature 18 Weather Intelligence caches current/hourly forecast, screens thunder/wind/visibility/precipitation, and preserves alert/source metadata offline');
+
 
 
 

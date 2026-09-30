@@ -85,6 +85,55 @@
 
 
 
+
+  // Original Feature 18 — Weather Intelligence.
+  const weatherState={cache:read('weather-cache',null),pressureHistory:[]};
+  const weatherCodeLabel=code=>{
+    code=Number(code);if(code===0)return 'CLEAR';if([1,2].includes(code))return 'PARTLY CLOUDY';if(code===3)return 'OVERCAST';if([45,48].includes(code))return 'FOG';if(code>=51&&code<=57)return 'DRIZZLE';if(code>=61&&code<=67)return 'RAIN';if(code>=71&&code<=77)return 'SNOW';if(code>=80&&code<=82)return 'SHOWERS';if(code>=85&&code<=86)return 'SNOW SHOWERS';if(code>=95)return 'THUNDERSTORM';return 'WEATHER CODE '+code;
+  };
+  function normalizeForecast(data={},alerts=[],position=getPosition()){
+    const h=data.hourly||{},times=Array.isArray(h.time)?h.time:[],hourly=times.slice(0,72).map((time,i)=>({time,tempF:Number(h.temperature_2m?.[i]),precipProbability:Number(h.precipitation_probability?.[i]),precipIn:Number(h.precipitation?.[i]),weatherCode:Number(h.weather_code?.[i]),windMph:Number(h.wind_speed_10m?.[i]),gustMph:Number(h.wind_gusts_10m?.[i]),visibilityM:Number(h.visibility?.[i]),pressureHpa:Number(h.surface_pressure?.[i])}));
+    const cur=data.current||{};
+    return {downloadedAt:new Date().toISOString(),position:validPoint(position)?{lat:Number(position.lat),lon:Number(position.lon)}:null,timezone:String(data.timezone||''),source:'Open-Meteo',current:{time:cur.time||null,tempF:Number(cur.temperature_2m),humidity:Number(cur.relative_humidity_2m),precipIn:Number(cur.precipitation),weatherCode:Number(cur.weather_code),windMph:Number(cur.wind_speed_10m),gustMph:Number(cur.wind_gusts_10m),visibilityM:Number(cur.visibility),pressureHpa:Number(cur.surface_pressure)},hourly,alerts:(Array.isArray(alerts)?alerts:[]).slice(0,20).map(a=>({id:String(a.id||a.properties?.id||''),event:String(a.event||a.properties?.event||'WEATHER ALERT'),severity:String(a.severity||a.properties?.severity||'Unknown'),headline:String(a.headline||a.properties?.headline||a.event||'Weather alert'),description:String(a.description||a.properties?.description||'').slice(0,600),expires:String(a.expires||a.properties?.expires||'')}))};
+  }
+  function weatherHazards(cache=weatherState.cache){
+    if(!cache)return [];const flags=[],next=(cache.hourly||[]).slice(0,12),push=(id,level,title,detail)=>{if(!flags.some(x=>x.id===id))flags.push({id,level,title,detail})};
+    for(const a of cache.alerts||[]){const sev=String(a.severity||'').toLowerCase(),level=/extreme|severe/.test(sev)?'high':'warn';push('alert-'+a.id,level,a.event||'OFFICIAL WEATHER ALERT',a.headline||a.description||'Active alert')}
+    const thunder=next.find(x=>Number(x.weatherCode)>=95);if(thunder)push('thunder','high','THUNDERSTORM SIGNAL','Forecast weather code indicates thunderstorm conditions in the next 12 hours.');
+    const gust=Math.max(0,...next.map(x=>Number.isFinite(x.gustMph)?x.gustMph:0));if(gust>=50)push('gust','high','VERY STRONG WIND GUSTS',`Forecast gusts reach about ${Math.round(gust)} mph in the next 12 hours.`);else if(gust>=35)push('gust','warn','STRONG WIND GUSTS',`Forecast gusts reach about ${Math.round(gust)} mph in the next 12 hours.`);
+    const lowVis=Math.min(Infinity,...next.map(x=>Number.isFinite(x.visibilityM)?x.visibilityM:Infinity));if(lowVis<=1609)push('visibility','warn','LOW VISIBILITY',`Forecast visibility falls to about ${(lowVis/1609.344).toFixed(1)} mi.`);
+    const wet=next.find(x=>Number(x.precipProbability)>=70&&Number(x.precipIn)>=.03);if(wet)push('precip','warn','HIGH PRECIPITATION CHANCE',`At least one upcoming hour shows ${Math.round(wet.precipProbability)}% precipitation probability.`);
+    return flags;
+  }
+  function localWeatherPressureTrend(now=Date.now()){
+    const recent=weatherState.pressureHistory.filter(x=>now-x.t<=3*60*60*1000&&Number.isFinite(x.v));if(recent.length<2)return null;return recent.at(-1).v-recent[0].v;
+  }
+  function setWeatherCache(cache){weatherState.cache=cache;write('weather-cache',cache);renderWeather();return cache}
+  async function fetchWeather(){
+    const pos=getPosition();if(!validPoint(pos))throw new Error('A valid position is required to download weather.');
+    const button=document.getElementById('weatherRefresh'),head=document.getElementById('weatherHeadState');if(button)button.disabled=true;if(head)head.textContent='DOWNLOADING…';
+    try{
+      const params=new URLSearchParams({latitude:String(pos.lat),longitude:String(pos.lon),current:'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,visibility,surface_pressure',hourly:'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,visibility,surface_pressure',forecast_days:'3',timezone:'auto',temperature_unit:'fahrenheit',wind_speed_unit:'mph',precipitation_unit:'inch'});
+      const res=await fetch('https://api.open-meteo.com/v1/forecast?'+params.toString());if(!res.ok)throw new Error(`Forecast HTTP ${res.status}`);const data=await res.json();
+      let alerts=[];if(pos.lat>=18&&pos.lat<=72&&pos.lon>=-180&&pos.lon<=-60){try{const ar=await fetch(`https://api.weather.gov/alerts/active?point=${pos.lat.toFixed(4)},${pos.lon.toFixed(4)}`);if(ar.ok){const aj=await ar.json();alerts=aj.features||[]}}catch{}}
+      const cache=normalizeForecast(data,alerts,pos);setWeatherCache(cache);return cache;
+    }finally{if(button)button.disabled=false}
+  }
+  function fmtWeatherValue(v,suffix='—'){return Number.isFinite(Number(v))?`${Math.round(Number(v))}${suffix}`:'—'}
+  function renderWeather(cache=weatherState.cache){
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v},haz=document.getElementById('weatherHazards'),hour=document.getElementById('weatherHourly'),head=document.getElementById('weatherHeadState');if(!document.getElementById('weather'))return cache;
+    if(!cache){if(head)head.textContent='CACHE EMPTY';return null}
+    const c=cache.current||{},ageMs=Math.max(0,Date.now()-Date.parse(cache.downloadedAt||0)),ageMin=Math.floor(ageMs/60000),flags=weatherHazards(cache),delta=localWeatherPressureTrend();
+    if(head)head.textContent=(navigator.onLine===false?'OFFLINE CACHE':'CACHED FORECAST');set('weatherCacheAge',ageMin<60?`${ageMin} MIN OLD`:`${Math.floor(ageMin/60)}H ${ageMin%60}M OLD`);set('weatherCondition',weatherCodeLabel(c.weatherCode));set('weatherTemp',fmtWeatherValue(c.tempF,'°F'));set('weatherPrecip',Number.isFinite(c.precipIn)?`${Number(c.precipIn).toFixed(2)} in`:'—');set('weatherWind',fmtWeatherValue(c.windMph,' mph'));set('weatherGust',fmtWeatherValue(c.gustMph,' mph'));set('weatherVisibility',Number.isFinite(c.visibilityM)?`${(c.visibilityM/1609.344).toFixed(1)} mi`:'—');set('weatherPressure',Number.isFinite(c.pressureHpa)?`${c.pressureHpa.toFixed(1)} hPa`:'—');set('weatherLocalPressure',delta==null?'INSUFFICIENT LOCAL HISTORY':`${delta>=0?'+':''}${delta.toFixed(1)} hPa / 3h`);set('weatherHazardCount',`${flags.length} FLAG${flags.length===1?'':'S'}`);set('weatherSource',cache.source||'Open-Meteo');set('weatherAlertSource',(cache.alerts||[]).length?'NWS ACTIVE ALERTS CACHED':'NWS / NONE CACHED');set('weatherPosition',cache.position?`${cache.position.lat.toFixed(4)}, ${cache.position.lon.toFixed(4)}`:'—');set('weatherDownloaded',new Date(cache.downloadedAt).toLocaleString());
+    if(haz)haz.innerHTML=flags.length?flags.map(x=>`<div class="weather-hazard ${x.level}"><span>${esc(x.level.toUpperCase())}</span><b>${esc(x.title)}</b><p>${esc(x.detail)}</p></div>`).join(''):'<p class="muted">No forecast hazard thresholds or cached official alerts are currently flagged.</p>';
+    if(hour){const now=Date.now(),items=(cache.hourly||[]).filter(x=>Date.parse(x.time)>=now-60*60000).slice(0,12);hour.innerHTML=items.length?items.map(x=>`<div class="weather-hour-card"><time>${new Date(x.time).toLocaleTimeString([], {hour:'numeric'})}</time><b>${Number.isFinite(x.tempF)?Math.round(x.tempF)+'°F':'—'}</b><span>${esc(weatherCodeLabel(x.weatherCode))}</span><span>PRECIP ${Number.isFinite(x.precipProbability)?Math.round(x.precipProbability)+'%':'—'}</span><span>WIND ${Number.isFinite(x.windMph)?Math.round(x.windMph)+' mph':'—'}</span><span>GUST ${Number.isFinite(x.gustMph)?Math.round(x.gustMph)+' mph':'—'}</span></div>`).join(''):'<p class="muted">Cached hourly forecast is unavailable.</p>'}
+    return cache;
+  }
+  document.getElementById('weatherRefresh')?.addEventListener('click',()=>fetchWeather().catch(err=>{const h=document.getElementById('weatherHeadState');if(h)h.textContent='DOWNLOAD FAILED';console.warn('FIELD/OS weather download failed',err)}));
+  document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},p=Number(d.pressureHpa??d.env?.pressureHpa??d.pressure);if(Number.isFinite(p)){weatherState.pressureHistory.push({t:Date.now(),v:p});weatherState.pressureHistory=weatherState.pressureHistory.filter(x=>Date.now()-x.t<=4*60*60*1000).slice(-240);if(document.querySelector('#weather.active'))renderWeather()}});
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='weather')renderWeather()});window.addEventListener('online',()=>{if(document.querySelector('#weather.active'))renderWeather()});window.addEventListener('offline',()=>{if(document.querySelector('#weather.active'))renderWeather()});setTimeout(()=>renderWeather(),450);
+  window.FIELD_WEATHER={state:weatherState,fetch:fetchWeather,setCache:setWeatherCache,normalize:normalizeForecast,hazards:weatherHazards,render:renderWeather,pressureTrend:localWeatherPressureTrend,codeLabel:weatherCodeLabel};
+
   // Backfill original Feature 03 — Route Data Confidence Meter.
   function computeRouteConfidence(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{}){
     const points=cleanPoints(plan.points||[]),sections=Array.isArray(plan.trailSections)?plan.trailSections:[],profile=Array.isArray(plan.elevationProfile)?plan.elevationProfile:[],mode=String(plan.routingMode||plan.mode||'').toLowerCase(),build=String(plan.routeBuildState||'').toUpperCase();
