@@ -3832,3 +3832,94 @@ input,select,textarea{
   .view-head-actions{display:flex!important;gap:5px!important;min-width:0!important}
   .view-head-actions>*{min-width:40px!important;min-height:40px!important}
 }
+
+
+/* v3.63 WORKSTATION ARCHITECTURE — explicit desktop ownership, no implicit hero geometry. */
+@media(min-width:1024px){
+  :root{--ws-nav-w:224px;--ws-edge:10px;--ws-gap:10px}
+  body .workstation-nav{
+    display:flex!important;
+    left:var(--ws-edge)!important;
+    top:var(--ws-edge)!important;
+    bottom:var(--ws-edge)!important;
+    width:var(--ws-nav-w)!important;
+    box-sizing:border-box!important;
+    padding:10px!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+  body .shell{
+    box-sizing:border-box!important;
+    width:calc(100% - var(--ws-nav-w) - (var(--ws-edge) * 3))!important;
+    max-width:none!important;
+    margin:var(--ws-edge) var(--ws-edge) var(--ws-edge) calc(var(--ws-nav-w) + (var(--ws-edge) * 2))!important;
+    padding:0!important;
+  }
+  body #app .screen{width:100%!important;max-width:none!important;box-sizing:border-box!important}
+  body .module-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    grid-auto-flow:row!important;
+    grid-auto-rows:auto!important;
+    align-items:start!important;
+    gap:10px!important;
+  }
+  body .module-grid>*{
+    min-width:0!important;
+    grid-row:auto!important;
+    align-self:start!important;
+  }
+  body .module-grid>.module-slot{
+    grid-column:auto!important;
+    width:auto!important;
+  }
+  body .module-grid>.module-slot>.panel{height:auto!important;min-height:0!important}
+  /* Retire legacy implicit hero spans. Full-width work areas are named explicitly below. */
+  body .module-grid>.module-hero{
+    grid-column:auto!important;
+    grid-row:auto!important;
+  }
+  body #route .route-planner-panel,
+  body #route .route-performance-panel,
+  body #route .route-elevation-panel,
+  body #map .terrain-map-card,
+  body #map .terrain-controls-below,
+  body #map .offline-map-manager,
+  body #map .route-offline-readiness,
+  body #track .track-map-panel,
+  body #trailreturn .return-map-panel{
+    grid-column:1 / -1!important;
+  }
+  body .module-console-header,
+  body .module-band{width:100%!important;box-sizing:border-box!important}
+  body .module-console-header>*,
+  body .module-band>*{min-width:0}
+}
+@media(min-width:1024px) and (max-width:1280px){
+  :root{--ws-nav-w:196px;--ws-edge:8px}
+  body .workstation-nav button{font-size:12px!important;min-height:38px!important}
+}
+
+
+@media(min-width:1024px){
+  body .module-console-header{
+    display:grid!important;
+    grid-template-columns:minmax(190px,1.4fr) repeat(4,minmax(90px,.8fr)) minmax(90px,.7fr)!important;
+    align-items:center!important;
+    min-height:48px!important;
+    padding:8px 10px!important;
+    gap:8px!important;
+    overflow:hidden!important;
+  }
+  body .module-console-header>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  body .module-band{
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    align-items:center!important;
+    min-height:30px!important;
+    padding:5px 10px!important;
+    gap:8px!important;
+    overflow:hidden!important;
+  }
+  body .module-band>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+}

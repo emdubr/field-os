@@ -527,7 +527,7 @@ console.log('PASS v3.61 route planner and ETA reclaim full desktop width without
 
 assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
-assert.ok(workstationCss.includes('v3.62 QA/UI hardening'));
+assert.ok(workstationCss.includes('v3.63 QA/UI hardening'));
 assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
 assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
 console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
@@ -571,9 +571,17 @@ console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime b
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
-assert.ok(workstationCss.includes('v3.62 UI COHERENCE LAYER'));
+assert.ok(workstationCss.includes('v3.63 UI COHERENCE LAYER'));
 assert.ok(workstationCss.includes('body .module-grid>*{grid-column:1!important;min-width:0!important}'));
 assert.ok(workstationCss.includes('height:auto!important'));
-assert.ok(workstationCss.includes('v3.62 chrome cleanup'));
+assert.ok(workstationCss.includes('v3.63 chrome cleanup'));
 assert.ok(workstationCss.includes('.status-strip{overflow-x:auto'));
-console.log('PASS v3.62 coherent panel flow, mobile layout, and chrome overflow handling');
+console.log('PASS v3.63 coherent panel flow, mobile layout, and chrome overflow handling');
+
+assert.ok(workstationJs.includes('no implicit first-card hero'));
+assert.ok(!workstationJs.includes("grid.querySelector(':scope > .panel');hero?.classList.add('module-hero')"));
+assert.ok(workstationCss.includes('v3.63 WORKSTATION ARCHITECTURE'));
+assert.ok(workstationCss.includes('--ws-nav-w:224px'));
+assert.ok(workstationCss.includes('body .module-grid>.module-hero{'));
+assert.ok(workstationCss.includes('grid-column:auto!important'));
+console.log('PASS v3.63 workstation uses explicit shell/grid/full-width ownership without implicit hero cards');
