@@ -1126,7 +1126,7 @@
     for(const leg of Array.isArray(legs)?legs:[]){
       for(const sec of leg?.result?.trailSections||[]){
         const last=out.at(-1);
-        const same=last&&last.label===sec.label&&last.highway===sec.highway&&last.surface===sec.surface;
+        const same=last&&last.label===sec.label&&last.highway===sec.highway&&last.surface===sec.surface&&last.smoothness===sec.smoothness&&last.tracktype===sec.tracktype&&last.sacScale===sec.sacScale&&last.trailVisibility===sec.trailVisibility;
         if(same)last.distanceM+=Number(sec.distanceM)||0;
         else out.push({...sec,distanceM:Number(sec.distanceM)||0});
       }
