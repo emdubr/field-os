@@ -51,30 +51,92 @@ function toggleTabSheet(force){
   moreTabs.setAttribute('aria-expanded',String(willOpen));
   document.body.classList.toggle('sheet-open',willOpen);
 }
-function openView(name){
-  const target=views.find(v=>v.dataset.view===name);
-  if(!target)return;
-  views.forEach(v => v.classList.toggle('active', v === target));
-  tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tabFor === name));
-  moreTabs?.classList.toggle('active', moreViewNames.has(name));
-  closeTabSheet();
-  document.getElementById('screen')?.focus({preventScroll:true});
-  window.scrollTo({top:0, behavior:'auto'});
-  document.dispatchEvent(new CustomEvent('fieldos:viewchange',{detail:{view:name}}));
+function syncNavigationState(name){
+  tabButtons.forEach(b=>{
+    const active=b.dataset.tabFor===name;
+    b.classList.toggle('active',active);
+    if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  const inMore=moreViewNames.has(name);
+  moreTabs?.classList.toggle('active',inMore);
+  if(moreTabs){
+    if(inMore)moreTabs.setAttribute('aria-current','page');else moreTabs.removeAttribute('aria-current');
+  }
+  document.querySelectorAll('#tabSheet [data-open]').forEach(b=>{
+    const active=b.dataset.open===name;
+    b.classList.toggle('active',active);
+    if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('.workstation-nav [data-module]').forEach(b=>{
+    const active=b.dataset.module===name;
+    b.classList.toggle('selected',active);
+    if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
+  });
+  document.querySelectorAll('#home .console-rail [data-open]').forEach(b=>{
+    const active=name!=='home'&&b.dataset.open===name;
+    b.classList.toggle('rail-active',active);
+    b.setAttribute('aria-pressed',active?'true':'false');
+    const raw=b.textContent.replace(/^[▶▷]\s*/,'').trim();
+    b.textContent=(active?'▶ ':'▷ ')+raw;
+  });
 }
+function openView(name,{history=true,focus=true}={}){
+  const target=views.find(v=>v.dataset.view===name);
+  if(!target){
+    console.warn('FIELD/OS navigation target not found',name);
+    return false;
+  }
+  const previous=document.querySelector('.view.active')?.dataset.view||'home';
+  views.forEach(v => v.classList.toggle('active', v === target));
+  syncNavigationState(name);
+  closeTabSheet();
+  if(focus)document.getElementById('screen')?.focus({preventScroll:true});
+  window.scrollTo({top:0, behavior:'auto'});
+  if(history&&previous!==name){
+    try{history.pushState({fieldosView:name},'',name==='home'?location.pathname+location.search:`#${name}`)}catch{}
+  }
+  document.dispatchEvent(new CustomEvent('fieldos:viewchange',{detail:{view:name,previous}}));
+  return true;
+}
+window.FIELD_OPEN_VIEW=openView;
+window.FIELD_SYNC_NAV=syncNavigationState;
 
 document.addEventListener('click', (e) => {
+  const trigger=e.target.closest('[data-open]');
   const isMapControl=e.target.closest('[data-map-action]');
-  const trigger = isMapControl?null:e.target.closest('[data-open]');
-  if(trigger) openView(trigger.dataset.open);
+  // Navigation wins when a control explicitly declares a destination.
+  if(trigger){
+    e.preventDefault();
+    openView(trigger.dataset.open);
+  }else if(isMapControl){
+    // handled by the map engine
+  }
   const theme = e.target.closest('[data-theme-choice]');
   if(theme) applyTheme(theme.dataset.themeChoice,true);
+});
+
+window.addEventListener('popstate',e=>{
+  const fromState=e.state?.fieldosView;
+  const fromHash=location.hash.replace(/^#/,'');
+  const target=views.some(v=>v.dataset.view===fromState)?fromState:
+    views.some(v=>v.dataset.view===fromHash)?fromHash:'home';
+  openView(target,{history:false});
+});
+window.addEventListener('hashchange',()=>{
+  const target=location.hash.replace(/^#/,'');
+  if(views.some(v=>v.dataset.view===target))openView(target,{history:false});
 });
 
 moreTabs?.addEventListener('click',()=>toggleTabSheet());
 document.getElementById('closeTabSheet')?.addEventListener('click',()=>closeTabSheet());
 tabSheetBackdrop?.addEventListener('click',()=>closeTabSheet());
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTabSheet()});
+{
+  const initialHash=location.hash.replace(/^#/,'');
+  const initial=views.some(v=>v.dataset.view===initialHash)?initialHash:(document.querySelector('.view.active')?.dataset.view||'home');
+  if(initial!=='home')openView(initial,{history:false,focus:false});
+  else syncNavigationState('home');
+}
 
 function syncThemeButtons(){
   const active=document.body.dataset.theme||'green';
@@ -336,11 +398,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.16',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.17',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.16';
+        const key='fieldos-sw-reloaded-v3.17';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
