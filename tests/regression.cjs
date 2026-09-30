@@ -5,6 +5,7 @@ w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:
 w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
+async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out waiting for async UI state')}
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){},invalidateSize(){},bindTooltip(){return this},setOpacity(){}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain};
@@ -21,7 +22,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  console.log('PASS waypoint/base and trip persistence');
  d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
- const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await tick();
+ const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await waitFor(()=>!d.getElementById('routeGainOut').textContent.includes('LOADING'));
  assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);assert.ok(parseFloat(d.getElementById('routeDistance').textContent)>0);assert.match(d.getElementById('routeGainOut').textContent,/N\/A/);assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-routePlan')).points.length,2);
  for(const id of ['homeRealMap','realMap']){assert.ok(d.querySelector('#'+id+' .planned-route-line'));assert.equal(d.querySelectorAll('#'+id+' .planned-route-marker').length,2)}
  const beforeRoute=d.querySelector('#homeRealMap .planned-route-line').getAttribute('points');
@@ -34,7 +35,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.equal(r.nearestNode(g,{lat:0,lon:0}),null);assert.equal(r.samplePolyline([{lat:44,lon:-73},{lat:44.01,lon:-73}],80)[0].distanceM,0);
  console.log('PASS trail-edge projection, same-segment route, distance, no-nearby-trail detection');
  w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}:{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
- d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await tick();await tick();
+ d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await waitFor(()=>/SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent));
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
  console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
  const merged=r.displayTrailSections([{result:{trailSections:[
@@ -96,7 +97,7 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  for(let i=0;i<20;i++){
    r.addAnchor({lat:44.475+i*.00001,lon:-73.215});
    r.addAnchor({lat:44.476+i*.00001,lon:-73.214});
-   await tick();await tick();
+   await waitFor(()=>w.FIELD_ROUTE_STATE.getPoints().length===2&&!d.getElementById('routeGainOut').textContent.includes('LOADING'));
    assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);
    r.clearAll();await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,0);
  }
