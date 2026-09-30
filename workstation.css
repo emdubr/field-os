@@ -1277,3 +1277,28 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   #map .map-control-grid{gap:7px!important}
   #map .map-quick-actions{gap:7px!important}
 }
+
+
+/* v3.16 route planner diagnostics */
+.route-diagnostic-strip{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  min-height:38px;margin:-4px 0 8px;padding:7px 9px;
+  border:1px solid var(--line);background:var(--panel2);
+}
+.route-diagnostic-strip b{
+  min-width:0;color:var(--fg2);font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.02em;overflow-wrap:anywhere;
+}
+.route-diagnostic-strip b.error{color:var(--danger)}
+.route-diagnostic-strip .micro-btn{flex:0 0 auto;min-height:30px!important;padding:5px 8px!important;font-size:10px!important}
+.route-error-guide{
+  margin-top:9px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);
+  font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.route-error-guide summary{cursor:pointer;padding:7px 9px;color:var(--fg2);font-weight:700}
+.route-error-guide>div{padding:0 9px 8px}
+.route-error-guide b{color:var(--fg)}
+@media(max-width:600px){
+  .route-diagnostic-strip{align-items:stretch;flex-direction:column}
+  .route-diagnostic-strip .micro-btn{width:100%}
+}
