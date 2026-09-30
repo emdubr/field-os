@@ -1478,3 +1478,79 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   .gaia-route-layer-bar .action{grid-column:1/-1;width:100%}
   .gaia-route-layer-bar span:last-child{text-align:left}
 }
+
+
+/* v3.22 detailed elevation breakdown + visible Gaia layer */
+.gaia-route-layer-bar{
+  position:relative;
+  border:1px solid var(--warn)!important;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 18%,transparent),0 0 8px color-mix(in srgb,var(--warn) 12%,transparent);
+}
+.gaia-route-layer-bar:before{
+  content:"ROUTE OVERLAY";
+  position:absolute;
+  top:-8px;left:10px;
+  padding:0 5px;
+  background:var(--panel2);
+  color:var(--warn);
+  font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.elevation-profile-chart{width:100%;min-height:220px}
+.elevation-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1px;
+  margin-top:9px;
+  border:1px solid var(--line);
+  background:var(--line);
+}
+.elevation-detail-grid>div{
+  min-width:0;
+  padding:8px 9px;
+  background:var(--panel2);
+}
+.elevation-detail-grid span{
+  display:block;
+  margin-bottom:4px;
+  color:var(--dim);
+  font-size:10px;
+  letter-spacing:.04em;
+}
+.elevation-detail-grid b{
+  display:block;
+  color:var(--fg2);
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+}
+.elevation-band-head{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:10px;
+  padding:7px 8px;
+  border:1px solid var(--line);
+  background:var(--panel3);
+  color:var(--fg2);
+  font:700 10px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.elevation-table-wrap{overflow-x:auto;border:1px solid var(--line);border-top:0}
+.elevation-breakdown-table{
+  width:100%;
+  min-width:620px;
+  border-collapse:collapse;
+  font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.elevation-breakdown-table th,.elevation-breakdown-table td{
+  padding:7px 8px;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  text-align:right;
+  white-space:nowrap;
+}
+.elevation-breakdown-table th:first-child,.elevation-breakdown-table td:first-child{text-align:left}
+.elevation-breakdown-table th{color:var(--dim);background:var(--panel2)}
+.elevation-breakdown-table td{color:var(--fg)}
+@media(max-width:700px){
+  .elevation-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
