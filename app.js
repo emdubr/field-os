@@ -336,11 +336,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.12',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.13',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.12';
+        const key='fieldos-sw-reloaded-v3.13';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -1092,6 +1092,9 @@ function updateLiveNavigationUI(){
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
+  window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null};
+  try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(window.FIELD_CURRENT_POSITION))}catch{}
+  document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:currentAccuracy;
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
   fieldLiveHeading=Number.isFinite(p.coords.heading)?p.coords.heading:null;
@@ -1419,4 +1422,4 @@ setTimeout(()=>updateFieldMaps(false),120);
 
 if(routePlan.elevationProfile?.length){document.getElementById('routeLossOut').textContent=`${Math.round(routePlan.elevationLossFt)} ft`;document.getElementById('routeElevRange').textContent=`${Math.round(routePlan.elevationMinFt)}–${Math.round(routePlan.elevationMaxFt)} ft`;}
 
-document.getElementById('saveRouteVisible')?.addEventListener('click',()=>document.getElementById('routeSaveTop')?.click());
+document.getElementById('saveRouteVisible')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeSave==='1')return;document.getElementById('routeSaveTop')?.click()});
