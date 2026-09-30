@@ -81,7 +81,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.21',
+      'BUILD: v3.22',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -411,7 +411,7 @@
           lossFt:Number(plan.elevationLossFt)||0,
           minFt:Number(plan.elevationMinFt)||0,
           maxFt:Number(plan.elevationMaxFt)||0,
-          maxGrade:Number(plan.grade)||0
+          maxGrade:Number(plan.elevationMaxGrade??plan.grade)||0
         }:null;
         applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
         renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();
@@ -514,7 +514,7 @@
     const samples=plan.elevationProfile,total=samples?.at(-1)?.distanceM||0;
     const profile=Array.isArray(samples)&&samples.length>1?{
       samples:[...samples].reverse().map(p=>({...p,distanceM:total-p.distanceM})),
-      gainFt:plan.elevationLossFt,lossFt:plan.elevationGainFt,minFt:plan.elevationMinFt,maxFt:plan.elevationMaxFt,maxGrade:Number(plan.grade)||0
+      gainFt:plan.elevationLossFt,lossFt:plan.elevationGainFt,minFt:plan.elevationMinFt,maxFt:plan.elevationMaxFt,maxGrade:Number(plan.elevationMaxGrade??plan.grade)||0
     }:null;
     state()?.setPoints?.(points);
     state()?.setMeta?.({...plan,anchors:reversedAnchors,routedAnchors:reversedAnchors,points,
@@ -643,6 +643,7 @@
       elevationLossFt:Number(plan.elevationLossFt)||0,
       elevationMinFt:Number(plan.elevationMinFt)||0,
       elevationMaxFt:Number(plan.elevationMaxFt)||0,
+      elevationMaxGrade:Number(plan.elevationMaxGrade??plan.grade)||0,
       elevationProfile:Array.isArray(plan.elevationProfile)?plan.elevationProfile:null,
       gain:Number(plan.gain)||0,grade:Number(plan.grade)||0,
       terrain:plan.terrain||'maintained',notes:plan.notes||''
@@ -668,7 +669,7 @@
     st?.setMeta?.({...saved,anchors,routedAnchors:anchors});st?.setPoints?.(points);st?.save?.();
     const profile=Array.isArray(saved.elevationProfile)&&saved.elevationProfile.length>1?{
       samples:saved.elevationProfile,gainFt:Number(saved.elevationGainFt)||0,lossFt:Number(saved.elevationLossFt)||0,
-      minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.grade)||0
+      minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.elevationMaxGrade??saved.grade)||0
     }:null;
     if($('routeName'))$('routeName').value=saved.name||'FIELD ROUTE';
     applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);fitPlanner(points,16);
@@ -992,20 +993,126 @@
     }
   }
 
+  function profileElevationAt(samples,distanceM){
+    const s=(Array.isArray(samples)?samples:[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    if(!s.length)return NaN;
+    if(distanceM<=s[0].distanceM)return s[0].elevationFt;
+    if(distanceM>=s.at(-1).distanceM)return s.at(-1).elevationFt;
+    let i=1;while(i<s.length&&s[i].distanceM<distanceM)i++;
+    const a=s[i-1],b=s[i],span=Math.max(1,b.distanceM-a.distanceM),t=(distanceM-a.distanceM)/span;
+    return a.elevationFt+(b.elevationFt-a.elevationFt)*t;
+  }
+
+  function elevationDetail(profile,distMi){
+    const samples=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    if(samples.length<2)return null;
+    const totalM=samples.at(-1).distanceM||distMi*1609.344;
+    const startFt=samples[0].elevationFt,endFt=samples.at(-1).elevationFt;
+    const high=samples.reduce((a,b)=>b.elevationFt>a.elevationFt?b:a,samples[0]);
+    const low=samples.reduce((a,b)=>b.elevationFt<a.elevationFt?b:a,samples[0]);
+    let maxUp=-Infinity,maxDown=Infinity;
+    for(let i=1;i<samples.length;i++){
+      const runFt=Math.max(1,(samples[i].distanceM-samples[i-1].distanceM)*3.28084);
+      const grade=(samples[i].elevationFt-samples[i-1].elevationFt)/runFt*100;
+      maxUp=Math.max(maxUp,grade);maxDown=Math.min(maxDown,grade);
+    }
+    const quarterM=0.25*1609.344;
+    let qUp=-Infinity,qDown=Infinity,qUpAt=0,qDownAt=0;
+    if(totalM>=quarterM){
+      for(let d=0;d<=totalM-quarterM;d+=Math.max(30,totalM/160)){
+        const a=profileElevationAt(samples,d),b=profileElevationAt(samples,d+quarterM);
+        const grade=(b-a)/(quarterM*3.28084)*100;
+        if(grade>qUp){qUp=grade;qUpAt=d}
+        if(grade<qDown){qDown=grade;qDownAt=d}
+      }
+    }
+    const binMi=distMi<=4?.5:distMi<=10?1:distMi<=20?2:5;
+    const binM=binMi*1609.344,bins=[];
+    for(let start=0;start<totalM-1;start+=binM){
+      const end=Math.min(totalM,start+binM);
+      const startFtBin=profileElevationAt(samples,start),endFtBin=profileElevationAt(samples,end);
+      let gain=0,loss=0,prev=startFtBin;
+      const inside=samples.filter(x=>x.distanceM>start&&x.distanceM<end);
+      for(const p of [...inside,{distanceM:end,elevationFt:endFtBin}]){
+        const de=p.elevationFt-prev;
+        if(de>5)gain+=de;else if(de<-5)loss+=-de;
+        prev=p.elevationFt;
+      }
+      const net=endFtBin-startFtBin,runFt=Math.max(1,(end-start)*3.28084);
+      bins.push({
+        startMi:start/1609.344,endMi:end/1609.344,startFt:startFtBin,endFt:endFtBin,
+        gainFt:gain,lossFt:loss,netFt:net,avgGrade:net/runFt*100
+      });
+    }
+    return {
+      startFt,endFt,netFt:endFt-startFt,highFt:high.elevationFt,highMi:high.distanceM/1609.344,
+      lowFt:low.elevationFt,lowMi:low.distanceM/1609.344,maxUp,maxDown,
+      quarterUp:Number.isFinite(qUp)?qUp:null,quarterDown:Number.isFinite(qDown)?qDown:null,
+      quarterUpMi:qUpAt/1609.344,quarterDownMi:qDownAt/1609.344,binMi,bins
+    };
+  }
+
+  function renderElevationBreakdown(profile,distMi){
+    const detail=elevationDetail(profile,distMi);
+    const set=(id,val)=>{const el=$(id);if(el)el.textContent=val};
+    if(!detail){
+      ['elevStart','elevFinish','elevHigh','elevLow','elevNet','elevMaxUp','elevMaxDown','elevQuarterUp','elevQuarterDown'].forEach(id=>set(id,'---'));
+      const body=$('elevationSegmentRows');if(body)body.innerHTML='<tr><td colspan="7">PLOT ROUTE TO CALCULATE ELEVATION BREAKDOWN</td></tr>';
+      return;
+    }
+    const ft=v=>`${Math.round(v).toLocaleString()} ft`;
+    const signed=v=>`${v>=0?'+':'−'}${Math.round(Math.abs(v)).toLocaleString()} ft`;
+    const grade=v=>Number.isFinite(v)?`${v>=0?'+':''}${v.toFixed(1)}%`:'---';
+    set('elevStart',ft(detail.startFt));set('elevFinish',ft(detail.endFt));
+    set('elevHigh',`${ft(detail.highFt)} @ ${detail.highMi.toFixed(2)} mi`);
+    set('elevLow',`${ft(detail.lowFt)} @ ${detail.lowMi.toFixed(2)} mi`);
+    set('elevNet',signed(detail.netFt));set('elevMaxUp',grade(detail.maxUp));set('elevMaxDown',grade(detail.maxDown));
+    set('elevQuarterUp',detail.quarterUp==null?'ROUTE < 0.25 MI':`${grade(detail.quarterUp)} @ ${detail.quarterUpMi.toFixed(2)} mi`);
+    set('elevQuarterDown',detail.quarterDown==null?'ROUTE < 0.25 MI':`${grade(detail.quarterDown)} @ ${detail.quarterDownMi.toFixed(2)} mi`);
+    set('elevationBandSize',`${detail.binMi.toFixed(detail.binMi<1?1:0)} MI BANDS`);
+    const body=$('elevationSegmentRows');
+    if(body)body.innerHTML=detail.bins.map(b=>`<tr>
+      <td>${b.startMi.toFixed(2)}–${b.endMi.toFixed(2)}</td>
+      <td>${Math.round(b.startFt).toLocaleString()}</td>
+      <td>${Math.round(b.endFt).toLocaleString()}</td>
+      <td>+${Math.round(b.gainFt).toLocaleString()}</td>
+      <td>−${Math.round(b.lossFt).toLocaleString()}</td>
+      <td>${signed(b.netFt)}</td>
+      <td>${grade(b.avgGrade)}</td>
+    </tr>`).join('');
+  }
+
   function drawElevationProfile(profile,distMi){
     const c=$('routeProfile');if(!c||!profile?.samples?.length)return;
     const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body);
     const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',warn=st.getPropertyValue('--warn').trim()||'#ffd166';
-    ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;
-    for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
+    ctx.clearRect(0,0,w,h);
     const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),span=Math.max(40,max-min);
+    const left=52,right=14,top=34,bottom=28,plotW=w-left-right,plotH=h-top-bottom;
+    ctx.strokeStyle=line;ctx.lineWidth=1;ctx.fillStyle=fg;ctx.font='13px monospace';
+    for(let i=0;i<=4;i++){
+      const y=top+plotH*i/4,e=max-span*i/4;
+      ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
+      ctx.fillText(`${Math.round(e)}`,4,y+4);
+    }
+    for(let i=0;i<=4;i++){
+      const x=left+plotW*i/4;
+      ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,h-bottom);ctx.stroke();
+      const mi=distMi*i/4,label=`${mi.toFixed(distMi<4?1:0)}mi`;
+      ctx.fillText(label,Math.min(w-48,Math.max(left-5,x-14)),h-8);
+    }
+    const xy=profile.samples.map(p=>({
+      x:left+(p.distanceM/(profile.samples.at(-1).distanceM||1))*plotW,
+      y:top+plotH-(p.elevationFt-min)/span*plotH
+    }));
+    ctx.beginPath();xy.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    ctx.lineTo(xy.at(-1).x,h-bottom);ctx.lineTo(xy[0].x,h-bottom);ctx.closePath();
+    ctx.globalAlpha=.12;ctx.fillStyle=warn;ctx.fill();ctx.globalAlpha=1;
     ctx.strokeStyle=warn;ctx.lineWidth=4;ctx.beginPath();
-    profile.samples.forEach((p,i)=>{
-      const x=i/(profile.samples.length-1)*w,y=h-18-((p.elevationFt-min)/span)*(h-42);
-      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-    });
-    ctx.stroke();ctx.fillStyle=fg;ctx.font='20px monospace';
-    ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,14,27);
+    xy.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+    ctx.fillStyle=fg;ctx.font='18px monospace';
+    ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,left,22);
+    renderElevationBreakdown(profile,distMi);
   }
 
   function applyRouteStats(points,profile,elevationState='auto'){
@@ -1035,6 +1142,7 @@
       set('routeLossOut',placeholder);set('plannerRouteLoss',placeholder);
       set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
       set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
+      renderElevationBreakdown(null,dist);
     }
     return dist;
   }
@@ -1054,6 +1162,7 @@
         elevationLossFt:Math.round(profile.lossFt),
         elevationMinFt:Math.round(profile.minFt),
         elevationMaxFt:Math.round(profile.maxFt),
+        elevationMaxGrade:Number(profile.maxGrade)||0,
         elevationProfile:profile.samples
       });
       state()?.save?.();
