@@ -398,11 +398,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.24',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.25',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.24';
+        const key='fieldos-sw-reloaded-v3.25';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -469,12 +469,12 @@ function saveRoutePlan(){const metrics=updateRouteMetrics();routePlan={...routeP
 function loadRouteFields(){if(document.getElementById('routeName'))document.getElementById('routeName').value=routePlan.name||'FIELD ROUTE 01';if(document.getElementById('routeGain'))document.getElementById('routeGain').value=routePlan.gain??0;if(document.getElementById('routeGrade'))document.getElementById('routeGrade').value=routePlan.grade??0;if(document.getElementById('routeTerrain'))document.getElementById('routeTerrain').value=routePlan.terrain||'maintained';if(document.getElementById('routeNotes'))document.getElementById('routeNotes').value=routePlan.notes||''}
 routeMap?.addEventListener('click',e=>{if(e.target.closest('button,input,select,label,textarea,.route-point'))return;if(routePoints.length>=1000)return alert('Route point limit reached (1000). Simplify or save this route before adding more.');const r=routeMap.getBoundingClientRect(),x=clamp((e.clientX-r.left)/r.width,0,1),y=clamp((e.clientY-r.top)/r.height,0,1),ll=mapXYToLatLon(x,y);routePoints.push({x,y,...ll});drawRoute();navigator.vibrate?.(18)});
 if(routeMap){
-  document.getElementById('undoRoutePoint')?.addEventListener('click',()=>{routePoints.pop();drawRoute()});
-  document.getElementById('reverseRoute')?.addEventListener('click',()=>{routePoints.reverse();drawRoute();addLog('ROUTE REVERSED — start/end swapped.','ROUTE')});
-  document.getElementById('clearRoute')?.addEventListener('click',()=>{if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
+  document.getElementById('undoRoutePoint')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;routePoints.pop();drawRoute()});
+  document.getElementById('reverseRoute')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;routePoints.reverse();drawRoute();addLog('ROUTE REVERSED — start/end swapped.','ROUTE')});
+  document.getElementById('clearRoute')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
 }
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
-document.getElementById('routeSaveTop')?.addEventListener('click',()=>{saveRoutePlan();alert('Route saved locally for offline use.')});
+document.getElementById('routeSaveTop')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;saveRoutePlan();alert('Route saved locally for offline use.')});
 function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.0" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
