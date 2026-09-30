@@ -3923,3 +3923,28 @@ input,select,textarea{
   }
   body .module-band>*{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 }
+
+
+/* v3.64 GAP-FREE WORKSTATION ROWS */
+@media(min-width:1024px){
+  body .module-grid{align-items:stretch!important}
+  body .module-grid>*{align-self:stretch!important}
+  body .module-grid>.module-slot{display:flex!important}
+  body .module-grid>.module-slot>.panel,
+  body .module-grid>article.panel{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    box-sizing:border-box!important;
+  }
+  body #route .route-planner-panel,
+  body #route .route-performance-panel,
+  body #route .route-elevation-panel,
+  body #map .terrain-map-card,
+  body #map .terrain-controls-below,
+  body #map .offline-map-manager,
+  body #map .route-offline-readiness{
+    height:auto!important;
+    min-height:0!important;
+  }
+}

@@ -934,8 +934,10 @@
     const all=await savedTrailNetworks(),now=Date.now();
     all.sort((x,y)=>Number(y.created)-Number(x.created));
     for(const rec of all){
-      if(!rec?.box||!Array.isArray(rec.elements)||now-Number(rec.created)>7*24*60*60*1000)continue;
-      if(covers(rec.box,a,b)){const graph=buildGraph(rec.elements);if(graph.nodes.size>1&&graph.segments.length)return {graph,box:rec.box,created:rec.created};}
+      if(!rec?.box||!Array.isArray(rec.elements))continue;
+      const stale=now-Number(rec.created)>7*24*60*60*1000;
+      if(stale&&navigator.onLine!==false)continue;
+      if(covers(rec.box,a,b)){const graph=buildGraph(rec.elements);if(graph.nodes.size>1&&graph.segments.length)return {graph,box:rec.box,created:rec.created,stale};}
     }
     return null;
   }
@@ -962,7 +964,7 @@
 
     if(!force){
       const offline=await offlineTrailGraph(a,b);
-      if(offline&&!navigator.onLine){graphCache.set(key,offline);status('OFFLINE TRAIL NETWORK // SAVED GRAPH','ready');return offline.graph;}
+      if(offline&&!navigator.onLine){graphCache.set(key,offline);status(offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH':'OFFLINE TRAIL NETWORK // SAVED GRAPH',offline.stale?'warn':'ready');return offline.graph;}
     }
     const controllers=OVERPASS_ENDPOINTS.map(()=>new AbortController());
     const failures=[];
