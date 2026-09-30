@@ -302,12 +302,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS v3.53 UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
  const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
- assert.ok(html.includes('styles.css?v=3.52')&&html.includes('workstation.css?v=3.52')&&html.includes('field-tools.js?v=3.52'));
- assert.ok(appJs.includes("sw.js?v=3.52")&&appJs.includes("fieldos-sw-reloaded-v3.52"));
- assert.ok(swJs.includes("field-os-v3-52")&&swJs.includes("field-tools.js?v=3.52"));
- assert.ok(manifest.includes("index.html?v=3.52"));
+ assert.ok(html.includes('styles.css?v=3.53')&&html.includes('workstation.css?v=3.53')&&html.includes('field-tools.js?v=3.53'));
+ assert.ok(appJs.includes("sw.js?v=3.53")&&appJs.includes("fieldos-sw-reloaded-v3.53"));
+ assert.ok(swJs.includes("field-os-v3-53")&&swJs.includes("field-tools.js?v=3.53"));
+ assert.ok(manifest.includes("index.html?v=3.53"));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS v3.52 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS v3.53 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
  assert.ok(appJs.includes("zoomSnap:.25")&&appJs.includes("zoomDelta:.5")&&appJs.includes("wheelDebounceTime:24")&&appJs.includes("wheelPxPerZoomLevel:100"));
  assert.ok(routePlannerJs.includes("zoomSnap:.25")&&routePlannerJs.includes("zoomDelta:.5")&&routePlannerJs.includes("wheelDebounceTime:24")&&routePlannerJs.includes("wheelPxPerZoomLevel:100"));
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
