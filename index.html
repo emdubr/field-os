@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.12" />
-  <link rel="stylesheet" href="workstation.css?v=3.12">
+  <link rel="stylesheet" href="styles.css?v=3.13" />
+  <link rel="stylesheet" href="workstation.css?v=3.13">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.12</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.13</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.12</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.13</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.12</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.13</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -307,9 +307,10 @@
             <label class="route-planner-mode"><span>ROUTING</span><select id="routeSnapMode" class="terminal-input"><option value="trail" selected>SNAP TO TRAILS</option><option value="direct">DIRECT / OFF-TRAIL</option></select></label>
             <button class="action" type="button" data-route-plan-action="current">+ CURRENT POSITION</button>
             <button class="action" type="button" data-route-plan-action="recenter">FIT ROUTE</button>
+            <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.12 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.13 // MAP STARTING</div>
           <div id="routePlannerMap" class="field-real-map route-planner-real-map" role="application" aria-label="Interactive trail route planner map"></div>
           <div class="route-live-telemetry" aria-label="Live route statistics">
             <div><span>DISTANCE</span><b id="plannerRouteDistance">0.00 mi</b></div>
@@ -319,13 +320,19 @@
             <div><span>ROUTE POINTS</span><b id="plannerRoutePoints">0</b></div>
           </div>
           <div id="plannerElevationSource" class="route-live-source">ELEVATION // WAITING FOR ROUTE</div>
+          <div id="plannerGpsStatus" class="route-live-source planner-gps-source">GPS // OFF</div>
           <div class="route-planner-helpbar"><span id="routePlannerHelp">Tap the map to set a start point.</span><span>TRAIL DATA: OPENSTREETMAP</span></div>
           <div class="button-row route-planner-actions">
             <button id="undoRoutePoint" class="action" type="button" data-route-plan-action="undo">UNDO POINT</button>
             <button id="reverseRoute" class="action" type="button" data-route-plan-action="reverse">REVERSE</button>
             <button id="clearRoute" class="action" type="button" data-route-plan-action="clear">CLEAR / CANCEL</button>
             <label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label>
-            <button class="action" type="button" id="saveRouteVisible">SAVE ROUTE</button><button id="exportGpx" class="action" type="button">EXPORT GPX</button>
+            <button class="action" type="button" id="saveRouteVisible" data-native-save="1">SAVE ROUTE</button><button id="exportGpx" class="action" type="button">EXPORT GPX</button>
+          </div>
+          <div class="route-saved-row">
+            <label><span>SAVED ROUTES</span><select id="savedRouteSelect" class="terminal-input"><option value="">SAVED ROUTES…</option></select></label>
+            <button class="action" type="button" data-route-plan-action="load-saved">LOAD SAVED</button>
+            <span class="route-anchor-readout">LOCAL <b id="savedRouteCount">0</b></span>
           </div>
           <p class="muted route-planner-note">In SNAP TO TRAILS mode, FIELD/OS downloads nearby OpenStreetMap walking/trail geometry when online and routes between your control points. Use DIRECT / OFF-TRAIL for intentional cross-country legs. Always verify trail status, access, terrain and closures before relying on a planned route.</p>
         </article>
@@ -533,12 +540,12 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.12"></script>
-  <script src="app.js?v=3.12"></script>
-  <script src="workstation.js?v=3.12"></script>
-  <script src="map-engine.js?v=3.12"></script>
+  <script src="route-state.js?v=3.13"></script>
+  <script src="app.js?v=3.13"></script>
+  <script src="workstation.js?v=3.13"></script>
+  <script src="map-engine.js?v=3.13"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.12"></script>
+  <script src="route-planner.js?v=3.13"></script>
 </body>
 </html>
 
