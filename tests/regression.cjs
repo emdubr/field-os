@@ -113,6 +113,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.ok(relayItems.length>0);assert.ok(relayItems[0].elevationFt>=900);assert.ok(relayItems[0].score>0);
  w.FIELD_RELAY.render(relayItems);assert.ok(d.querySelectorAll('#relayRecommendList .relay-recommend-row').length>=1);
  console.log('PASS feature 11 Relay Recommendation scores elevated reachable candidates against weak mesh coverage zones');
+ w.FIELD_TRANSPORT.state.items.length=0;w.FIELD_TRANSPORT.queue('queued while offline',{channel:'PRIMARY'});await tick();
+ assert.equal(w.FIELD_TRANSPORT.state.items.length,1);assert.equal(w.FIELD_TRANSPORT.state.items[0].status,'pending');assert.match(d.getElementById('storeForwardState').textContent,/1 QUEUED/);
+ let delivered=[];const unregister=w.FIELD_TRANSPORT.register('mock-mesh',{priority:100,available:false,send:async msg=>{delivered.push(msg.text);return {ok:true,receipt:'rx-1'}}});await tick();
+ assert.equal(delivered.length,0);w.FIELD_TRANSPORT.setAvailable('mock-mesh',true);await waitFor(()=>w.FIELD_TRANSPORT.state.items[0].status==='sent');
+ assert.deepEqual(delivered,['queued while offline']);assert.equal(w.FIELD_TRANSPORT.state.items[0].transport,'mock-mesh');assert.equal(w.FIELD_TRANSPORT.state.items[0].receipt,'rx-1');
+ w.FIELD_TRANSPORT.queue('second packet',{channel:'PRIMARY'});await waitFor(()=>w.FIELD_TRANSPORT.state.items.at(-1).status==='sent');assert.equal(delivered.length,2);
+ unregister();assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-message-queue')).items.length>=2);
+ console.log('PASS feature 12 Store-and-Forward Messaging persists offline packets and automatically flushes through an available registered transport');
+
 
 
 

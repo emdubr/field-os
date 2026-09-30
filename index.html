@@ -294,11 +294,17 @@
           <div class="button-row"><button id="relayRecommendRefresh" class="action" type="button">REFRESH RECOMMENDATIONS</button></div>
           <div id="relayRecommendList" class="relay-recommend-list"><div class="terrain-risk-empty">NO RELAY CANDIDATES YET</div></div>
         </article>
+        <article class="panel store-forward-panel">
+          <div class="panel-title"><span>STORE + FORWARD QUEUE</span><span class="tiny" id="storeForwardState">0 QUEUED</span></div>
+          <div class="store-forward-summary"><span id="storeForwardTransport">TRANSPORT // NONE</span><span id="storeForwardLastFlush">LAST FLUSH // —</span></div>
+          <div id="storeForwardQueue" class="store-forward-queue"><p class="muted">No queued messages.</p></div>
+          <div class="button-row"><button id="storeForwardRetry" class="action" type="button">RETRY QUEUE</button><button id="storeForwardClearSent" class="danger-lite" type="button">CLEAR SENT HISTORY</button></div>
+        </article>
         <article class="panel compose">
           <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
           <label for="messageInput">MESSAGE</label>
           <textarea id="messageInput" placeholder="Type demo message..."></textarea>
-          <div class="button-row"><button class="action" id="sendDemo">TRANSMIT DEMO</button><button class="action">CHANNEL</button></div>
+          <div class="button-row"><button class="action" id="sendDemo">QUEUE / TRANSMIT</button><button class="action">CHANNEL</button></div>
         </article>
       </section>
 

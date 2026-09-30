@@ -79,6 +79,74 @@
 
 
 
+
+  // Feature 12 — Store-and-Forward Messaging.
+  const transportRegistry=new Map();
+  const messageQueueState={items:[]};
+  function loadMessageQueue(){
+    const saved=read('message-queue',null),items=Array.isArray(saved?.items)?saved.items:[];
+    messageQueueState.items=items.filter(x=>x&&x.id&&x.text).slice(-250).map(x=>({...x,status:['pending','sending','sent','failed'].includes(x.status)?x.status:'pending'}));
+    for(const item of messageQueueState.items)if(item.status==='sending')item.status='pending';
+    return messageQueueState.items;
+  }
+  function persistMessageQueue(){write('message-queue',{savedAt:new Date().toISOString(),items:messageQueueState.items.slice(-250)})}
+  function activeTransports(){
+    return [...transportRegistry.entries()].map(([name,t])=>({name,t})).filter(({t})=>{try{return t.enabled!==false&&(typeof t.available==='function'?!!t.available():!!t.available)}catch{return false}}).sort((a,b)=>(b.t.priority||0)-(a.t.priority||0));
+  }
+  function renderMessageQueue(){
+    const list=document.getElementById('storeForwardQueue'),state=document.getElementById('storeForwardState'),transport=document.getElementById('storeForwardTransport');if(!list)return messageQueueState.items;
+    const pending=messageQueueState.items.filter(x=>x.status==='pending'||x.status==='failed').length,available=activeTransports();
+    if(state)state.textContent=`${pending} QUEUED`;if(transport)transport.textContent=`TRANSPORT // ${available.length?available.map(x=>x.name.toUpperCase()).join(' + '):'NONE'}`;
+    const visible=messageQueueState.items.slice(-40).reverse();
+    list.innerHTML=visible.length?visible.map(x=>`<div class="store-forward-row ${x.status}"><i>${esc(x.status.toUpperCase())}</i><div class="store-forward-copy"><b>${esc(x.text)}</b><small>CH ${esc(x.channel||'PRIMARY')} // ${esc(x.transport||'UNASSIGNED')}${x.error?' // '+esc(x.error):''}</small></div><span class="store-forward-time">${new Date(x.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span></div>`).join(''):'<p class="muted">No queued messages.</p>';
+    return messageQueueState.items;
+  }
+  function queueMessage(textValue,{channel='PRIMARY',meta={}}={}){
+    const textValueClean=String(textValue||'').trim().slice(0,1000);if(!textValueClean)return null;
+    const item={id:`msg-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,text:textValueClean,channel:String(channel||'PRIMARY'),createdAt:Date.now(),updatedAt:Date.now(),status:'pending',attempts:0,transport:null,error:null,meta};
+    messageQueueState.items.push(item);if(messageQueueState.items.length>250)messageQueueState.items.splice(0,messageQueueState.items.length-250);persistMessageQueue();renderMessageQueue();document.dispatchEvent(new CustomEvent('fieldos:messagequeued',{detail:{id:item.id,channel:item.channel}}));flushMessageQueue();return item;
+  }
+  async function sendQueueItem(item,entry){
+    item.status='sending';item.updatedAt=Date.now();item.transport=entry.name;item.attempts=(item.attempts||0)+1;item.error=null;persistMessageQueue();renderMessageQueue();
+    try{
+      const result=await entry.t.send({...item});
+      if(result===false||result?.ok===false)throw new Error(result?.error||'Transport rejected message');
+      item.status='sent';item.sentAt=Date.now();item.updatedAt=item.sentAt;item.receipt=result?.receipt||result?.id||null;item.error=null;
+      document.dispatchEvent(new CustomEvent('fieldos:messagesent',{detail:{id:item.id,transport:entry.name,receipt:item.receipt}}));return true;
+    }catch(err){
+      item.status='failed';item.updatedAt=Date.now();item.error=String(err?.message||err||'Send failed').slice(0,180);return false;
+    }finally{persistMessageQueue();renderMessageQueue()}
+  }
+  let flushing=false;
+  async function flushMessageQueue(){
+    if(flushing)return false;const transports=activeTransports();if(!transports.length){renderMessageQueue();return false}
+    flushing=true;let sent=0;
+    try{
+      for(const item of messageQueueState.items){
+        if(!['pending','failed'].includes(item.status))continue;
+        let delivered=false;
+        for(const entry of transports){if(await sendQueueItem(item,entry)){sent++;delivered=true;break}}
+        if(!delivered)item.status='failed';
+      }
+      const el=document.getElementById('storeForwardLastFlush');if(el)el.textContent=`LAST FLUSH // ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} // ${sent} SENT`;
+      persistMessageQueue();renderMessageQueue();return sent>0;
+    }finally{flushing=false}
+  }
+  function registerTransport(name,adapter={}){
+    if(!name||typeof adapter.send!=='function')throw new Error('Transport requires a name and send(message) function.');
+    transportRegistry.set(String(name),{priority:0,available:false,...adapter});renderMessageQueue();queueMicrotask(flushMessageQueue);return ()=>{transportRegistry.delete(String(name));renderMessageQueue()};
+  }
+  function setTransportAvailability(name,available){
+    const t=transportRegistry.get(String(name));if(!t)return false;t.available=!!available;renderMessageQueue();if(available)flushMessageQueue();return true;
+  }
+  function clearSentMessages(){messageQueueState.items=messageQueueState.items.filter(x=>x.status!=='sent');persistMessageQueue();renderMessageQueue()}
+  document.addEventListener('fieldos:outgoingmessage',e=>{const item=queueMessage(e.detail?.text,{channel:e.detail?.channel||'PRIMARY',meta:e.detail?.meta||{}});if(item)e.preventDefault()});
+  document.addEventListener('fieldos:transportchange',e=>{if(e.detail?.name)setTransportAvailability(e.detail.name,e.detail.available)});
+  window.addEventListener('online',flushMessageQueue);document.getElementById('storeForwardRetry')?.addEventListener('click',flushMessageQueue);document.getElementById('storeForwardClearSent')?.addEventListener('click',clearSentMessages);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMessageQueue()});
+  loadMessageQueue();renderMessageQueue();
+  window.FIELD_TRANSPORT={register:registerTransport,setAvailable:setTransportAvailability,flush:flushMessageQueue,queue:queueMessage,clearSent:clearSentMessages,active:activeTransports,state:messageQueueState};
+
   // Feature 11 — Relay Placement Recommendation.
   function weakCoverageCentroid(samples=[]){
     const weak=(Array.isArray(samples)?samples:[]).filter(s=>validPoint(s)&&['weak','dead'].includes(s.quality||classifyMeshCoverage(s)));

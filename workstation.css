@@ -3121,3 +3121,11 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .relay-recommend-row>i{font-style:normal;color:var(--dim);font-size:8px;text-align:center}.relay-recommend-main b{display:block;font-size:10px}.relay-recommend-main small{display:block;color:var(--dim);font-size:8px;line-height:1.35}.relay-recommend-score{text-align:right;white-space:nowrap}.relay-recommend-score b{display:block;font-size:13px}.relay-recommend-score small{font-size:7px;color:var(--dim)}
 .relay-recommend-save{min-height:36px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:8px/1.2 monospace;padding:5px 7px}
 @media(max-width:600px){.relay-recommend-row{grid-template-columns:28px minmax(0,1fr) auto}.relay-recommend-save{grid-column:2/-1;width:100%;min-height:42px}.relay-recommend-main small{font-size:9px}}
+
+
+/* feature 12 — store + forward messaging */
+.store-forward-summary{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--dim);font-size:7px;margin-bottom:6px}.store-forward-queue{display:grid;gap:5px;max-height:320px;overflow:auto;margin-bottom:7px}
+.store-forward-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;align-items:start;border:1px solid color-mix(in srgb,var(--line) 40%,transparent);background:var(--panel2);padding:7px}.store-forward-row>i{font-style:normal;font-size:7px;padding:3px 5px;border:1px solid var(--line);color:var(--dim)}
+.store-forward-row.pending>i{color:var(--warn);border-color:var(--warn)}.store-forward-row.sending>i{color:var(--fg2);border-color:var(--fg2)}.store-forward-row.sent>i{color:var(--fg2)}.store-forward-row.failed>i{color:var(--danger);border-color:var(--danger)}
+.store-forward-copy{min-width:0}.store-forward-copy b{display:block;font-size:9px;overflow-wrap:anywhere}.store-forward-copy small{display:block;color:var(--dim);font-size:7px;line-height:1.35;margin-top:3px}.store-forward-time{text-align:right;color:var(--dim);font-size:7px;white-space:nowrap}
+@media(max-width:600px){.store-forward-row{grid-template-columns:auto minmax(0,1fr)}.store-forward-time{grid-column:2;text-align:left}.store-forward-copy b{font-size:10px}.store-forward-copy small{font-size:8px}}

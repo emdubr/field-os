@@ -389,9 +389,12 @@ updateSolar(); setInterval(updateSolar,30000);
 
 const sendDemo=document.getElementById('sendDemo');
 sendDemo?.addEventListener('click', ()=>{
-  const box=document.getElementById('messageInput');
-  if(!box.value.trim()) return;
-  alert(`DEMO ONLY — would transmit: ${box.value.trim()}`); box.value='';
+  const box=document.getElementById('messageInput'),value=box?.value?.trim()||'';
+  if(!value) return;
+  const ev=new CustomEvent('fieldos:outgoingmessage',{detail:{text:value,channel:'PRIMARY',createdAt:Date.now()},cancelable:true});
+  const accepted=!document.dispatchEvent(ev);
+  if(accepted) box.value='';
+  else alert(`No FIELD/OS transport queue is available yet. Message was not cleared.`);
 });
 
 let sosTimer;
