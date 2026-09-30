@@ -2803,3 +2803,147 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
     min-height:300px!important;
   }
 }
+
+
+/* v3.38 narrow-module usability pass */
+@media(max-width:600px){
+  body .button-row{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+    width:100%!important;
+  }
+  body .button-row>*{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    margin:0!important;
+  }
+  body .link-action{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+  }
+
+  #waypoints .waypoint-row{
+    grid-template-columns:42px minmax(0,1fr)!important;
+    gap:8px!important;
+    padding:9px!important;
+  }
+  #waypoints .waypoint-symbol{
+    width:42px!important;
+    height:42px!important;
+  }
+  #waypoints .waypoint-main b{font-size:12px!important}
+  #waypoints .waypoint-main small{
+    font-size:9px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+  }
+  #waypoints .waypoint-actions{
+    grid-column:1/-1!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+    width:100%!important;
+  }
+  #waypoints .waypoint-actions .micro-btn,
+  #waypoints .tiny-button{
+    min-height:42px!important;
+    padding:7px!important;
+    font-size:9px!important;
+  }
+
+  #track .track-stat-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px!important;
+  }
+  #track .track-stat-grid>div{
+    min-width:0!important;
+    padding:10px 7px!important;
+  }
+  #track .track-stat-grid b{font-size:18px!important}
+  #track .track-stat-grid span{font-size:8px!important}
+  #track .mini-track-map{
+    height:clamp(190px,30dvh,300px)!important;
+  }
+
+  #comms .message{
+    padding:11px 6px!important;
+  }
+  #comms .message b{font-size:11px!important}
+  #comms .message span{font-size:8px!important}
+  #comms .message p{
+    clear:both!important;
+    padding-top:4px!important;
+    font-size:11px!important;
+    line-height:1.5!important;
+  }
+  #comms .compose label{font-size:9px!important}
+  #comms .compose textarea{min-height:110px!important}
+
+  #lost .lost-step{
+    padding:11px!important;
+    margin-bottom:7px!important;
+  }
+  #lost .lost-step b{font-size:12px!important}
+  #lost .lost-step p{
+    font-size:12px!important;
+    line-height:1.5!important;
+  }
+  #lost .button-row{
+    grid-template-columns:1fr!important;
+  }
+
+  #sos .sos-ring{
+    width:104px!important;
+    height:104px!important;
+    margin:10px auto!important;
+    font-size:28px!important;
+  }
+  #sos .sos-button{
+    min-height:64px!important;
+    padding:14px 10px!important;
+    font-size:12px!important;
+    line-height:1.2!important;
+    touch-action:none;
+  }
+  #sos .terminal-area{
+    min-height:120px!important;
+    margin-top:8px!important;
+  }
+
+  #survival .survival-grid,
+  #survival #guideGrid{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+  #survival .survival-card{
+    min-height:92px!important;
+    padding:12px!important;
+  }
+  #survival .survival-card b{font-size:12px!important}
+  #survival .survival-card small{
+    font-size:10px!important;
+    line-height:1.45!important;
+  }
+
+  .return-trail-panel .return-arrow{
+    font-size:72px!important;
+    margin:7px auto!important;
+  }
+  .return-trail-panel .big-readout{
+    font-size:28px!important;
+    margin-bottom:12px!important;
+  }
+}
+
+@media(max-width:360px){
+  body .button-row{
+    grid-template-columns:1fr!important;
+  }
+  #waypoints .waypoint-actions{
+    grid-template-columns:1fr!important;
+  }
+}
