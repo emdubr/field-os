@@ -524,11 +524,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.56',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.57',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.56';
+        const key='fieldos-sw-reloaded-v3.57';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -1044,9 +1044,31 @@ function ensureFieldMap(id,fallbackId,labelId){
   const overlay=L.layerGroup().addTo(map);
   const state={id,el,fallback,label,map,overlay,base:null,trails:null,baseKind:'',attr:'',centered:false,tileErrors:0};
   fieldMaps.set(id,state);
-  map.setView([currentNavPosition.lat,currentNavPosition.lon],14);
+  map.setView([currentNavPosition.lat,currentNavPosition.lon],14);enableContinuousWheelZoom(map);
   map.on('zoomend moveend',()=>{state.centered=true;});
   return state;
+}
+function enableContinuousWheelZoom(map){
+  if(!map||map._fieldContinuousWheel)return;
+  map._fieldContinuousWheel=true;
+  map.scrollWheelZoom?.disable?.();
+  const el=map.getContainer();let target=map.getZoom(),raf=0,anchor=null,last=0;
+  const frame=()=>{
+    raf=0;const now=performance.now();const current=map.getZoom();const diff=target-current;
+    if(Math.abs(diff)<.002){if(Math.abs(diff)>0)map.setZoomAround(anchor||map.getSize().divideBy(2),target,{animate:false});return;}
+    const dt=Math.min(32,Math.max(8,now-(last||now-16)));last=now;
+    const next=current+diff*(1-Math.exp(-dt/55));
+    map.setZoomAround(anchor||map.getSize().divideBy(2),next,{animate:false});
+    raf=requestAnimationFrame(frame);
+  };
+  el.addEventListener('wheel',e=>{
+    if(e.ctrlKey)return;
+    e.preventDefault();anchor=map.mouseEventToContainerPoint(e);
+    const dy=Math.max(-120,Math.min(120,e.deltaY));
+    target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/420));
+    last=performance.now();if(!raf)raf=requestAnimationFrame(frame);
+  },{passive:false});
+  map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
 }
 function showFieldFallback(state,message='SCHEMATIC FALLBACK'){
   if(!state)return;
@@ -1188,6 +1210,17 @@ async function updateFieldMaps(recenter=false){
   }
   const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):(fieldMapMode==='osm'?'STREET OSM':'OPEN TOPO HIKING');
 }
+window.FIELD_OFFLINE_MAPS={
+  async active(){return await resolveActiveFieldPack()},
+  async leafletLayer(){
+    const pack=await resolveActiveFieldPack();if(!pack)return null;
+    if(!(await ensureOfflineMapLibraries()))return null;
+    const file=pack.blob instanceof File?pack.blob:new File([pack.blob],pack.name||'offline.pmtiles',{type:'application/octet-stream'});
+    const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
+    return {layer:protomapsL.leafletLayer({url:archive,flavor:'dark',lang:'en'}),pack};
+  },
+  async ready(){const pack=await resolveActiveFieldPack();return {pack:!!pack,name:pack?.name||'',mode:fieldMapMode,offline:navigator.onLine===false}}
+};
 async function activateFieldMapPack(id){
   const rec=await getFieldMapPack(id);
   if(!rec)throw new Error('Saved map pack not found.');
@@ -1540,8 +1573,16 @@ function fieldNativeEnsure(id,fallbackId,labelId){
   st.onWheel=e=>{
     if(!st.active)return;
     e.preventDefault();
-    const max=fieldMapMode==='osm'?19:17,next=Math.max(2,Math.min(max,st.zoom+(e.deltaY<0?1:-1)));
-    if(next!==st.zoom){st.zoom=next;fieldNativeRender(st);}
+    const max=fieldMapMode==='osm'?19:17;
+    if(!Number.isFinite(st.renderedZoom))st.renderedZoom=Math.round(st.zoom);
+    const dy=Math.max(-120,Math.min(120,e.deltaY));
+    st.zoom=Math.max(2,Math.min(max,st.zoom-dy/520));
+    const scale=Math.pow(2,st.zoom-st.renderedZoom),ox=Math.max(0,Math.min(st.el.clientWidth,e.offsetX)),oy=Math.max(0,Math.min(st.el.clientHeight,e.offsetY));
+    const origin=ox+'px '+oy+'px';
+    st.base.style.transformOrigin=origin;st.trails.style.transformOrigin=origin;st.overlay.style.transformOrigin=origin;
+    const visual='scale('+scale.toFixed(5)+')';st.base.style.transform=visual;st.trails.style.transform=visual;st.overlay.style.transform=visual;
+    clearTimeout(st.zoomSettleTimer);
+    st.zoomSettleTimer=setTimeout(()=>{if(!st.active)return;st.zoom=Math.max(2,Math.min(max,Math.round(st.zoom)));st.renderedZoom=st.zoom;fieldNativeResetDrag(st);fieldNativeRender(st);},110);
   };
   st.onDbl=e=>{if(!st.active)return;e.preventDefault();const max=fieldMapMode==='osm'?19:17;st.zoom=Math.min(max,st.zoom+1);fieldNativeRender(st);};
   el.addEventListener('pointerdown',st.onDown);

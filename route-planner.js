@@ -316,6 +316,25 @@
     if(!plannerZooming)scheduleDomRouteLayer();
   }
 
+  function enableContinuousPlannerZoom(map){
+    if(!map||map._fieldContinuousWheel)return;
+    map._fieldContinuousWheel=true;map.scrollWheelZoom?.disable?.();
+    const el=map.getContainer();let target=map.getZoom(),raf=0,anchor=null,last=0;
+    const frame=()=>{
+      raf=0;const now=performance.now(),current=map.getZoom(),diff=target-current;
+      if(Math.abs(diff)<.002){if(Math.abs(diff)>0)map.setZoomAround(anchor||map.getSize().divideBy(2),target,{animate:false});return;}
+      const dt=Math.min(32,Math.max(8,now-(last||now-16)));last=now;
+      map.setZoomAround(anchor||map.getSize().divideBy(2),current+diff*(1-Math.exp(-dt/55)),{animate:false});
+      raf=requestAnimationFrame(frame);
+    };
+    el.addEventListener('wheel',e=>{
+      if(e.ctrlKey)return;e.preventDefault();anchor=map.mouseEventToContainerPoint(e);
+      const dy=Math.max(-120,Math.min(120,e.deltaY));target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/420));
+      last=performance.now();if(!raf)raf=requestAnimationFrame(frame);
+    },{passive:false});
+    map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
+  }
+
   function plannerColors(){
     const st=getComputedStyle(document.body);
     return {
@@ -351,18 +370,30 @@
       wheelDebounceTime:12,
       wheelPxPerZoomLevel:180
     }).setView([here.lat,here.lon],14);
+    enableContinuousPlannerZoom(plannerMap);
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
       maxZoom:19,
       attribution:'© OpenStreetMap contributors'
-    }).addTo(plannerMap);
+    });
+    if(navigator.onLine!==false)osm.addTo(plannerMap);
 
     const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
       subdomains:'abc',
       maxZoom:17,
       opacity:.93,
       attribution:'OpenTopoMap'
-    }).addTo(plannerMap);
+    });
+    if(navigator.onLine!==false)topo.addTo(plannerMap);
+
+    if(navigator.onLine===false&&window.FIELD_OFFLINE_MAPS){
+      Promise.resolve(window.FIELD_OFFLINE_MAPS.leafletLayer()).then(result=>{
+        if(!result?.layer||!plannerMap)return;
+        try{plannerMap.removeLayer(osm);plannerMap.removeLayer(topo);plannerMap.removeLayer(hiking)}catch{}
+        result.layer.addTo(plannerMap);
+        status('OFFLINE PMTILES // '+String(result.pack?.name||'SAVED MAP').toUpperCase(),'ready');
+      }).catch(()=>status('OFFLINE MAP PACK COULD NOT BE OPENED','error'));
+    }
 
     let topoErrors=0;
     topo.on('tileerror',()=>{
@@ -380,7 +411,7 @@
       attribution:'Waymarked Trails'
     });
     hiking.on('tileerror',()=>{});
-    hiking.addTo(plannerMap);
+    if(navigator.onLine!==false)hiking.addTo(plannerMap);
 
     // Keep route geometry above all raster/trail tiles like Gaia GPS.
     const routePane=plannerMap.createPane('fieldRoutePane');

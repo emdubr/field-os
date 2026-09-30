@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-56';
-const ASSETS=['./','./index.html','./styles.css?v=3.56','./app.js?v=3.56','./workstation.css?v=3.56','./workstation.js?v=3.56','./survival-data.js','./route-state.js?v=3.56','./map-engine.js?v=3.56','./route-planner.js?v=3.56','./field-intel.js?v=3.56','./field-ops.js?v=3.56','./field-tools.js?v=3.56','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-57';
+const ASSETS=['./','./index.html','./styles.css?v=3.57','./app.js?v=3.57','./workstation.css?v=3.57','./workstation.js?v=3.57','./survival-data.js','./route-state.js?v=3.57','./map-engine.js?v=3.57','./route-planner.js?v=3.57','./field-intel.js?v=3.57','./field-ops.js?v=3.57','./field-tools.js?v=3.57','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -23,6 +23,16 @@ self.addEventListener('fetch',e=>{
   if(!same&&!external)return;
   if(external){
     e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(r=>{if(r.ok||r.type==='opaque'){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,copy)));}return r;})));
+    return;
+  }
+  if(e.request.mode==='navigate'){
+    e.respondWith(fetch(e.request).then(r=>{
+      if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put('./index.html',copy)));}
+      return r;
+    }).catch(async()=>{
+      const cache=await caches.open(CACHE);
+      return (await cache.match('./index.html'))||(await cache.match('./'))||Response.error();
+    }));
     return;
   }
   const shellAsset=ASSETS.some(path=>new URL(path,self.location.href).href===url.href)&&url.pathname!==new URL('./',self.location.href).pathname&&!url.pathname.endsWith('/index.html');
