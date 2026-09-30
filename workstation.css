@@ -3365,3 +3365,86 @@ input,select,textarea{
   .leaflet-control-container .leaflet-left{left:4px}
   .leaflet-control-container .leaflet-right{right:4px}
 }
+
+
+/* v3.53 route/map/nav operational layout polish */
+.view-head{
+  position:sticky;
+  top:0;
+  z-index:40;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.view-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.view-head-actions{min-width:0}
+.route-planner-status,.route-diagnostic-strip,.gaia-route-layer-bar,.route-live-source{
+  border-radius:4px;
+}
+.route-live-telemetry>div{
+  min-width:0;
+}
+.route-live-telemetry b,.route-live-telemetry span{
+  overflow-wrap:anywhere;
+}
+.map-source-bar,.route-planner-toolbar{
+  border-radius:var(--ui-radius);
+}
+.map-control-grid{
+  align-items:stretch;
+}
+.map-source-btn{
+  min-height:36px;
+}
+.nav-live-strip{
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+}
+.nav-live-strip>span{white-space:nowrap}
+
+@media(min-width:1000px){
+  .terrain-map-card{margin-bottom:10px}
+  .main-real-map{min-height:clamp(480px,58vh,760px)!important}
+  .route-planner-real-map{min-height:clamp(500px,60vh,780px)!important}
+  .route-planner-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+  .route-planner-toolbar>*{min-width:0}
+  .route-planner-mode{flex:1 1 240px}
+  .route-anchor-readout{margin-left:auto}
+  .route-planner-actions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+  .map-quick-actions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+
+@media(max-width:767px){
+  .view-head{
+    top:0;
+    min-height:46px;
+    padding-top:max(6px,env(safe-area-inset-top));
+    background:color-mix(in srgb,var(--bg) 94%,transparent);
+  }
+  .view-head h2{font-size:11px;letter-spacing:.07em}
+  .view-head .back,.view-head .ghost{min-height:40px}
+  .view-head-actions{display:flex;gap:4px}
+  .view-head-actions .ghost{padding-left:7px;padding-right:7px;font-size:8px}
+  .main-real-map,.route-planner-real-map{min-height:56dvh!important;max-height:70dvh!important}
+  .map-source-bar{padding:7px}
+  .map-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px}
+  .map-source-btn{min-height:44px;font-size:9px}
+  .route-planner-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .route-planner-toolbar .route-planner-mode{grid-column:1/-1}
+  .route-anchor-readout{grid-column:1/-1;text-align:center}
+  .route-planner-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .route-live-telemetry{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .route-live-telemetry>div:last-child{grid-column:1/-1}
+  .route-diagnostic-strip,.gaia-route-layer-bar{gap:6px;flex-wrap:wrap}
+  .route-diagnostic-strip b{min-width:0;overflow-wrap:anywhere}
+  .nav-live-strip{margin-left:0;margin-right:0}
+}
+
+@media(max-width:430px){
+  .view-head{gap:4px}
+  .view-head h2{font-size:10px}
+  .view-head-actions .ghost:first-child{display:none}
+  .route-planner-toolbar{grid-template-columns:1fr}
+  .route-planner-toolbar>*{grid-column:1!important}
+  .map-control-grid{grid-template-columns:1fr 1fr!important}
+}
