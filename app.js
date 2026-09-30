@@ -987,10 +987,22 @@ async function fieldMapDb(mode,action){
 async function listFieldMapPacks(){return await fieldMapDb('readonly',s=>s.getAll());}
 async function getFieldMapPack(id){if(!id)return null;return await fieldMapDb('readonly',s=>s.get(id));}
 async function deleteFieldMapPack(id){if(!id)return;await fieldMapDb('readwrite',s=>s.delete(id));}
+async function ensureMapStorageCapacity(bytes){
+  const need=Math.max(0,Number(bytes)||0);
+  if(!navigator.storage?.estimate)return {ok:true,need,available:null};
+  const e=await navigator.storage.estimate(),available=Math.max(0,Number(e.quota||0)-Number(e.usage||0));
+  if(need&&available<need*1.12)throw new Error(`Not enough browser storage. Need about ${fmtBytes(need*1.12)} including safety margin; ${fmtBytes(available)} appears available.`);
+  return {ok:true,need,available,usage:Number(e.usage||0),quota:Number(e.quota||0)};
+}
+function fmtMapPackAge(created){
+  const ms=Date.now()-Date.parse(created||'');if(!Number.isFinite(ms)||ms<0)return 'UNKNOWN';
+  const h=Math.floor(ms/3600000);if(h<1)return '<1 HOUR OLD';if(h<48)return h+' HOURS OLD';return Math.floor(h/24)+' DAYS OLD';
+}
 async function saveFieldMapPackBlob(blob,name,source='import'){
   if(!blob||!blob.size)throw new Error('Map file is empty.');
   try{if(navigator.storage?.persist)await navigator.storage.persist();}catch{}
   if(blob.size>FIELD_MAP_MAX_BYTES)throw new Error('Map pack is larger than the 250 MB FIELD/OS browser safety limit.');
+  await ensureMapStorageCapacity(blob.size);
   if(typeof pmtiles==='undefined')throw new Error('PMTiles library unavailable.');
   const safeName=String(name||'offline-map.pmtiles').replace(/[^a-zA-Z0-9._ -]/g,'_');
   const file=blob instanceof File?blob:new File([blob],safeName,{type:'application/octet-stream'});
@@ -1015,6 +1027,9 @@ async function refreshFieldMapPackUI(){
   const active=packs.find(p=>p.id===fieldActivePackId);
   if(src)src.textContent=(fieldMapMode==='offline'&&active)?active.name:'ONLINE OSM';
   if(sz)sz.textContent=active?fmtBytes(active.size):'—';
+  const age=document.getElementById('offlineMapAge'),origin=document.getElementById('offlineMapOrigin');
+  if(age)age.textContent=active?fmtMapPackAge(active.created):'—';
+  if(origin)origin.textContent=active?String(active.source||'import').toUpperCase():'—';
   if(mode)mode.textContent=(fieldMapMode==='offline'&&active)?'OFFLINE PMTILES':'ONLINE OSM';
   if(navigator.storage?.estimate){
     try{const e=await navigator.storage.estimate(),st=document.getElementById('offlineMapStorage');if(st)st.textContent=`${fmtBytes(e.usage||0)} / ${fmtBytes(e.quota||0)}`;}catch{}
@@ -1213,6 +1228,7 @@ async function downloadFieldPmtiles(url){
   if(!res.ok)throw new Error(`Download failed: HTTP ${res.status}`);
   const advertised=Number(res.headers.get('content-length')||0);
   if(advertised>FIELD_MAP_MAX_BYTES)throw new Error('Map pack exceeds the 250 MB FIELD/OS browser safety limit.');
+  if(advertised)await ensureMapStorageCapacity(advertised);
   let blob;
   if(res.body?.getReader){
     const reader=res.body.getReader(),chunks=[];let got=0;

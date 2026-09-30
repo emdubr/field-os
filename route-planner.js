@@ -870,6 +870,36 @@
     const margin=.001;
     return [a,b].every(p=>p.lat>box.s+margin&&p.lat<box.n-margin&&p.lon>box.w+margin&&p.lon<box.e-margin);
   }
+  const TRAIL_DB='fieldos-route-cache-v1',TRAIL_STORE='networks',TRAIL_CACHE_MAX=6;
+  function trailDb(){
+    return new Promise((resolve,reject)=>{
+      if(!('indexedDB' in window))return reject(new Error('IndexedDB unavailable'));
+      const q=indexedDB.open(TRAIL_DB,1);
+      q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(TRAIL_STORE))q.result.createObjectStore(TRAIL_STORE,{keyPath:'key'});};
+      q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
+    });
+  }
+  async function savedTrailNetworks(){
+    let db;try{db=await trailDb();return await new Promise((resolve,reject)=>{const tx=db.transaction(TRAIL_STORE,'readonly'),q=tx.objectStore(TRAIL_STORE).getAll();q.onsuccess=()=>resolve(q.result||[]);q.onerror=()=>reject(q.error);});}catch{return []}finally{db?.close()}
+  }
+  async function persistTrailNetwork(key,box,elements){
+    if(!Array.isArray(elements)||!elements.length)return;
+    let db;try{
+      db=await trailDb();
+      await new Promise((resolve,reject)=>{const tx=db.transaction(TRAIL_STORE,'readwrite'),s=tx.objectStore(TRAIL_STORE);s.put({key,box,elements,created:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+      const all=await savedTrailNetworks();all.sort((a,b)=>Number(b.created)-Number(a.created));
+      for(const old of all.slice(TRAIL_CACHE_MAX)){const d=await trailDb();await new Promise(resolve=>{const tx=d.transaction(TRAIL_STORE,'readwrite');tx.objectStore(TRAIL_STORE).delete(old.key);tx.oncomplete=resolve;tx.onerror=resolve;});d.close();}
+    }catch{}finally{db?.close()}
+  }
+  async function offlineTrailGraph(a,b){
+    const all=await savedTrailNetworks(),now=Date.now();
+    all.sort((x,y)=>Number(y.created)-Number(x.created));
+    for(const rec of all){
+      if(!rec?.box||!Array.isArray(rec.elements)||now-Number(rec.created)>7*24*60*60*1000)continue;
+      if(covers(rec.box,a,b)){const graph=buildGraph(rec.elements);if(graph.nodes.size>1&&graph.segments.length)return {graph,box:rec.box,created:rec.created};}
+    }
+    return null;
+  }
   function waitForGraph(promise,signal){
     if(!signal)return promise;
     if(signal.aborted)return Promise.reject(new DOMException('Cancelled','AbortError'));
@@ -891,6 +921,10 @@
     const key=bboxKey(box),q=queryFor(box);
     if(pendingGraphs.has(key))return waitForGraph(pendingGraphs.get(key).promise,signal);
 
+    if(!force){
+      const offline=await offlineTrailGraph(a,b);
+      if(offline&&!navigator.onLine){graphCache.set(key,offline);status('OFFLINE TRAIL NETWORK // SAVED GRAPH','ready');return offline.graph;}
+    }
     const controllers=OVERPASS_ENDPOINTS.map(()=>new AbortController());
     const failures=[];
     const cancelAll=()=>controllers.forEach(c=>c.abort());
@@ -922,12 +956,15 @@
 
     const promise=Promise.any(requests).then(graph=>{
       graphCache.set(key,{box,graph,created:Date.now()});
-      try{const raw=JSON.stringify({box,elements:graph.rawElements,created:Date.now()});if(raw.length<2500000)sessionStorage.setItem('fieldos-trail-network',raw)}catch{}
+      const rawElements=graph.rawElements;
+      try{const raw=JSON.stringify({box,elements:rawElements,created:Date.now()});if(raw.length<2500000)sessionStorage.setItem('fieldos-trail-network',raw)}catch{}
+      persistTrailNetwork(key,box,rawElements);
       delete graph.rawElements;
       if(graphCache.size>8)graphCache.delete(graphCache.keys().next().value);
       return graph;
-    }).catch(()=>{
+    }).catch(async()=>{
       if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
+      if(!force){const offline=await offlineTrailGraph(a,b);if(offline){graphCache.set(key,offline);status('NETWORK FAILED // USING SAVED TRAIL GRAPH','ready');return offline.graph;}}
       const codes=failures.map(x=>x.code);
       if(codes.length&&codes.every(x=>x==='RP-204'))throw rpError('RP-204','No mapped walkable trails were found in the search area.',{failures,expanded:force});
       if(codes.length&&codes.every(x=>x==='RP-203'))throw rpError('RP-203','All trail-data requests timed out.',{failures});
