@@ -92,7 +92,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.30',
+      'BUILD: v3.31',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -359,6 +359,32 @@
     ctx.fillText(`3D ROUTE // AZ ${Math.round(route3dAzimuth)}° // TILT ${Math.round(route3dTilt)}° // Z×${route3dExaggeration.toFixed(1)}`,16,22);
     const label=$('route3dStatus');if(label)label.textContent=`DEM ROUTE GEOMETRY // ${samples.length} PTS // Z×${route3dExaggeration.toFixed(1)}`;
   }
+  function bindElevationProfileHover(){
+    const canvas=$('routeProfile'),tip=$('routeProfileHover'),line=$('routeProfileHoverLine');
+    if(!canvas||canvas.dataset.hoverBound==='1')return;
+    canvas.dataset.hoverBound='1';
+    const update=e=>{
+      const profile=activeElevationProfile,samples=profile?.samples||[];
+      if(samples.length<2||!tip)return;
+      const rect=canvas.getBoundingClientRect(),left=52/canvas.width*rect.width,right=14/canvas.width*rect.width;
+      const plotW=Math.max(1,rect.width-left-right);
+      const x=clamp(e.clientX-rect.left,left,rect.width-right),ratio=clamp((x-left)/plotW,0,1);
+      const totalM=samples.at(-1).distanceM||0,target=ratio*totalM;
+      let idx=0,best=Infinity;
+      for(let i=0;i<samples.length;i++){const d=Math.abs(samples[i].distanceM-target);if(d<best){best=d;idx=i}}
+      const p=samples[idx],a=samples[Math.max(0,idx-1)],b=samples[Math.min(samples.length-1,idx+1)];
+      const gradeValue=a===b?0:sampleGrade(a,b),cls=slopeClass(gradeValue);
+      const done=p.distanceM/1609.344,remaining=Math.max(0,(totalM-p.distanceM)/1609.344);
+      tip.innerHTML=`<b>${done.toFixed(2)} MI</b><span>ELEV ${Math.round(p.elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
+      tip.className=`route-profile-hover slope-${cls.key} active`;
+      tip.style.left=`${x}px`;
+      if(line){line.classList.add('active');line.style.left=`${x}px`}
+    };
+    canvas.addEventListener('pointermove',update);
+    canvas.addEventListener('pointerdown',update);
+    canvas.addEventListener('pointerleave',()=>{tip?.classList.remove('active');line?.classList.remove('active')});
+  }
+
   function bindRoute3DControls(){
     const c=$('routeGeometry3D');if(!c||c.dataset.bound3d==='1')return;
     c.dataset.bound3d='1';
@@ -585,7 +611,7 @@
           maxGrade:Number(plan.elevationMaxGrade??plan.grade)||0
         }:null;
         applyRouteStats(pts,savedProfile,savedProfile?'ready':(pts.length>1?'unavailable':'empty'));
-        renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();
+        renderSavedRoutes();updateFollowButton();updateGaiaLayerButton();renderTrailNames(plan.legs||[]);
         if(latestFollowPosition)drawPlannerPosition(latestFollowPosition);
         requestAnimationFrame(()=>{
           plannerMap?.invalidateSize(false);
@@ -641,6 +667,7 @@
     $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('routeSaveTop')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('copyRouteDiag')?.addEventListener('click',copyRouteDiagnostic);
+    bindElevationProfileHover();
     bindRoute3DControls();
     renderSavedRoutes();
   }
@@ -705,7 +732,7 @@
     aborter?.abort();setBusy(false);
     anchors=[];snapped=[];lastSuccessfulAnchors=[];
     state()?.setMeta?.({anchors:[],routedAnchors:[],legs:[],routingMode:routeMode(),routingSource:null,routeBuildState:'EMPTY',routeBuildLeg:0});
-    state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');
+    state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');renderTrailNames([]);
     status('TAP MAP TO SET START','ready');
   }
 
@@ -855,7 +882,7 @@
       minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.elevationMaxGrade??saved.grade)||0
     }:null;
     if($('routeName'))$('routeName').value=saved.name||'FIELD ROUTE';
-    applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);fitPlanner(points,16);
+    applyRouteStats(points,profile,profile?'ready':'unavailable');overlay(points);renderTrailNames(saved.legs||[]);fitPlanner(points,16);
     status(`SAVED ROUTE LOADED -- ${String(saved.name||'FIELD ROUTE').toUpperCase()} // ${routeDistanceMiles(points).toFixed(2)} MI`,'ready');
   }
 
@@ -1027,7 +1054,7 @@
   }
 
   function shortestPath(graph,startId,endId){
-    if(startId===endId)return {path:[graph.nodes.get(startId)],visits:0,limitHit:false};
+    if(startId===endId)return {path:[graph.nodes.get(startId)],edgeTags:[],visits:0,limitHit:false};
     const goal=graph.nodes.get(endId),open=new MinHeap(),g=new Map([[startId,0]]),came=new Map(),closed=new Set();
     open.push({id:startId,f:meters(graph.nodes.get(startId),goal)});
     let visits=0;
@@ -1035,21 +1062,26 @@
     while(open.size&&visits<VISIT_LIMIT){
       const cur=open.pop();if(closed.has(cur.id))continue;closed.add(cur.id);visits++;
       if(cur.id===endId){
-        const ids=[endId];let x=endId;
-        while(came.has(x)){x=came.get(x);ids.push(x)}
-        ids.reverse();return {path:ids.map(id=>graph.nodes.get(id)),visits,limitHit:false};
+        const ids=[endId],edgeTags=[];let x=endId;
+        while(came.has(x)){
+          const step=came.get(x);
+          edgeTags.push(step.tags||{});
+          x=step.from;ids.push(x);
+        }
+        ids.reverse();edgeTags.reverse();
+        return {path:ids.map(id=>graph.nodes.get(id)),edgeTags,visits,limitHit:false};
       }
       for(const edge of graph.adj.get(cur.id)||[]){
         if(closed.has(edge.to))continue;
         const ng=(g.get(cur.id)||0)+edge.w;
         if(ng<(g.get(edge.to)??Infinity)){
-          g.set(edge.to,ng);came.set(edge.to,cur.id);
+          g.set(edge.to,ng);came.set(edge.to,{from:cur.id,tags:edge.tags||{}});
           const h=meters(graph.nodes.get(edge.to),goal);
           open.push({id:edge.to,f:ng+h*.84});
         }
       }
     }
-    return {path:null,visits,limitHit:visits>=VISIT_LIMIT};
+    return {path:null,edgeTags:[],visits,limitHit:visits>=VISIT_LIMIT};
   }
 
   function dedupe(points){
@@ -1062,10 +1094,65 @@
     return out;
   }
 
+  function trailLabel(tags={}){
+    const name=String(tags.name||'').trim(),ref=String(tags.ref||'').trim();
+    if(name&&ref&&!name.toLowerCase().includes(ref.toLowerCase()))return `${name} (${ref})`;
+    if(name)return name;
+    if(ref)return ref;
+    const h=String(tags.highway||'path').replaceAll('_',' ').toUpperCase();
+    return `UNNAMED OSM ${h}`;
+  }
+  function trailSectionsForPath(path,edgeTags=[]){
+    const sections=[];
+    for(let i=1;i<path.length;i++){
+      const a=path[i-1],b=path[i],tags=edgeTags[i-1]||{},distanceM=meters(a,b);
+      const label=trailLabel(tags);
+      const key=[label,tags.highway||'',tags.surface||''].join('|');
+      const last=sections.at(-1);
+      if(last&&last.key===key)last.distanceM+=distanceM;
+      else sections.push({
+        key,label,name:tags.name||null,ref:tags.ref||null,
+        highway:tags.highway||null,surface:tags.surface||null,
+        sacScale:tags.sac_scale||null,trailVisibility:tags.trail_visibility||null,
+        distanceM
+      });
+    }
+    return sections.map(({key,...s})=>s);
+  }
+  function combinedTrailSections(legs=[]){
+    const out=[];
+    for(const leg of Array.isArray(legs)?legs:[]){
+      for(const sec of leg?.result?.trailSections||[]){
+        const last=out.at(-1);
+        const same=last&&last.label===sec.label&&last.highway===sec.highway&&last.surface===sec.surface;
+        if(same)last.distanceM+=Number(sec.distanceM)||0;
+        else out.push({...sec,distanceM:Number(sec.distanceM)||0});
+      }
+    }
+    return out;
+  }
+  function renderTrailNames(legs=planMeta().legs||[]){
+    const box=$('routeTrailNames'),count=$('routeTrailNameCount');
+    if(!box)return;
+    const sections=combinedTrailSections(legs);
+    if(count)count.textContent=String(sections.length);
+    if(!sections.length){
+      box.innerHTML='<div class="route-trail-empty">TRAIL NAMES // WAITING FOR SNAPPED ROUTE</div>';
+      return;
+    }
+    box.innerHTML=sections.map((s,i)=>{
+      const detail=[s.highway?String(s.highway).replaceAll('_',' ').toUpperCase():'',s.surface?String(s.surface).replaceAll('_',' ').toUpperCase():'',s.sacScale?String(s.sacScale).replaceAll('_',' ').toUpperCase():''].filter(Boolean).join(' // ');
+      return `<div class="route-trail-row"><b>${i+1}</b><span><strong>${escapeHtml(s.label)}</strong><small>${detail||'OSM WALKABLE WAY'}</small></span><em>${(s.distanceM/1609.344).toFixed(2)} mi</em></div>`;
+    }).join('');
+  }
+  function escapeHtml(value=''){
+    return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
   async function routeLeg(a,b,signal,retry=false){
     const cached=legCache.get(legKey(a,b));if(cached)return {...cached,cached:true};
     const back=legCache.get(legKey(b,a));
-    if(back)return {...back,points:[...back.points].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
+    if(back)return {...back,points:[...back.points].reverse(),trailSections:[...(back.trailSections||[])].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
     const legMi=miles(a,b);
     if(legMi>35)throw rpError('RP-301','Snapped leg is over 35 miles. Add an intermediate point.',{legMiles:+legMi.toFixed(2)});
 
@@ -1104,6 +1191,7 @@
 
     const result={
       points:search.path.map(p=>({lat:p.lat,lon:p.lon})),
+      trailSections:trailSectionsForPath(search.path,search.edgeTags||[]),
       startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},
       endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d},
       diagnostics:{retry,snapRadius,startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d),nodes:graph.nodes.size,segments:graph.segments.length,visits:search.visits}
@@ -1428,7 +1516,7 @@
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
         routingResolvedAnchors=anchors.length;
-        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
+        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],trailSections:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);renderTrailNames([]);
         lastSuccessfulAnchors=anchors.map(p=>({...p}));
         fitPlanner(direct,16);setBusy(false);
         const enriched=await enrichRoute(direct,signal,'DIRECT ROUTE');
@@ -1467,6 +1555,7 @@
           routeBuildLeg:i
         });
         overlay(partial);
+        renderTrailNames(legs);
         applyRouteStats(partial,null,'loading');
         status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${routeDistanceMiles(partial).toFixed(2)} MI // LINE DRAWN // ROUTING NEXT LEG`,'loading');
       }
@@ -1474,7 +1563,8 @@
       const clean=dedupe(full);
       if(clean.length<2)throw rpError('RP-307','Trail router returned empty route geometry.',{rawPoints:full.length});
       state()?.setPoints?.(clean);
-      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
+      renderTrailNames(legs);
       lastSuccessfulAnchors=anchors.map(p=>({...p}));
       routingResolvedAnchors=anchors.length;
       overlay(clean);fitPlanner(clean,16);setBusy(false);
