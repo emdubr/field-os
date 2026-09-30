@@ -67,5 +67,50 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.match(run('routeAsGPX()'),/lat="44.0000000"/);
  await importGpx('<gpx><trkpt lat="100" lon="-73"/></gpx>');assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);assert.ok(alerts.at(-1));
  console.log('PASS valid GPX import/export and rejected invalid GPX preserves route');
+ // Long-session UI churn: repeated module switches must not duplicate IDs or throw.
+ const navButtons=[...d.querySelectorAll('.workstation-nav button[data-open]')];
+ for(let cycle=0;cycle<8;cycle++)for(const btn of navButtons){btn.click();await tick();}
+ assert.equal(new Set([...d.querySelectorAll('[id]')].map(e=>e.id)).size,[...d.querySelectorAll('[id]')].length);
+ console.log('PASS repeated module-switch stress with stable DOM ids');
+
+ // Repeated planner activation should remain idempotent and not multiply control bindings.
+ d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
+ for(let i=0;i<50;i++)w.FIELD_ROUTE_PLANNER.activate();
+ assert.equal(d.querySelectorAll('#undoRoutePoint').length,1);assert.equal(d.querySelectorAll('#routePlannerMap').length,1);
+ console.log('PASS 50x route-planner activation stress');
+
+ // Route-state sanitization under malformed and oversized point updates.
+ for(let i=0;i<100;i++){
+   w.FIELD_ROUTE_STATE.setMeta({anchors:[
+     {lat:44.47+i*.000001,lon:-73.21},
+     {lat:'bad',lon:-73},
+     {lat:999,lon:999}
+   ]});
+   assert.equal(w.FIELD_ROUTE_STATE.getPlan().anchors.length,1);
+ }
+ console.log('PASS 100x route-state sanitize/write cycles');
+
+ // Direct-route edit/clear churn with elevation service available.
+ d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
+ w.fetch=async url=>({ok:true,json:async()=>({elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)})});
+ for(let i=0;i<20;i++){
+   r.addAnchor({lat:44.475+i*.00001,lon:-73.215});
+   r.addAnchor({lat:44.476+i*.00001,lon:-73.214});
+   await tick();await tick();
+   assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,2);
+   r.clearAll();await tick();assert.equal(w.FIELD_ROUTE_STATE.getPoints().length,0);
+ }
+ console.log('PASS 20x direct route build/clear churn');
+
+ // Corrupt persisted route JSON must fail closed to a clean bootstrap plan.
+ const iso=new JSDOM('<!doctype html><html><body></body></html>',{url:'https://isolated.test/',runScripts:'outside-only'});
+ iso.window.localStorage.setItem('fieldos-v12-routePlan','{not-json');
+ const isoCtx=iso.getInternalVMContext();
+ vm.runInContext(fs.readFileSync(dir+'/route-state.js','utf8'),isoCtx,{filename:'route-state.js'});
+ assert.equal(iso.window.FIELD_ROUTE_STATE.getPoints().length,0);
+ assert.equal(iso.window.FIELD_ROUTE_STATE.getPlan().name,'FIELD ROUTE 01');
+ iso.window.close();
+ console.log('PASS corrupted persisted route state recovery');
+
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
