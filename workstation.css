@@ -1696,3 +1696,50 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .elevation-breakdown-table tr.slope-easy td{box-shadow:none!important}
 .elevation-breakdown-table tr.slope-medium td:first-child{box-shadow:inset 3px 0 #f28c28}
 .elevation-breakdown-table tr.slope-hard td:first-child{box-shadow:inset 3px 0 #e5484d}
+
+
+/* v3.30 slope-colored 2D Route Layer + 3D route geometry */
+.route-planner-real-map .route-dom-slope{
+  vector-effect:non-scaling-stroke;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  fill:none;
+}
+.route-planner-real-map .route-dom-slope-medium{
+  stroke:#f28c28!important;
+  stroke-width:8px!important;
+  stroke-opacity:1!important;
+}
+.route-planner-real-map .route-dom-slope-hard{
+  stroke:#e5484d!important;
+  stroke-width:9px!important;
+  stroke-opacity:1!important;
+  filter:drop-shadow(0 0 3px rgba(229,72,77,.5));
+}
+.route-3d-head{
+  display:flex;justify-content:space-between;gap:10px;align-items:center;
+  margin-top:10px;padding:7px 9px;border:1px solid var(--line);
+  background:var(--panel3);color:var(--fg2);
+  font:700 10px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.route-3d-head span{color:var(--dim);text-align:right}
+.route-geometry-3d{
+  display:block;width:100%;height:auto;min-height:280px;
+  border:1px solid var(--line);border-top:0;
+  background:var(--panel2);
+  touch-action:none;cursor:grab;
+}
+.route-geometry-3d:active{cursor:grabbing}
+.route-3d-controls{
+  display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;
+  padding:8px 9px;border:1px solid var(--line);border-top:0;background:var(--panel2);
+}
+.route-3d-controls label{display:grid;gap:5px}
+.route-3d-controls label span,.route-3d-controls>span{
+  color:var(--dim);font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.route-3d-controls input[type="range"]{width:100%;accent-color:var(--fg2)}
+@media(max-width:700px){
+  .route-3d-controls{grid-template-columns:1fr}
+  .route-geometry-3d{min-height:230px}
+}
