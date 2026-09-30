@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.39" />
-  <link rel="stylesheet" href="workstation.css?v=3.39">
+  <link rel="stylesheet" href="styles.css?v=3.40" />
+  <link rel="stylesheet" href="workstation.css?v=3.40">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.39</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.40</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.39</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.40</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.39</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.40</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -77,7 +77,7 @@
           <div class="console-main-grid detail-main-grid">
             <nav class="console-rail terminal-panel" aria-label="Field modules">
               <div class="terminal-title">FIELD MODULES <span>?</span></div>
-              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
+              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="mission">▷ MISSION MODE</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
               <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
             </nav>
 
@@ -179,7 +179,7 @@
             <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ FIELD GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
             <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table"><b>NODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DIST&nbsp;&nbsp;RSSI&nbsp;&nbsp;HOP&nbsp;BAT</b><br>BASE-01&nbsp;&nbsp;&nbsp;1.2mi&nbsp;-72&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;88%<br>RIDGE-01&nbsp;&nbsp;3.6mi&nbsp;-85&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;71%<br>CAMP-01&nbsp;&nbsp;&nbsp;4.8mi&nbsp;-91&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;64%<br>RELAY-A&nbsp;&nbsp;&nbsp;5.1mi&nbsp;-96&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;92%</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
           </div>
-          <div class="console-command-strip"><button data-open="route">PLAN ROUTE</button><button data-open="waypoints">WAYPOINTS</button><button data-open="track">RECORD TRACK</button><button data-open="trip">TRIP PLAN</button><button data-open="log">FIELD LOG</button><button data-open="system">SETTINGS</button></div>
+          <div class="console-command-strip"><button data-open="mission">MISSION</button><button data-open="route">PLAN ROUTE</button><button data-open="waypoints">WAYPOINTS</button><button data-open="track">RECORD TRACK</button><button data-open="trip">TRIP PLAN</button><button data-open="log">FIELD LOG</button><button data-open="system">SETTINGS</button></div>
         </div></div>
       </section>
 
@@ -370,7 +370,7 @@
             <button class="action route-follow-btn" id="routeFollowMe" type="button" data-route-plan-action="follow" aria-pressed="false">FOLLOW ME</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.39 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.40 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -553,6 +553,36 @@
         </article>
       </section>
 
+      <section class="view" id="mission" data-view="mission">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>MISSION MODE</h2><span id="missionHeadState" class="mission-head-state">NOT BUILT</span></div>
+        <article class="panel mission-control-panel">
+          <div class="panel-title"><span>MISSION PACK</span><span class="tiny">LOCAL / FROZEN SNAPSHOT</span></div>
+          <p class="muted">Build one field package before departure. The stored mission snapshot will not silently change if you later edit the route or trip plan.</p>
+          <div class="mission-input-grid">
+            <label><span class="field-label">WEATHER SNAPSHOT</span><textarea id="missionWeather" class="terminal-area" placeholder="Forecast / sky / wind / precipitation / temperature notes..."></textarea></label>
+            <label><span class="field-label">EMERGENCY CONTACT</span><textarea id="missionContact" class="terminal-area" placeholder="Name, phone, contact method, route-holder notes..."></textarea></label>
+          </div>
+          <div class="button-row mission-main-actions">
+            <button id="missionBuild" class="action" type="button">BUILD / REFRESH PACK</button>
+            <button id="missionStart" class="action" type="button">START MISSION</button>
+            <button id="missionEnd" class="danger-lite" type="button">END ACTIVE MISSION</button>
+            <button id="missionCopy" class="action" type="button">COPY SUMMARY</button>
+            <button id="missionExport" class="action" type="button">EXPORT JSON</button>
+          </div>
+          <div id="missionStatus" class="route-planner-status ready" role="status" aria-live="polite">MISSION-001 // READY TO BUILD</div>
+        </article>
+        <article class="panel">
+          <div class="panel-title"><span>READINESS</span><span class="tiny" id="missionReadinessScore">0 / 0</span></div>
+          <div id="missionReadiness" class="mission-readiness-grid"></div>
+        </article>
+        <div class="grid two-col mission-summary-grid">
+          <article class="panel"><div class="panel-title"><span>TRIP / ROUTE</span><span class="tiny">SNAPSHOT</span></div><dl id="missionTripRoute" class="readouts large-readouts"></dl></article>
+          <article class="panel"><div class="panel-title"><span>OFFLINE / POSITION</span><span class="tiny">FIELD AVAILABILITY</span></div><dl id="missionOfflinePosition" class="readouts large-readouts"></dl></article>
+          <article class="panel"><div class="panel-title"><span>DEVICE / COMMS</span><span class="tiny">STATUS</span></div><dl id="missionDevice" class="readouts large-readouts"></dl></article>
+          <article class="panel"><div class="panel-title"><span>WAYPOINTS / ESSENTIALS</span><span class="tiny">LOCAL DATABASE</span></div><div id="missionWaypoints" class="mission-waypoint-list"></div><p id="missionEssentials" class="muted"></p></article>
+        </div>
+      </section>
+
       <section class="view" id="trip" data-view="trip">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TRIP PLAN</h2><span></span></div>
         <article class="panel">
@@ -562,7 +592,7 @@
           <label class="field-label" for="tripReturn">EXPECTED RETURN</label><input id="tripReturn" class="terminal-input" type="datetime-local" />
           <label class="field-label">CHECK-IN INTERVAL</label>
           <select id="checkinInterval" class="terminal-input"><option value="60">Every 60 min</option><option value="120">Every 2 hr</option><option value="180">Every 3 hr</option><option value="0">Manual only</option></select>
-          <div class="button-row"><button id="saveTrip" class="action">SAVE PLAN</button><button id="checkinNow" class="action">CHECK IN NOW</button></div>
+          <div class="button-row"><button id="saveTrip" class="action">SAVE PLAN</button><button id="checkinNow" class="action">CHECK IN NOW</button><button class="action" data-open="mission">BUILD MISSION PACK</button></div>
         </article>
         <article class="panel checkin-panel"><div class="panel-title"><span>CHECK-IN TIMER</span><span class="tiny">LOCAL REMINDER</span></div><div class="checkin-clock" id="checkinCountdown">MANUAL</div><p id="checkinDetail" class="muted">Set an interval and press CHECK IN NOW to start the countdown.</p><div class="button-row"><button id="resetCheckin" class="action">RESET TIMER</button><button id="copyCheckin" class="action">COPY CHECK-IN</button></div></article>
         <article class="panel"><div class="panel-title"><span>EMERGENCY PLAN</span><span class="tiny">PRE-TRIP</span></div><textarea id="tripEmergency" class="terminal-area" placeholder="Who has your route? Satellite device? Turnaround time? Medical notes?"></textarea></article>
@@ -639,6 +669,7 @@
         <button class="sheet-tab" data-open="waypoints"><span>◆</span><b>WAYPOINTS</b><small>Saved positions</small></button>
         <button class="sheet-tab" data-open="track"><span>⋯</span><b>TRACK</b><small>Breadcrumb log</small></button>
         <button class="sheet-tab" data-open="trip"><span>▣</span><b>TRIP</b><small>Plan / check-in</small></button>
+        <button class="sheet-tab" data-open="mission"><span>◎</span><b>MISSION</b><small>Pre-trip pack</small></button>
         <button class="sheet-tab" data-open="survival"><span>✚</span><b>GUIDE</b><small>Offline manual</small></button>
         <button class="sheet-tab" data-open="sensors"><span>◫</span><b>SENSORS</b><small>TAP / environment</small></button>
         <button class="sheet-tab" data-open="log"><span>≡</span><b>FIELD LOG</b><small>Notes / marks</small></button>
@@ -658,12 +689,13 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script src="survival-data.js"></script>
-  <script src="route-state.js?v=3.39"></script>
-  <script src="app.js?v=3.39"></script>
-  <script src="workstation.js?v=3.39"></script>
-  <script src="map-engine.js?v=3.39"></script>
+  <script src="route-state.js?v=3.40"></script>
+  <script src="app.js?v=3.40"></script>
+  <script src="workstation.js?v=3.40"></script>
+  <script src="map-engine.js?v=3.40"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="route-planner.js?v=3.39"></script>
+  <script src="route-planner.js?v=3.40"></script>
+  <script src="field-intel.js?v=3.40"></script>
 </body>
 </html>
 

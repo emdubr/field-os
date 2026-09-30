@@ -3029,3 +3029,15 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
     font-size:11px!important;
   }
 }
+
+
+/* v3.40 feature 01 — Mission Mode */
+.mission-head-state{align-self:center;justify-self:end;border:1px solid var(--line);background:var(--panel2);color:var(--dim);padding:6px 8px;font:8px/1.15 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;white-space:nowrap}
+.mission-head-state.active{color:var(--fg);border-color:var(--fg2);box-shadow:0 0 8px color-mix(in srgb,var(--fg2) 22%,transparent)}
+.mission-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.mission-input-grid label{display:block;min-width:0}.mission-input-grid .terminal-area{min-height:94px}.mission-main-actions{margin-top:8px}
+.mission-readiness-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.mission-readiness-item{min-width:0;border:1px solid color-mix(in srgb,var(--line) 48%,transparent);background:var(--panel2);padding:8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:start}
+.mission-readiness-item i{width:10px;height:10px;border-radius:50%;margin-top:2px;background:var(--danger);box-shadow:0 0 7px color-mix(in srgb,var(--danger) 40%,transparent)}.mission-readiness-item.ok i{background:var(--fg2);box-shadow:0 0 7px color-mix(in srgb,var(--fg2) 45%,transparent)}.mission-readiness-item.warn i{background:var(--warn);box-shadow:0 0 7px color-mix(in srgb,var(--warn) 45%,transparent)}
+.mission-readiness-item b{font-size:9px;line-height:1.2;overflow-wrap:anywhere}.mission-readiness-item small{grid-column:2;color:var(--dim);font-size:8px;line-height:1.35;overflow-wrap:anywhere}.mission-summary-grid{margin-top:7px}.mission-waypoint-list{display:grid;gap:4px}
+.mission-waypoint-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;border-bottom:1px dotted color-mix(in srgb,var(--line) 35%,transparent);padding:5px 0;font-size:9px}.mission-waypoint-row small{color:var(--dim);font-size:8px}#missionStatus{margin:8px 0 0}
+@media(max-width:760px){.mission-input-grid{grid-template-columns:1fr}.mission-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mission-main-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}.mission-summary-grid{grid-template-columns:1fr!important}}
+@media(max-width:380px){.mission-readiness-grid{grid-template-columns:1fr}.mission-main-actions{grid-template-columns:1fr!important}}

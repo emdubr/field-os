@@ -3,7 +3,7 @@ const tabButtons = [...document.querySelectorAll('.tab-btn[data-tab-for]')];
 const moreTabs = document.getElementById('moreTabs');
 const tabSheet = document.getElementById('tabSheet');
 const tabSheetBackdrop = document.getElementById('tabSheetBackdrop');
-const moreViewNames = new Set(['route','trailreturn','waypoints','track','trip','survival','sensors','log','power','system','sos']);
+const moreViewNames = new Set(['route','trailreturn','waypoints','track','trip','mission','survival','sensors','log','power','system','sos']);
 const DEMO_POS = {lat:44.4759, lon:-73.2121, alt:3420};
 let currentNavPosition={...DEMO_POS, source:'DEMO GNSS'};
 let currentAccuracy=4;
@@ -516,11 +516,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.39',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.40',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.39';
+        const key='fieldos-sw-reloaded-v3.40';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();

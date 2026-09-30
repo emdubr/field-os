@@ -9,7 +9,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});
 (async()=>{
  await tick();
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
@@ -20,6 +20,24 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  d.getElementById('waypointName').value='QA Base';click('setBaseWaypoint');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'))[0].name,'QA Base');assert.match(d.getElementById('waypointList').textContent,/QA Base/);
  d.getElementById('tripName').value='QA Hike';click('saveTrip');assert.match(w.localStorage.getItem('fieldos-v12-trip'),/QA Hike/);
  console.log('PASS waypoint/base and trip persistence');
+ d.getElementById('tripReturn').value='2026-10-04T18:00';
+ d.getElementById('tripEmergency').value='Route held by contact; turnaround before dark.';
+ click('saveTrip');
+ w.FIELD_ROUTE_STATE.setPoints([{lat:44.47,lon:-73.22},{lat:44.48,lon:-73.20}]);
+ d.getElementById('missionWeather').value='Cool and dry; light west wind.';
+ d.getElementById('missionWeather').dispatchEvent(new w.Event('input',{bubbles:true}));
+ d.getElementById('missionContact').value='QA CONTACT / 555-0100';
+ d.getElementById('missionContact').dispatchEvent(new w.Event('input',{bubbles:true}));
+ click('missionBuild');await tick();
+ const missionPack=JSON.parse(w.localStorage.getItem('fieldos-v12-mission-pack'));
+ assert.equal(missionPack.name,'QA Hike');assert.equal(missionPack.route.points.length,2);
+ assert.equal(missionPack.waypoints.length,1);assert.match(missionPack.weather.snapshot,/Cool and dry/);
+ assert.match(missionPack.emergencyContact,/QA CONTACT/);assert.equal(missionPack.trip.tripReturn,'2026-10-04T18:00');
+ assert.ok(Array.isArray(missionPack.readiness)&&missionPack.readiness.length>=8);
+ click('missionStart');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-mission-active')).active,true);
+ click('missionEnd');await tick();assert.equal(w.localStorage.getItem('fieldos-v12-mission-active'),null);
+ w.FIELD_ROUTE_STATE.setPoints([]);
+ console.log('PASS feature 01 Mission Mode builds, freezes, starts, and ends a complete local trip pack');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
