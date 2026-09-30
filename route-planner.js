@@ -83,7 +83,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.23',
+      'BUILD: v3.24',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -177,7 +177,7 @@
     if(!btn)return;
     btn.classList.toggle('active',gaiaRouteEnabled);
     btn.setAttribute('aria-pressed',gaiaRouteEnabled?'true':'false');
-    btn.textContent=gaiaRouteEnabled?'GAIA ROUTE LAYER // ON':'GAIA ROUTE LAYER // OFF';
+    btn.textContent=gaiaRouteEnabled?'ROUTE LAYER // ON':'ROUTE LAYER // OFF';
   }
   function toggleGaiaRouteLayer(){
     gaiaRouteEnabled=!gaiaRouteEnabled;
