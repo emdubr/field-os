@@ -618,15 +618,28 @@ function updateReturnGuidance(){const n=nearestPointOnRoute(currentNavPosition),
 document.getElementById('usePhonePos')?.addEventListener('click',()=>requestFieldLiveLocation());
 document.getElementById('followBreadcrumbs')?.addEventListener('click',()=>{addLog(`RETURN TO BASE STARTED — target ${routePlan.name||'route start'}.`,'NAV')});
 document.getElementById('mapMarkBtn')?.addEventListener('click',()=>addLog(`MAP MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}.`,'POSITION'));
+const cleanSharedRoutePoints=(list=[],limit=1000)=>(Array.isArray(list)?list:[]).filter(validLatLon).slice(0,limit).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
 window.FIELD_ROUTE_STATE={
-  getPoints:()=>routePoints.map(p=>({lat:Number(p.lat),lon:Number(p.lon)})).filter(validLatLon),
+  getPoints:()=>cleanSharedRoutePoints(routePoints),
   setPoints:(pts=[])=>{
-    routePoints=(Array.isArray(pts)?pts:[]).filter(validLatLon).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
+    routePoints=cleanSharedRoutePoints(pts);
     routePlan={...routePlan,points:routePoints};
     saveJSON('routePlan',routePlan);drawRoute()
   },
-  getPlan:()=>({...routePlan,anchors:Array.isArray(routePlan.anchors)?routePlan.anchors.map(p=>({...p})):[]}),
-  setMeta:(meta={})=>{routePlan={...routePlan,...meta,points:routePoints.map(({lat,lon})=>({lat,lon}))};saveJSON('routePlan',routePlan)},
+  getPlan:()=>({
+    ...routePlan,
+    points:cleanSharedRoutePoints(routePoints),
+    anchors:cleanSharedRoutePoints(routePlan.anchors,30),
+    routedAnchors:cleanSharedRoutePoints(routePlan.routedAnchors,30)
+  }),
+  setMeta:(meta={})=>{
+    if(!meta||typeof meta!=='object'||Array.isArray(meta))return;
+    const safe={...meta};
+    if('anchors' in safe)safe.anchors=cleanSharedRoutePoints(safe.anchors,30);
+    if('routedAnchors' in safe)safe.routedAnchors=cleanSharedRoutePoints(safe.routedAnchors,30);
+    routePlan={...routePlan,...safe,points:cleanSharedRoutePoints(routePoints)};
+    saveJSON('routePlan',routePlan)
+  },
   save:()=>saveRoutePlan(),
   current:()=>({lat:Number(currentNavPosition.lat),lon:Number(currentNavPosition.lon),alt:currentNavPosition.alt??null,source:currentNavPosition.source||'POSITION'})
 };
