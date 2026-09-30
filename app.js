@@ -398,11 +398,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.19',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.20',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.19';
+        const key='fieldos-sw-reloaded-v3.20';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -1151,7 +1151,9 @@ function updateLiveNavigationUI(){
   for(const id of ['navCompassRotor','homeCompassRotor']){
     const rotor=document.getElementById(id);
     if(rotor){
-      rotor.setAttribute('transform',Number.isFinite(heading)?`rotate(${heading} 100 100)`:'rotate(0 100 100)');
+      const angle=Number.isFinite(heading)?heading:0;
+      rotor.removeAttribute('transform');
+      rotor.style.setProperty('--compass-heading',`${angle}deg`);
       rotor.classList.toggle('no-course',!Number.isFinite(heading));
     }
   }
