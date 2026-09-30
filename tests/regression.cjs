@@ -294,24 +294,24 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('position:fixed!important'));
  assert.ok(workstationCss.includes('@media(max-width:430px)'));
  console.log('PASS final responsive layer separates desktop/mobile navigation and constrains overflow');
- assert.ok(workstationCss.includes('v3.54 UI refinement'));
+ assert.ok(workstationCss.includes('v3.55 UI refinement'));
  assert.ok(workstationCss.includes('font-size:max(16px,1em)'));
  assert.ok(workstationCss.includes('min-height:56dvh!important'));
  assert.ok(workstationCss.includes('grid-template-columns:repeat(6,minmax(0,1fr))'));
  assert.ok(workstationCss.includes('button:focus-visible'));
- console.log('PASS v3.54 UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
+ console.log('PASS v3.55 UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
  const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
  assert.ok(html.includes('styles.css?v=3.54')&&html.includes('workstation.css?v=3.54')&&html.includes('field-tools.js?v=3.54'));
- assert.ok(appJs.includes("sw.js?v=3.54")&&appJs.includes("fieldos-sw-reloaded-v3.54"));
- assert.ok(swJs.includes("field-os-v3-54")&&swJs.includes("field-tools.js?v=3.54"));
+ assert.ok(appJs.includes("sw.js?v=3.54")&&appJs.includes("fieldos-sw-reloaded-v3.55"));
+ assert.ok(swJs.includes("field-os-v3-55")&&swJs.includes("field-tools.js?v=3.54"));
  assert.ok(manifest.includes("index.html?v=3.54"));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS v3.54 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS v3.55 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
- assert.ok(workstationJs.includes('FIELD / OS <b>3.54</b>')&&workstationJs.includes('<em>v3.54</em>'));
- assert.ok(routePlannerJs.includes("'BUILD: v3.54'"));
- console.log('PASS runtime workstation and route diagnostics display FIELD OS v3.54');
+ assert.ok(workstationJs.includes('FIELD / OS <b>3.55</b>')&&workstationJs.includes('<em>v3.55</em>'));
+ assert.ok(routePlannerJs.includes("'BUILD: v3.55'"));
+ console.log('PASS runtime workstation and route diagnostics display FIELD OS v3.55');
  assert.ok(appJs.includes("zoomSnap:.25")&&appJs.includes("zoomDelta:.5")&&appJs.includes("wheelDebounceTime:24")&&appJs.includes("wheelPxPerZoomLevel:100"));
  assert.ok(routePlannerJs.includes("zoomSnap:.25")&&routePlannerJs.includes("zoomDelta:.5")&&routePlannerJs.includes("wheelDebounceTime:24")&&routePlannerJs.includes("wheelPxPerZoomLevel:100"));
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
@@ -491,7 +491,14 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
-assert.ok(workstationCss.includes('v3.54 route workspace'));
+assert.ok(workstationCss.includes('v3.55 route workspace'));
 assert.ok(workstationCss.includes('#route .route-performance-panel{'));
 assert.ok(workstationCss.includes('align-self:start!important'));
 console.log('PASS Adaptive ETA panel sizes to content instead of stretching with route map');
+
+assert.ok(workstationCss.includes('v3.55 MOBILE DOCK REBUILD'));
+assert.ok(workstationCss.includes('grid-template-columns:repeat(5,minmax(0,1fr))!important'));
+assert.ok(workstationCss.includes('bottom:var(--mobile-dock-h)!important'));
+assert.ok(workstationCss.includes('.tab-sheet.open{'));
+assert.ok(workstationCss.includes('transform:translateY(0)!important'));
+console.log('PASS v3.55 mobile dock owns bottom safe area and More sheet geometry');
