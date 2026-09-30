@@ -77,6 +77,50 @@
 
 
 
+
+  // Feature 10 — Mesh Coverage Heatmap.
+  const meshCoverage={samples:[]};
+  function classifyMeshCoverage(sample={}){
+    const rssi=Number(sample.rssi),snr=Number(sample.snr);
+    if((Number.isFinite(rssi)&&rssi<-115)||(Number.isFinite(snr)&&snr<-8))return 'dead';
+    if((Number.isFinite(rssi)&&rssi<-103)||(Number.isFinite(snr)&&snr<0))return 'weak';
+    if((Number.isFinite(rssi)&&rssi<-90)||(Number.isFinite(snr)&&snr<5))return 'fair';
+    return 'strong';
+  }
+  function normalizeCoverageSample(raw={}){
+    const lat=Number(raw.lat),lon=Number(raw.lon),rssi=Number(raw.rssi),snr=Number(raw.snr);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return null;
+    if(!Number.isFinite(rssi)&&!Number.isFinite(snr))return null;
+    return {lat,lon,rssi:Number.isFinite(rssi)?rssi:null,snr:Number.isFinite(snr)?snr:null,time:Number(raw.time)||Date.now(),quality:classifyMeshCoverage({rssi,snr})};
+  }
+  function addCoverageSample(raw={}){
+    const s=normalizeCoverageSample(raw);if(!s)return null;
+    const last=meshCoverage.samples.at(-1);
+    if(last&&meters(last,s)<8&&Math.abs((s.time||0)-(last.time||0))<30000){meshCoverage.samples[meshCoverage.samples.length-1]=s}
+    else meshCoverage.samples.push(s);
+    if(meshCoverage.samples.length>1200)meshCoverage.samples.splice(0,meshCoverage.samples.length-1200);
+    write('mesh-coverage',{savedAt:new Date().toISOString(),samples:meshCoverage.samples});
+    renderMeshCoverage();return s;
+  }
+  function renderMeshCoverage(){
+    const svg=document.getElementById('meshCoverageMap'),state=document.getElementById('meshCoverageState'),summary=document.getElementById('meshCoverageSummary');if(!svg)return meshCoverage.samples;
+    const samples=meshCoverage.samples.slice(-800),origin=getPosition(),validOrigin=validPoint(origin);
+    if(!samples.length){svg.innerHTML='<text x="400" y="180" text-anchor="middle" fill="currentColor" opacity=".45" font-size="12">NO COVERAGE SAMPLES</text>';if(state)state.textContent='NO SAMPLES';if(summary)summary.textContent='SAMPLES // 0';return samples}
+    const ref=validOrigin?origin:samples.at(-1),pts=samples.map(s=>({s,p:meshPoint(s,ref)})).filter(x=>x.p),maxD=Math.max(150,...pts.map(x=>x.p.distanceM)),scale=145/maxD,cx=400,cy=180;
+    const parts=['<g class="mesh-coverage-grid"><path d="M100 0V360M200 0V360M300 0V360M400 0V360M500 0V360M600 0V360M700 0V360M0 60H800M0 120H800M0 180H800M0 240H800M0 300H800"/></g>'];
+    for(const {s,p} of pts){const x=cx+p.x*scale,y=cy-p.y*scale,r=s.quality==='dead'?18:s.quality==='weak'?16:s.quality==='fair'?14:12;parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" class="mesh-coverage-sample ${s.quality}"><title>${s.quality.toUpperCase()} / ${Number.isFinite(s.rssi)?Math.round(s.rssi)+' dBm':'RSSI —'} / ${Number.isFinite(s.snr)?s.snr.toFixed(1)+' dB':'SNR —'}</title></circle>`)}
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="7" class="mesh-coverage-center"/>`);
+    svg.innerHTML=parts.join('');
+    const counts={strong:0,fair:0,weak:0,dead:0};for(const s of samples)counts[s.quality]=(counts[s.quality]||0)+1;
+    if(state)state.textContent=`${samples.length} SAMPLE${samples.length===1?'':'S'}`;if(summary)summary.textContent=`STRONG ${counts.strong} // FAIR ${counts.fair} // WEAK ${counts.weak} // POOR ${counts.dead} // CACHE LOCAL`;
+    return samples;
+  }
+  function clearMeshCoverage(){meshCoverage.samples=[];try{localStorage.removeItem(key('mesh-coverage'))}catch{}renderMeshCoverage()}
+  const savedCoverage=read('mesh-coverage',null);if(Array.isArray(savedCoverage?.samples))meshCoverage.samples=savedCoverage.samples.map(normalizeCoverageSample).filter(Boolean);
+  document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},m=d.mesh||{},rssi=Number(m.rssi??d.rssi),snr=Number(m.snr??d.snr),pos=getPosition();if(validPoint(pos)&&(Number.isFinite(rssi)||Number.isFinite(snr)))addCoverageSample({lat:pos.lat,lon:pos.lon,rssi,snr,time:Date.now()})});
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshCoverage()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshCoverage()});document.getElementById('meshCoverageClear')?.addEventListener('click',clearMeshCoverage);setTimeout(renderMeshCoverage,260);
+  window.FIELD_MESH_COVERAGE={add:addCoverageSample,render:renderMeshCoverage,clear:clearMeshCoverage,classify:classifyMeshCoverage,state:meshCoverage};
+
   // Feature 09 — Mesh Network Map / topology cache.
   const meshState={nodes:[]};
   function normalizeMeshNode(raw={}){

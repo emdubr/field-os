@@ -3107,3 +3107,10 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .mesh-node-roster{display:grid;gap:5px;align-content:start;max-height:330px;overflow:auto}.mesh-node-row{border:1px solid color-mix(in srgb,var(--line) 40%,transparent);background:var(--panel2);padding:7px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px}.mesh-node-row b{font-size:9px;overflow-wrap:anywhere}.mesh-node-row>span{font-size:8px;color:var(--dim)}.mesh-node-row small{grid-column:1/-1;font-size:7px;line-height:1.35;color:var(--dim)}
 .mesh-node-row.weak{border-color:var(--warn)}.mesh-node-row.bad{border-color:var(--danger)}.mesh-network-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:6px;color:var(--dim);font-size:7px}
 @media(max-width:760px){.mesh-network-layout{grid-template-columns:1fr}.mesh-network-map{height:280px}.mesh-node-roster{max-height:none}.mesh-node-row b{font-size:10px}.mesh-node-row small{font-size:8px}}
+
+
+/* feature 10 — mesh coverage heatmap */
+.mesh-coverage-wrap{display:grid;gap:5px}.mesh-coverage-map{display:block;width:100%;height:300px;border:1px solid var(--line);background:var(--panel2)}
+.mesh-coverage-grid{stroke:currentColor;opacity:.05;stroke-width:1}.mesh-coverage-sample{stroke:none}.mesh-coverage-sample.strong{fill:var(--fg2);opacity:.72}.mesh-coverage-sample.fair{fill:#d7c85d;opacity:.62}.mesh-coverage-sample.weak{fill:var(--warn);opacity:.58}.mesh-coverage-sample.dead{fill:var(--danger);opacity:.56}
+.mesh-coverage-center{fill:var(--panel);stroke:var(--fg);stroke-width:2}.mesh-coverage-scale{display:grid;grid-template-columns:auto repeat(4,28px) auto;gap:3px;align-items:center;font-size:7px;color:var(--dim)}.mesh-coverage-scale i{height:7px}.mesh-coverage-scale .strong{background:var(--fg2)}.mesh-coverage-scale .fair{background:#d7c85d}.mesh-coverage-scale .weak{background:var(--warn)}.mesh-coverage-scale .dead{background:var(--danger)}
+@media(max-width:600px){.mesh-coverage-map{height:250px}}

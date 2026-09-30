@@ -279,6 +279,15 @@
           </div>
           <div class="mesh-network-foot"><span id="meshNetworkFreshness">CACHE // EMPTY</span><span id="meshNetworkCoverage">POSITIONED 0 / 0</span></div>
         </article>
+        <article class="panel mesh-coverage-panel">
+          <div class="panel-title"><span>MESH COVERAGE HEATMAP</span><span class="tiny" id="meshCoverageState">NO SAMPLES</span></div>
+          <div class="mesh-coverage-wrap">
+            <svg id="meshCoverageMap" class="mesh-coverage-map" viewBox="0 0 800 360" role="img" aria-label="Local Meshtastic signal quality heatmap"></svg>
+            <div class="mesh-coverage-scale"><span>STRONG</span><i class="strong"></i><i class="fair"></i><i class="weak"></i><i class="dead"></i><span>POOR</span></div>
+          </div>
+          <div class="button-row"><button id="meshCoverageClear" class="danger-lite" type="button">CLEAR COVERAGE HISTORY</button></div>
+          <div id="meshCoverageSummary" class="terrain-risk-confidence">SAMPLES // 0</div>
+        </article>
         <article class="panel compose">
           <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
           <label for="messageInput">MESSAGE</label>

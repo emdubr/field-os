@@ -98,6 +98,12 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.equal(w.FIELD_MESH.state.nodes.length,2);assert.equal(w.FIELD_MESH.quality(w.FIELD_MESH.state.nodes.find(n=>n.id==='ridge-1')),'good');assert.equal(w.FIELD_MESH.quality(w.FIELD_MESH.state.nodes.find(n=>n.id==='valley-2')),'weak');
  w.FIELD_MESH.render();assert.match(d.getElementById('meshNetworkState').textContent,/2 NODES/);assert.equal(d.querySelectorAll('#meshNodeRoster .mesh-node-row').length,2);assert.ok(d.querySelectorAll('#meshNetworkMap .mesh-link').length>=2);assert.ok(JSON.parse(w.localStorage.getItem('fieldos-v12-mesh-roster')).nodes.length===2);
  console.log('PASS feature 09 Mesh Network Map ingests, caches, positions, quality-rates, and renders Meshtastic nodes with topology metadata');
+ w.FIELD_MESH_COVERAGE.clear();
+ assert.equal(w.FIELD_MESH_COVERAGE.classify({rssi:-75,snr:8}),'strong');assert.equal(w.FIELD_MESH_COVERAGE.classify({rssi:-98,snr:2}),'fair');assert.equal(w.FIELD_MESH_COVERAGE.classify({rssi:-108,snr:-2}),'weak');assert.equal(w.FIELD_MESH_COVERAGE.classify({rssi:-120,snr:-10}),'dead');
+ w.FIELD_MESH_COVERAGE.add({lat:44.47,lon:-73.21,rssi:-80,snr:8,time:Date.now()-4000});w.FIELD_MESH_COVERAGE.add({lat:44.471,lon:-73.211,rssi:-106,snr:-1,time:Date.now()-2000});w.FIELD_MESH_COVERAGE.add({lat:44.472,lon:-73.212,rssi:-118,snr:-9,time:Date.now()});
+ assert.equal(w.FIELD_MESH_COVERAGE.state.samples.length,3);w.FIELD_MESH_COVERAGE.render();assert.equal(d.querySelectorAll('#meshCoverageMap .mesh-coverage-sample').length,3);assert.match(d.getElementById('meshCoverageSummary').textContent,/POOR 1/);assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-mesh-coverage')).samples.length,3);
+ console.log('PASS feature 10 Mesh Coverage Heatmap records, classifies, caches, and renders moving RSSI/SNR samples');
+
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
