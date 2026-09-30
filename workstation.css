@@ -3214,6 +3214,7 @@ input,select,textarea,button{max-width:100%;box-sizing:border-box}
 @media(min-width:768px){
   body{padding-bottom:0!important}
   .tabbar{display:none!important}
+  .tab-sheet,.tab-sheet-backdrop{display:none!important}
   .shell{padding-bottom:0!important}
   .view{padding-bottom:18px!important}
   .detail-main-grid,.detail-bottom-grid{width:100%;min-width:0}
