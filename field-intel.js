@@ -384,7 +384,7 @@
   document.addEventListener('fieldos:messagesent',e=>{if(e.detail?.id&&e.detail.id===autoCheckinState.pendingMessageId){autoCheckinState.lastDelivered=Date.now();autoCheckinState.pendingMessageId=null;persistAutoCheckin();renderAutoCheckin()}});
   document.addEventListener('fieldos:checkin',e=>{const d=e.detail||{};if(d.auto)return;const interval=checkinIntervalMinutes();autoCheckinState.lastGenerated=Number(d.createdAt)||Date.now();autoCheckinState.nextDue=interval?autoCheckinState.lastGenerated+interval*60000:0;if(!d.transportQueued&&window.FIELD_TRANSPORT?.queue){const item=window.FIELD_TRANSPORT.queue(d.text||'FIELD/OS CHECK-IN',{channel:'CHECK-IN',meta:{kind:'manual-checkin'}});autoCheckinState.pendingMessageId=item?.id||null}persistAutoCheckin();renderAutoCheckin()});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())});document.getElementById('checkinInterval')?.addEventListener('change',()=>{if(autoCheckinConfig.enabled)armAutoCheckin()});
-  setInterval(()=>autoCheckinTick(Date.now()),15000);setTimeout(()=>renderAutoCheckin(),320);
+  setInterval(()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())},15000);setTimeout(()=>renderAutoCheckin(),320);
   window.FIELD_AUTO_CHECKIN={config:autoCheckinConfig,state:autoCheckinState,setConfig:setAutoCheckinConfig,arm:armAutoCheckin,tick:autoCheckinTick,generate:generateAutoCheckin,format:formatAutoCheckin,render:renderAutoCheckin};
 
   // Feature 13 — Unified Communications Inbox.
@@ -731,7 +731,7 @@
   document.getElementById('drArm')?.addEventListener('click',armDr);document.getElementById('drReset')?.addEventListener('click',resetDr);
   document.addEventListener('fieldos:positionchange',e=>{const p=e.detail;if(validPoint(p)){dr.anchor={lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.estimated={...dr.anchor};dr.uncertaintyM=Number(p.accuracy)||15;dr.active=false;if(dr.armed)renderDr()}});
   document.addEventListener('fieldos:telemetry',e=>{const h=Number(e.detail?.heading),s=Number(e.detail?.speedMps);if(Number.isFinite(h))dr.heading=h;if(Number.isFinite(s))dr.speedMps=Math.max(0,s)});
-  setInterval(updateDr,1000);setTimeout(renderDr,160);
+  setInterval(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);setTimeout(renderDr,160);
   window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,state:dr};
 
   // Feature 06 — stripped-down breadcrumb navigation.
@@ -978,7 +978,7 @@
   document.getElementById('priorityAction')?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
   document.addEventListener('fieldos:positionchange',refreshContext);document.addEventListener('fieldos:routechange',refreshContext);document.addEventListener('fieldos:missionstart',refreshContext);document.addEventListener('fieldos:missionend',refreshContext);
   document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshContext()});
-  setInterval(refreshContext,5000);setTimeout(refreshContext,60);
+  setInterval(()=>{if(document.visibilityState==='visible')refreshContext()},5000);setTimeout(refreshContext,60);
   window.FIELD_CONTEXT={refresh:refreshContext,candidates:contextCandidates,pushPressure:(v,t=Date.now())=>{v=Number(v);if(Number.isFinite(v)){contextState.pressure.push({t:Number(t)||Date.now(),v});contextState.pressure=contextState.pressure.slice(-120)}return refreshContext()},state:contextState};
 
   window.FIELD_MISSION={build,start,end,render,getPack:()=>read('mission-pack',null),getActive:()=>read('mission-active',null),summary,preview:missionData};
