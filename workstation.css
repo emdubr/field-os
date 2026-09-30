@@ -1554,3 +1554,52 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 @media(max-width:700px){
   .elevation-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* v3.23 force Gaia route line through SVG renderer */
+.route-planner-real-map .leaflet-fieldRoute-pane svg,
+.route-planner-real-map .leaflet-fieldRoutePreview-pane svg{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  overflow:visible!important;
+  filter:none!important;
+  pointer-events:none!important;
+}
+.route-planner-real-map path.gaia-route-casing{
+  fill:none!important;
+  stroke:#050807!important;
+  stroke-width:12px!important;
+  stroke-opacity:.96!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  vector-effect:non-scaling-stroke;
+}
+.route-planner-real-map path.gaia-route-main{
+  fill:none!important;
+  stroke:var(--warn)!important;
+  stroke-width:7px!important;
+  stroke-opacity:1!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 0 2px rgba(0,0,0,.95)) drop-shadow(0 0 4px color-mix(in srgb,var(--warn) 35%,transparent))!important;
+}
+.route-planner-real-map path.gaia-route-highlight{
+  fill:none!important;
+  stroke:#fff!important;
+  stroke-width:2.5px!important;
+  stroke-opacity:.9!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  vector-effect:non-scaling-stroke;
+}
+.route-planner-real-map path.gaia-route-preview{
+  fill:none!important;
+  stroke:var(--warn)!important;
+  stroke-width:4px!important;
+  stroke-opacity:.95!important;
+  stroke-dasharray:10 8!important;
+  stroke-linecap:round!important;
+  vector-effect:non-scaling-stroke;
+}
