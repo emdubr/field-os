@@ -273,6 +273,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS browser offline-route corridor coverage controls and pack selection are wired');
  assert.ok(appJs.includes('corridorTemplateUrl'));assert.ok(appJs.includes('downloadRouteCorridorPack'));assert.ok(html.includes('id="routeCorridorTemplate"'));assert.ok(html.includes('id="downloadRouteCorridor"'));
  console.log('PASS provider-safe automatic route corridor download workflow is wired');
+ assert.ok(fieldIntelJs.includes('FIELD_ENVIRONMENT_INTEL'));assert.ok(fieldIntelJs.includes('air-quality-api.open-meteo.com'));assert.ok(fieldIntelJs.includes('earthquake.usgs.gov'));assert.ok(html.includes('id="environmentIntelRefresh"'));assert.ok(html.includes('id="environmentAqi"'));
+ console.log('PASS cached browser environmental intelligence is wired to air-quality and earthquake sources');
+
 
  assert.ok(routePlannerJs.includes("fieldos-route-cache-v1"));assert.ok(routePlannerJs.includes('offlineTrailGraph'));assert.ok(routePlannerJs.includes('persistTrailNetwork'));
  assert.ok(appJs.includes('ensureMapStorageCapacity'));assert.ok(appJs.includes('fmtMapPackAge'));assert.ok(html.includes('id="offlineMapAge"'));assert.ok(html.includes('id="offlineMapOrigin"'));
