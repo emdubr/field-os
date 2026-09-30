@@ -1210,6 +1210,17 @@ async function updateFieldMaps(recenter=false){
   }
   const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):(fieldMapMode==='osm'?'STREET OSM':'OPEN TOPO HIKING');
 }
+window.FIELD_OFFLINE_MAPS={
+  async active(){return await resolveActiveFieldPack()},
+  async leafletLayer(){
+    const pack=await resolveActiveFieldPack();if(!pack)return null;
+    if(!(await ensureOfflineMapLibraries()))return null;
+    const file=pack.blob instanceof File?pack.blob:new File([pack.blob],pack.name||'offline.pmtiles',{type:'application/octet-stream'});
+    const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
+    return {layer:protomapsL.leafletLayer({url:archive,flavor:'dark',lang:'en'}),pack};
+  },
+  async ready(){const pack=await resolveActiveFieldPack();return {pack:!!pack,name:pack?.name||'',mode:fieldMapMode,offline:navigator.onLine===false}}
+};
 async function activateFieldMapPack(id){
   const rec=await getFieldMapPack(id);
   if(!rec)throw new Error('Saved map pack not found.');
