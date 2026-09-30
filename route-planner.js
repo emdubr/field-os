@@ -21,6 +21,8 @@
   let plannerMap=null;
   let plannerRouteLayer=null;
   let plannerPreviewLayer=null;
+  let plannerRouteRenderer=null;
+  let plannerPreviewRenderer=null;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -81,7 +83,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.22',
+      'BUILD: v3.23',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -232,7 +234,7 @@
     plannerMap=L.map(el,{
       zoomControl:true,
       attributionControl:true,
-      preferCanvas:true,
+      preferCanvas:false,
       doubleClickZoom:false,
       tap:true
     }).setView([here.lat,here.lon],14);
@@ -283,6 +285,10 @@
     directionPane.style.zIndex='625';
     directionPane.style.pointerEvents='none';
 
+    // Explicit SVG renderers avoid the custom-pane Canvas visibility issue.
+    plannerRouteRenderer=L.svg({pane:'fieldRoutePane',padding:.65});
+    plannerPreviewRenderer=L.svg({pane:'fieldRoutePreviewPane',padding:.65});
+
     plannerRouteLayer=L.layerGroup().addTo(plannerMap);
     plannerPreviewLayer=L.layerGroup().addTo(plannerMap);
     plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
@@ -327,13 +333,16 @@
       if(gaiaRouteEnabled&&pts.length>1){
         const latlngs=pts.map(p=>[p.lat,p.lon]);
         L.polyline(latlngs,{
-          pane:'fieldRoutePane',color:'#050807',weight:11,opacity:.92,lineCap:'round',lineJoin:'round',interactive:false
+          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-casing',
+          color:'#050807',weight:12,opacity:.96,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
         L.polyline(latlngs,{
-          pane:'fieldRoutePane',color:c.route,weight:6,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
+          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-main',
+          color:c.route,weight:7,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
         L.polyline(latlngs,{
-          pane:'fieldRoutePane',color:'#ffffff',weight:2,opacity:.82,lineCap:'round',lineJoin:'round',interactive:false
+          pane:'fieldRoutePane',renderer:plannerRouteRenderer,className:'gaia-route-highlight',
+          color:'#ffffff',weight:2.5,opacity:.88,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
         drawRouteDirections(pts,c);
       }
@@ -353,7 +362,8 @@
         }
         if(guide.length>1){
           L.polyline(guide.map(p=>[p.lat,p.lon]),{
-            pane:'fieldRoutePreviewPane',color:c.route,weight:4,opacity:.95,dashArray:'10 8',lineCap:'round',interactive:false
+            pane:'fieldRoutePreviewPane',renderer:plannerPreviewRenderer,className:'gaia-route-preview',
+            color:c.route,weight:4,opacity:.95,dashArray:'10 8',lineCap:'round',interactive:false
           }).addTo(plannerPreviewLayer);
         }
       }
