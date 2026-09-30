@@ -82,6 +82,78 @@
 
 
 
+
+  // Feature 15 — Group Expedition Mode.
+  const groupConfig={enabled:false,allNodes:true,separationMi:.5,lowBattery:20,staleMin:15,members:[],...(read('group-config',{})||{})};
+  const groupState={history:{},activeAlerts:new Set(),lastEvaluation:[]};
+  function persistGroupConfig(){write('group-config',{...groupConfig,members:[...(groupConfig.members||[])]})}
+  function recordGroupHistory(nodes=[],now=Date.now()){
+    for(const node of Array.isArray(nodes)?nodes:[]){
+      if(!node?.id||!Number.isFinite(Number(node.lat))||!Number.isFinite(Number(node.lon)))continue;
+      const id=String(node.id),list=groupState.history[id]||(groupState.history[id]=[]),time=Number(node.lastHeard)||now,point={lat:Number(node.lat),lon:Number(node.lon),time};
+      const last=list.at(-1);
+      if(!last||meters(last,point)>5||Math.abs(time-last.time)>120000)list.push(point);
+      if(list.length>12)list.splice(0,list.length-12);
+    }
+    return groupState.history;
+  }
+  function groupMovement(node,now=Date.now()){
+    if(!Number.isFinite(Number(node?.lat))||!Number.isFinite(Number(node?.lon)))return 'NO POSITION';
+    const age=now-(Number(node.lastHeard)||0);if(age>groupConfig.staleMin*60000)return 'STALE';
+    const hist=groupState.history[String(node.id)]||[];if(hist.length<2)return 'CURRENT';
+    const recent=hist.filter(p=>now-p.time<=15*60000);if(recent.length<2)return 'CURRENT';
+    const first=recent[0],last=recent.at(-1),span=last.time-first.time,dist=meters(first,last);
+    if(span>0&&dist>=25)return 'MOVING';
+    if(span>=5*60000&&dist<15)return 'STOPPED';
+    return 'CURRENT';
+  }
+  function groupNodes(nodes=[]){
+    const all=Array.isArray(nodes)?nodes:[];
+    if(groupConfig.allNodes)return all;
+    const selected=new Set((groupConfig.members||[]).map(String));return all.filter(n=>selected.has(String(n.id)));
+  }
+  function evaluateGroup(nodes=window.FIELD_MESH?.state?.nodes||[],origin=getPosition(),now=Date.now()){
+    recordGroupHistory(nodes,now);
+    const members=groupNodes(nodes),limitM=Math.max(.05,Number(groupConfig.separationMi)||.5)*1609.344;
+    return members.map(node=>{
+      const positioned=Number.isFinite(Number(node.lat))&&Number.isFinite(Number(node.lon)),distanceM=positioned&&validPoint(origin)?meters(origin,{lat:Number(node.lat),lon:Number(node.lon)}):null,ageMs=Math.max(0,now-(Number(node.lastHeard)||0)),movement=groupMovement(node,now),warnings=[];
+      if(distanceM!=null&&distanceM>limitM)warnings.push({type:'separation',level:distanceM>limitM*2?'bad':'warn',text:`SEPARATED ${(distanceM/1609.344).toFixed(2)} MI`});
+      if(Number.isFinite(Number(node.battery))&&Number(node.battery)<=groupConfig.lowBattery)warnings.push({type:'battery',level:Number(node.battery)<=10?'bad':'warn',text:`LOW BAT ${Math.round(node.battery)}%`});
+      if(!positioned)warnings.push({type:'position',level:'bad',text:'NO POSITION'});
+      else if(ageMs>groupConfig.staleMin*60000)warnings.push({type:'stale',level:ageMs>groupConfig.staleMin*120000?'bad':'warn',text:`STALE ${meshAgeLabel(node.lastHeard)}`});
+      if(movement==='STOPPED')warnings.push({type:'stopped',level:'warn',text:'POSITION STATIC 5+ MIN'});
+      return {...node,distanceM,ageMs,movement,warnings};
+    }).sort((a,b)=>Math.max(0,...b.warnings.map(w=>w.level==='bad'?2:1))-Math.max(0,...a.warnings.map(w=>w.level==='bad'?2:1))||(b.distanceM||0)-(a.distanceM||0));
+  }
+  function syncGroupAlerts(result=[]){
+    if(!groupConfig.enabled){groupState.activeAlerts.clear();return}
+    const next=new Set();
+    for(const member of result)for(const warning of member.warnings){
+      if(!['separation','battery','stale','position','stopped'].includes(warning.type))continue;
+      const key=`${member.id}:${warning.type}`;next.add(key);
+      if(!groupState.activeAlerts.has(key))document.dispatchEvent(new CustomEvent('fieldos:devicealert',{detail:{id:`group-${key}`,createdAt:Date.now(),source:'GROUP EXPEDITION',title:`${member.name||member.id} — ${warning.text}`,text:`Group monitor flagged ${warning.type} for ${member.name||member.id}. Last heard ${meshAgeLabel(member.lastHeard)} ago.`,severity:warning.level==='bad'?'high':'warn',memberId:member.id}}));
+    }
+    groupState.activeAlerts=next;
+  }
+  function renderGroup(result=evaluateGroup()){
+    groupState.lastEvaluation=result;syncGroupAlerts(result);
+    const roster=document.getElementById('groupExpeditionRoster'),state=document.getElementById('groupExpeditionState'),summary=document.getElementById('groupExpeditionSummary'),enabled=document.getElementById('groupExpeditionEnabled'),all=document.getElementById('groupAllNodes'),limit=document.getElementById('groupSeparationLimit');if(!roster)return result;
+    if(enabled)enabled.checked=!!groupConfig.enabled;if(all)all.checked=!!groupConfig.allNodes;if(limit)limit.value=String(groupConfig.separationMi);
+    const alertCount=result.reduce((n,m)=>n+m.warnings.length,0),bad=result.some(m=>m.warnings.some(w=>w.level==='bad'));
+    if(state)state.textContent=groupConfig.enabled?`ACTIVE // ${result.length} MEMBER${result.length===1?'':'S'} // ${alertCount} FLAG${alertCount===1?'':'S'}`:'DISABLED';
+    if(summary)summary.textContent=groupConfig.enabled?(alertCount?`${alertCount} current group flag${alertCount===1?'':'s'} // separation limit ${groupConfig.separationMi} mi`:'Group nominal // no current separation, stale-position, low-battery or stopped flags'):'Enable group monitoring to track member separation, position age, movement, and battery.';
+    const selected=new Set((groupConfig.members||[]).map(String)),allNodes=window.FIELD_MESH?.state?.nodes||[],display=groupConfig.allNodes?result:allNodes.map(n=>result.find(x=>String(x.id)===String(n.id))||{...n,distanceM:null,movement:'EXCLUDED',warnings:[]});
+    roster.innerHTML=display.length?display.map(m=>{const excluded=!groupConfig.allNodes&&!selected.has(String(m.id)),worst=m.warnings?.some(w=>w.level==='bad')?'critical':m.warnings?.length?'warning':'';return `<div class="group-member-row ${worst} ${excluded?'excluded':''}"><div class="group-member-main"><b>${esc(m.name||m.id)}</b><small>${esc(m.role||'CLIENT')} // ${esc(m.movement||'CURRENT')} // heard ${meshAgeLabel(m.lastHeard)} ago</small></div><div class="group-member-stat"><b>${m.distanceM==null?'—':(m.distanceM/1609.344).toFixed(2)+' mi'}</b><small>SEPARATION</small></div><div class="group-member-stat"><b>${Number.isFinite(Number(m.battery))?Math.round(m.battery)+'%':'—'}</b><small>BATTERY</small></div><div class="group-member-flags">${m.warnings?.length?m.warnings.map(w=>`<span class="group-member-flag ${w.level}">${esc(w.text)}</span>`).join(''):'<span class="group-member-flag">NOMINAL</span>'}</div><button class="group-member-toggle" type="button" data-group-member="${esc(m.id)}">${groupConfig.allNodes?'ALL-NODE MODE':excluded?'ADD TO GROUP':'REMOVE'}</button></div>`}).join(''):'<p class="muted">No mesh members available.</p>';
+    return result;
+  }
+  function setGroupConfig(patch={}){
+    if('enabled' in patch)groupConfig.enabled=!!patch.enabled;if('allNodes' in patch)groupConfig.allNodes=!!patch.allNodes;if('separationMi' in patch)groupConfig.separationMi=Math.max(.05,Math.min(10,Number(patch.separationMi)||.5));if(Array.isArray(patch.members))groupConfig.members=[...new Set(patch.members.map(String))];persistGroupConfig();return renderGroup();
+  }
+  document.getElementById('groupExpeditionEnabled')?.addEventListener('change',e=>setGroupConfig({enabled:e.currentTarget.checked}));document.getElementById('groupAllNodes')?.addEventListener('change',e=>{if(!e.currentTarget.checked&&!(groupConfig.members||[]).length)groupConfig.members=(window.FIELD_MESH?.state?.nodes||[]).map(n=>String(n.id));setGroupConfig({allNodes:e.currentTarget.checked,members:groupConfig.members})});document.getElementById('groupSeparationLimit')?.addEventListener('change',e=>setGroupConfig({separationMi:e.currentTarget.value}));
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-group-member]');if(!b||groupConfig.allNodes)return;const id=String(b.dataset.groupMember),set=new Set((groupConfig.members||[]).map(String));set.has(id)?set.delete(id):set.add(id);setGroupConfig({members:[...set]})});
+  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderGroup()});setInterval(()=>{if(groupConfig.enabled&&document.querySelector('#comms.active'))renderGroup()},10000);setTimeout(()=>renderGroup(),380);
+  window.FIELD_GROUP={config:groupConfig,state:groupState,record:recordGroupHistory,movement:groupMovement,evaluate:evaluateGroup,render:renderGroup,setConfig:setGroupConfig};
+
   // Feature 14 — Automatic Check-ins.
   const autoCheckinConfig={enabled:false,template:'OK',graceMin:10,...(read('auto-checkin-config',{})||{})};
   const autoCheckinState={armedAt:0,nextDue:0,lastGenerated:0,lastDelivered:0,pendingMessageId:null,lastMissedAlertFor:null,...(read('auto-checkin-state',{})||{})};

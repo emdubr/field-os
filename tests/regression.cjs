@@ -135,6 +135,18 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  const autoMsg=w.FIELD_TRANSPORT.state.items.find(x=>x.id===w.FIELD_AUTO_CHECKIN.state.pendingMessageId);assert.match(autoMsg.text,/STATUS OK/);assert.match(autoMsg.text,/POS/);
  let autoDelivered=[];const unregAuto=w.FIELD_TRANSPORT.register('auto-test',{priority:200,available:true,send:async m=>{autoDelivered.push(m.id);return {ok:true,receipt:'auto-rx'}}});await waitFor(()=>w.FIELD_AUTO_CHECKIN.state.pendingMessageId===null);assert.ok(w.FIELD_AUTO_CHECKIN.state.lastDelivered>0);assert.ok(autoDelivered.length>=1);unregAuto();w.FIELD_AUTO_CHECKIN.setConfig({enabled:false});
  console.log('PASS feature 14 Automatic Check-ins schedules, catches up after suspension, queues location packets, warns on missed windows, and confirms real transport delivery');
+ w.FIELD_GROUP.setConfig({enabled:true,allNodes:true,separationMi:.3,members:[]});w.FIELD_GROUP.state.activeAlerts.clear();
+ const groupNow=Date.now(),groupOrigin={lat:44.47,lon:-73.21};
+ const groupResult=w.FIELD_GROUP.evaluate([
+   {id:'near',name:'NEAR',role:'CLIENT',lat:44.471,lon:-73.21,battery:80,lastHeard:groupNow,rssi:-80},
+   {id:'far',name:'FAR',role:'CLIENT',lat:44.49,lon:-73.21,battery:9,lastHeard:groupNow-20*60000,rssi:-100}
+ ],groupOrigin,groupNow);
+ assert.equal(groupResult.length,2);const farMember=groupResult.find(x=>x.id==='far');assert.ok(farMember.warnings.some(x=>x.type==='separation'));assert.ok(farMember.warnings.some(x=>x.type==='battery'));assert.ok(farMember.warnings.some(x=>x.type==='stale'));
+ const inboxBeforeGroup=w.FIELD_INBOX.state.items.length;w.FIELD_GROUP.render(groupResult);await tick();assert.ok(w.FIELD_INBOX.state.items.length>inboxBeforeGroup);assert.match(d.getElementById('groupExpeditionState').textContent,/ACTIVE/);
+ const firstGroupAlertCount=w.FIELD_INBOX.state.items.filter(x=>/^group-/.test(x.id)).length;w.FIELD_GROUP.render(groupResult);await tick();const secondGroupAlertCount=w.FIELD_INBOX.state.items.filter(x=>/^group-/.test(x.id)).length;assert.equal(secondGroupAlertCount,firstGroupAlertCount);
+ w.FIELD_GROUP.setConfig({enabled:false});
+ console.log('PASS feature 15 Group Expedition Mode evaluates separation, stale position, movement and battery while emitting transition-based group alerts');
+
 
 
 

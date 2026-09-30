@@ -290,6 +290,16 @@
           </div>
           <div class="mesh-network-foot"><span id="meshNetworkFreshness">CACHE // EMPTY</span><span id="meshNetworkCoverage">POSITIONED 0 / 0</span></div>
         </article>
+        <article class="panel group-expedition-panel">
+          <div class="panel-title"><span>GROUP EXPEDITION MODE</span><span class="tiny" id="groupExpeditionState">DISABLED</span></div>
+          <div class="group-expedition-controls">
+            <label><input id="groupExpeditionEnabled" type="checkbox"> GROUP MONITORING</label>
+            <label><input id="groupAllNodes" type="checkbox" checked> ALL MESH NODES = GROUP</label>
+            <label><span>SEPARATION ALERT</span><select id="groupSeparationLimit" class="terminal-input"><option value="0.25">0.25 mi</option><option value="0.5" selected>0.5 mi</option><option value="1">1.0 mi</option><option value="2">2.0 mi</option></select></label>
+          </div>
+          <div id="groupExpeditionSummary" class="group-expedition-summary">Enable group monitoring to track member separation, position age, movement, and battery.</div>
+          <div id="groupExpeditionRoster" class="group-expedition-roster"><p class="muted">No mesh members available.</p></div>
+        </article>
         <article class="panel mesh-coverage-panel">
           <div class="panel-title"><span>MESH COVERAGE HEATMAP</span><span class="tiny" id="meshCoverageState">NO SAMPLES</span></div>
           <div class="mesh-coverage-wrap">
