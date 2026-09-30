@@ -69,5 +69,55 @@
   document.getElementById('missionBuild')?.addEventListener('click',build);document.getElementById('missionStart')?.addEventListener('click',start);document.getElementById('missionEnd')?.addEventListener('click',end);document.getElementById('missionCopy')?.addEventListener('click',copySummary);document.getElementById('missionExport')?.addEventListener('click',exportPack);
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='mission')render(read('mission-pack',null))});
   if(read('mission-active',null))document.body.classList.add('mission-active');render(read('mission-pack',null));
+
+  // Feature 02 — contextual "What Matters Now" home priority.
+  const contextState={pressure:[]};
+  function daylightMinutes(){
+    const raw=text('daylightRemaining');
+    const h=Number((raw.match(/(\d+)h/)||[])[1]||0),m=Number((raw.match(/(\d+)m/)||[])[1]||0);
+    if(!/\d/.test(raw))return null;
+    return h*60+m;
+  }
+  function pressureDrop(){
+    const cutoff=Date.now()-3*60*60*1000,pts=contextState.pressure.filter(p=>p.t>=cutoff&&Number.isFinite(p.v));
+    if(pts.length<2)return null;
+    return pts[0].v-pts.at(-1).v;
+  }
+  function contextCandidates(){
+    const list=[],fix=text('mobileFixState'),banner=document.getElementById('routeDeviationBanner'),bannerText=banner?.textContent?.trim()||'',battery=parseBattery(),checkin=text('mobileCheckin'),light=daylightMinutes(),drop=pressureDrop();
+    if(/STALE|NO FIX|AWAITING/i.test(fix))list.push({id:'gnss',score:100,level:'danger',title:'GNSS FIX LOST / STALE',detail:`Position status is ${fix}. Use last trusted fix, map and compass until position recovers.`,view:'nav',action:'OPEN NAV CORE'});
+    if(/DEVIATION|OFF ROUTE/i.test(bannerText)){
+      const severe=banner?.classList.contains('critical-banner')||/DEVIATION/i.test(bannerText);
+      list.push({id:'route',score:severe?95:84,level:severe?'danger':'warn',title:'ROUTE DEVIATION',detail:bannerText||'You are outside the configured route corridor.',view:'trailreturn',action:'RETURN TO TRAIL'});
+    }
+    if(Number.isFinite(battery)&&battery<=15)list.push({id:'battery',score:90,level:'danger',title:'CRITICAL BATTERY',detail:`Phone battery is ${battery}%. Preserve navigation and communications power.`,view:'power',action:'POWER CONTROL'});
+    else if(Number.isFinite(battery)&&battery<=25)list.push({id:'battery',score:72,level:'warn',title:'LOW BATTERY',detail:`Phone battery is ${battery}%. Consider low-power mode before reserve becomes critical.`,view:'power',action:'POWER CONTROL'});
+    if(/OVERDUE/i.test(checkin))list.push({id:'checkin',score:88,level:'danger',title:'CHECK-IN OVERDUE',detail:'Your local check-in timer is overdue. Record or send a check-in when safe.',view:'trip',action:'CHECK IN'});
+    else if(/DUE SOON/i.test(checkin))list.push({id:'checkin',score:68,level:'warn',title:'CHECK-IN DUE SOON',detail:'A planned check-in is approaching.',view:'trip',action:'TRIP / CHECK-IN'});
+    if(Number.isFinite(drop)&&drop>=2)list.push({id:'pressure',score:82,level:'warn',title:'FAST PRESSURE FALL',detail:`Pressure fell ${drop.toFixed(1)} hPa in the recent 3-hour window. Recheck weather and exposure.`,view:'sensors',action:'SENSOR TREND'});
+    if(Number.isFinite(light)&&light<=60)list.push({id:'dark',score:76,level:'warn',title:'DARKNESS APPROACHING',detail:`Approximately ${light} minutes of daylight remain. Recheck route, turnaround and lighting.`,view:'nav',action:'SUN / NAV'});
+    else if(Number.isFinite(light)&&light<=120)list.push({id:'dark',score:58,level:'warn',title:'DAYLIGHT WINDOW CLOSING',detail:`Approximately ${light} minutes of daylight remain.`,view:'trip',action:'TRIP TIMING'});
+    const active=read('mission-active',null),pack=read('mission-pack',null);
+    if(!active&&!pack)list.push({id:'mission',score:35,level:'good',title:'BUILD MISSION PACK',detail:'No frozen pre-trip mission package is saved yet.',view:'mission',action:'MISSION MODE'});
+    else if(!active&&pack)list.push({id:'mission',score:28,level:'good',title:'MISSION PACK READY',detail:'A pre-trip package is built but the mission has not been started.',view:'mission',action:'START MISSION'});
+    if(!list.length)list.push({id:'nominal',score:1,level:'good',title:'FIELD STATUS NOMINAL',detail:'Monitoring route, position, daylight, battery, check-in and field conditions.',view:'mission',action:'MISSION STATUS'});
+    return list.sort((a,b)=>b.score-a.score);
+  }
+  function refreshContext(){
+    const list=contextCandidates(),top=list[0],box=document.getElementById('priorityNow'),level=document.getElementById('priorityLevel'),title=document.getElementById('priorityTitle'),detail=document.getElementById('priorityDetail'),action=document.getElementById('priorityAction'),stack=document.getElementById('priorityStack');
+    if(!box)return top;
+    box.classList.remove('priority-good','priority-warn','priority-danger');box.classList.add(`priority-${top.level}`);
+    if(level)level.textContent=top.level==='danger'?'IMMEDIATE':top.level==='warn'?'ATTENTION':'NOMINAL';
+    if(title)title.textContent=top.title;if(detail)detail.textContent=top.detail;
+    if(action){action.textContent=top.action;action.dataset.contextOpen=top.view}
+    if(stack)stack.innerHTML=list.slice(1,4).map(x=>`<span>${esc(x.title)}</span>`).join('');
+    return top;
+  }
+  document.getElementById('priorityAction')?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
+  document.addEventListener('fieldos:positionchange',refreshContext);document.addEventListener('fieldos:routechange',refreshContext);document.addEventListener('fieldos:missionstart',refreshContext);document.addEventListener('fieldos:missionend',refreshContext);
+  document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshContext()});
+  setInterval(refreshContext,5000);setTimeout(refreshContext,60);
+  window.FIELD_CONTEXT={refresh:refreshContext,candidates:contextCandidates,pushPressure:(v,t=Date.now())=>{v=Number(v);if(Number.isFinite(v)){contextState.pressure.push({t:Number(t)||Date.now(),v});contextState.pressure=contextState.pressure.slice(-120)}return refreshContext()},state:contextState};
+
   window.FIELD_MISSION={build,start,end,render,getPack:()=>read('mission-pack',null),getActive:()=>read('mission-active',null),summary,preview:missionData};
 })();

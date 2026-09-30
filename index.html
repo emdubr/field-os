@@ -73,6 +73,11 @@
           <div class="handheld-actions" aria-label="Quick field actions">
             <button data-open="trailreturn">↶ RETURN TRAIL</button><button data-open="trailreturn">⌂ RETURN BASE</button><button data-open="lost">? LOST MODE</button><button class="handheld-sos" data-open="sos">! SOS</button>
           </div>
+          <section id="priorityNow" class="priority-now priority-good" aria-live="polite">
+            <div class="priority-now-copy"><span>WHAT MATTERS NOW <b id="priorityLevel">NOMINAL</b></span><strong id="priorityTitle">FIELD STATUS NOMINAL</strong><p id="priorityDetail">Monitoring route, position, daylight, battery, check-in and field conditions.</p></div>
+            <button id="priorityAction" class="priority-action" type="button">MISSION STATUS</button>
+            <div id="priorityStack" class="priority-stack" aria-label="Other current priorities"></div>
+          </section>
 
           <div class="console-main-grid detail-main-grid">
             <nav class="console-rail terminal-panel" aria-label="Field modules">

@@ -38,6 +38,15 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  click('missionEnd');await tick();assert.equal(w.localStorage.getItem('fieldos-v12-mission-active'),null);
  w.FIELD_ROUTE_STATE.setPoints([]);
  console.log('PASS feature 01 Mission Mode builds, freezes, starts, and ends a complete local trip pack');
+ d.getElementById('mobileFixState').textContent='STALE';
+ let priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'gnss');assert.match(d.getElementById('priorityTitle').textContent,/GNSS/);
+ d.getElementById('priorityAction').click();await tick();assert.equal(d.querySelector('.view.active').id,'nav');
+ d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('mobileBattery').textContent='12%';
+ priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'battery');assert.match(d.getElementById('priorityTitle').textContent,/BATTERY/);
+ d.getElementById('mobileBattery').textContent='64%';const devBanner=d.getElementById('routeDeviationBanner');devBanner.textContent='ROUTE DEVIATION — 500 FT';devBanner.className='deviation-banner critical-banner';
+ priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'route');assert.match(d.getElementById('priorityTitle').textContent,/ROUTE DEVIATION/);
+ devBanner.textContent='ON ROUTE';devBanner.className='deviation-banner good-banner';w.FIELD_CONTEXT.refresh();
+ console.log('PASS feature 02 What Matters Now reprioritizes GNSS, battery, and route hazards with one-tap navigation');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
