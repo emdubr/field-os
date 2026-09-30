@@ -255,7 +255,7 @@
     });
     scheduleRefresh();
   });
-  setInterval(scheduleRefresh,2000);refresh();
+  setInterval(()=>{if(!document.hidden)scheduleRefresh()},5000);refresh();
   window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();});
 })();
 
