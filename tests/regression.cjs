@@ -218,6 +218,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
+ const appJs=app,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),readme=fs.readFileSync(dir+'/README.md','utf8');
  const sosBtn=d.getElementById('meshSos');
  sosBtn.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
  sosBtn.dispatchEvent(new w.Event('pointercancel',{bubbles:true}));
