@@ -2074,3 +2074,43 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   #map .terrain-controls-below .map-control-grid{grid-template-columns:1fr!important}
   #map .main-real-map{height:44vh!important;min-height:300px!important}
 }
+
+
+/* v3.37 terrain full-width layout + slope-color clarity */
+#map .module-grid>.module-hero,
+#map .module-grid>.terrain-map-card{
+  grid-column:1/-1!important;
+  grid-row:auto!important;
+}
+#map .module-grid>.terrain-controls-below,
+#map .module-grid>.map-source-bar.terrain-controls-below,
+#map .module-grid>.offline-map-manager{
+  grid-column:1/-1!important;
+}
+#map .terrain-map-card,
+#map .terrain-controls-below,
+#map .offline-map-manager,
+#map .map-quick-actions{
+  width:100%!important;
+  max-width:none!important;
+  justify-self:stretch!important;
+}
+#map .main-real-map{
+  width:100%!important;
+  max-width:none!important;
+}
+.route-planner-real-map .route-dom-slope-easy{
+  stroke:#35ff9c!important;
+  stroke-width:7px!important;
+  stroke-opacity:1!important;
+}
+.route-planner-real-map .route-dom-slope-medium{
+  stroke:#f2b84b!important;
+}
+.route-planner-real-map .route-dom-slope-hard{
+  stroke:#e5484d!important;
+}
+.slope-swatch.easy{
+  background:#35ff9c!important;
+  border:0!important;
+}
