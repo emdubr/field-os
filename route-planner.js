@@ -619,10 +619,9 @@
     signal?.addEventListener('abort',cancelAll,{once:true});
 
     const requests=OVERPASS_ENDPOINTS.map((endpoint,i)=>new Promise((resolve,reject)=>{
-      const controller=controllers[i];let deadline,start,timedOut=false;
-      const stop=()=>{clearTimeout(start);clearTimeout(deadline);reject(new DOMException('Cancelled','AbortError'));};
-      controller.signal.addEventListener('abort',stop,{once:true});
-      start=setTimeout(async()=>{
+      const controller=controllers[i];let deadline,timedOut=false;
+      setTimeout(async()=>{
+        if(controller.signal.aborted)return reject(new DOMException('Cancelled','AbortError'));
         deadline=setTimeout(()=>{timedOut=true;controller.abort()},24000);
         try{
           const res=await fetch(endpoint+'?data='+encodeURIComponent(q),{signal:controller.signal,cache:'no-store'});
@@ -638,7 +637,7 @@
           if(e.code!=='RP-099')failures.push({endpoint,code:e.code,message:e.message});
           reject(e);
         }finally{
-          clearTimeout(deadline);controller.signal.removeEventListener('abort',stop);
+          clearTimeout(deadline);
         }
       },[0,1200,3000][i]);
     }));
@@ -650,6 +649,7 @@
       if(graphCache.size>8)graphCache.delete(graphCache.keys().next().value);
       return graph;
     }).catch(()=>{
+      if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
       const codes=failures.map(x=>x.code);
       if(codes.length&&codes.every(x=>x==='RP-204'))throw rpError('RP-204','No mapped walkable trails were found in the search area.',{failures,expanded:force});
       if(codes.length&&codes.every(x=>x==='RP-203'))throw rpError('RP-203','All trail-data requests timed out.',{failures});
