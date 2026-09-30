@@ -294,6 +294,13 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('position:fixed!important'));
  assert.ok(workstationCss.includes('@media(max-width:430px)'));
  console.log('PASS final responsive layer separates desktop/mobile navigation and constrains overflow');
+ assert.ok(workstationCss.includes('v3.53 UI refinement'));
+ assert.ok(workstationCss.includes('font-size:max(16px,1em)'));
+ assert.ok(workstationCss.includes('min-height:56dvh!important'));
+ assert.ok(workstationCss.includes('grid-template-columns:repeat(6,minmax(0,1fr))'));
+ assert.ok(workstationCss.includes('button:focus-visible'));
+ console.log('PASS v3.53 UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
+
  const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
  assert.ok(html.includes('styles.css?v=3.52')&&html.includes('workstation.css?v=3.52')&&html.includes('field-tools.js?v=3.52'));
  assert.ok(appJs.includes("sw.js?v=3.52")&&appJs.includes("fieldos-sw-reloaded-v3.52"));
