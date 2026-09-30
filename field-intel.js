@@ -78,6 +78,57 @@
 
 
 
+
+  // Feature 11 — Relay Placement Recommendation.
+  function weakCoverageCentroid(samples=[]){
+    const weak=(Array.isArray(samples)?samples:[]).filter(s=>validPoint(s)&&['weak','dead'].includes(s.quality||classifyMeshCoverage(s)));
+    if(!weak.length)return null;
+    const lat=weak.reduce((sum,s)=>sum+Number(s.lat),0)/weak.length,lon=weak.reduce((sum,s)=>sum+Number(s.lon),0)/weak.length;
+    return {lat,lon,count:weak.length};
+  }
+  function relayCandidates(plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},waypoints=read('waypoints',[]),coverage=meshCoverage.samples){
+    const out=[],profile=Array.isArray(plan.elevationProfile)?plan.elevationProfile:[],pos=getPosition(),weakCenter=weakCoverageCentroid(coverage);
+    if(profile.length){
+      for(let i=0;i<profile.length;i++){
+        const p=profile[i];if(!validPoint(p)||!Number.isFinite(Number(p.elevationFt)))continue;
+        const prev=Number(profile[Math.max(0,i-2)]?.elevationFt),next=Number(profile[Math.min(profile.length-1,i+2)]?.elevationFt),e=Number(p.elevationFt);
+        const localHigh=(!Number.isFinite(prev)||e>=prev)&&(!Number.isFinite(next)||e>=next);
+        if(localHigh)out.push({name:`ROUTE HIGH POINT ${i+1}`,type:'ROUTE_HIGH',lat:Number(p.lat),lon:Number(p.lon),elevationFt:e,source:'ROUTE DEM',distanceM:Number(p.distanceM)||0});
+      }
+    }
+    for(const w of Array.isArray(waypoints)?waypoints:[]){
+      if(!validPoint(w))continue;
+      const alt=Number(w.alt??w.elevationFt);
+      if(Number.isFinite(alt)||/RIDGE|SUMMIT|PEAK|LOOKOUT|JUNCTION|BASE|CAMP/i.test(String(w.name||'')+' '+String(w.type||'')))out.push({name:String(w.name||'WAYPOINT'),type:'WAYPOINT',lat:Number(w.lat),lon:Number(w.lon),elevationFt:Number.isFinite(alt)?alt:null,source:'WAYPOINT'});
+    }
+    if(!out.length)return [];
+    const elevs=out.map(x=>x.elevationFt).filter(Number.isFinite),minE=elevs.length?Math.min(...elevs):0,maxE=elevs.length?Math.max(...elevs):1,range=Math.max(1,maxE-minE);
+    for(const c of out){
+      const elevScore=Number.isFinite(c.elevationFt)?((c.elevationFt-minE)/range)*45:12;
+      const accessM=validPoint(pos)?meters(pos,c):2000,accessScore=Math.max(0,25-Math.min(25,accessM/200));
+      const needM=weakCenter?meters(weakCenter,c):null,needScore=weakCenter?Math.max(0,25-Math.min(25,needM/250)):10;
+      const waypointBonus=c.type==='WAYPOINT'?5:0;
+      c.accessM=accessM;c.weakDistanceM=needM;c.score=Math.round(Math.max(0,Math.min(100,elevScore+accessScore+needScore+waypointBonus)));
+      c.reason=`${Number.isFinite(c.elevationFt)?Math.round(c.elevationFt).toLocaleString()+' ft elevation':'elevation unknown'} // ${(accessM/1609.344).toFixed(2)} mi from current${needM!=null?' // '+(needM/1609.344).toFixed(2)+' mi from weak-zone center':''}`;
+    }
+    const dedup=[];
+    for(const c of out.sort((a,b)=>b.score-a.score)){if(dedup.some(x=>meters(x,c)<80))continue;dedup.push(c);if(dedup.length>=6)break}
+    return dedup;
+  }
+  function renderRelayRecommendations(items=relayCandidates()){
+    const list=document.getElementById('relayRecommendList'),state=document.getElementById('relayRecommendState');if(!list)return items;
+    if(state)state.textContent=items.length?`${items.length} CANDIDATE${items.length===1?'':'S'}`:'NO CANDIDATES';
+    list.innerHTML=items.length?items.map((x,i)=>`<div class="relay-recommend-row"><i>${String(i+1).padStart(2,'0')}</i><div class="relay-recommend-main"><b>${esc(x.name)}</b><small>${esc(x.reason)} // ${esc(x.source)}</small></div><div class="relay-recommend-score"><b>${x.score}</b><small>REL SCORE</small></div><button class="relay-recommend-save" type="button" data-relay-save="${i}">SAVE RELAY</button></div>`).join(''):'<div class="terrain-risk-empty">ADD ROUTE ELEVATION OR ELEVATED WAYPOINTS TO SCORE RELAY LOCATIONS</div>';
+    window.FIELD_RELAY._rendered=items;return items;
+  }
+  function saveRelayCandidate(item){
+    if(!item||!validPoint(item))return false;
+    document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`RELAY — ${item.name}`,type:'JUNCTION',lat:item.lat,lon:item.lon,alt:item.elevationFt??null,notes:`Relay candidate score ${item.score}/100 from FIELD/OS; verify line of sight and access before use.`}}));return true;
+  }
+  document.getElementById('relayRecommendRefresh')?.addEventListener('click',()=>renderRelayRecommendations());document.addEventListener('click',e=>{const b=e.target.closest('[data-relay-save]');if(!b)return;const item=window.FIELD_RELAY?._rendered?.[Number(b.dataset.relaySave)];if(item){saveRelayCandidate(item);b.textContent='SAVED';b.disabled=true}});
+  document.addEventListener('fieldos:routechange',()=>renderRelayRecommendations());document.addEventListener('fieldos:waypointschange',()=>renderRelayRecommendations());document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderRelayRecommendations()});setTimeout(()=>renderRelayRecommendations(),300);
+  window.FIELD_RELAY={candidates:relayCandidates,render:renderRelayRecommendations,save:saveRelayCandidate,weakCentroid:weakCoverageCentroid,_rendered:[]};
+
   // Feature 10 — Mesh Coverage Heatmap.
   const meshCoverage={samples:[]};
   function classifyMeshCoverage(sample={}){

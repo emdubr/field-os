@@ -288,6 +288,12 @@
           <div class="button-row"><button id="meshCoverageClear" class="danger-lite" type="button">CLEAR COVERAGE HISTORY</button></div>
           <div id="meshCoverageSummary" class="terrain-risk-confidence">SAMPLES // 0</div>
         </article>
+        <article class="panel relay-recommend-panel">
+          <div class="panel-title"><span>RELAY PLACEMENT</span><span class="tiny" id="relayRecommendState">WAITING FOR DATA</span></div>
+          <p class="muted">Scores route high points and saved waypoints using elevation, access distance, and weak-coverage proximity. This is a planning estimate, not a radio-propagation guarantee.</p>
+          <div class="button-row"><button id="relayRecommendRefresh" class="action" type="button">REFRESH RECOMMENDATIONS</button></div>
+          <div id="relayRecommendList" class="relay-recommend-list"><div class="terrain-risk-empty">NO RELAY CANDIDATES YET</div></div>
+        </article>
         <article class="panel compose">
           <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
           <label for="messageInput">MESSAGE</label>

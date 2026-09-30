@@ -103,6 +103,17 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  w.FIELD_MESH_COVERAGE.add({lat:44.47,lon:-73.21,rssi:-80,snr:8,time:Date.now()-4000});w.FIELD_MESH_COVERAGE.add({lat:44.471,lon:-73.211,rssi:-106,snr:-1,time:Date.now()-2000});w.FIELD_MESH_COVERAGE.add({lat:44.472,lon:-73.212,rssi:-118,snr:-9,time:Date.now()});
  assert.equal(w.FIELD_MESH_COVERAGE.state.samples.length,3);w.FIELD_MESH_COVERAGE.render();assert.equal(d.querySelectorAll('#meshCoverageMap .mesh-coverage-sample').length,3);assert.match(d.getElementById('meshCoverageSummary').textContent,/POOR 1/);assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-mesh-coverage')).samples.length,3);
  console.log('PASS feature 10 Mesh Coverage Heatmap records, classifies, caches, and renders moving RSSI/SNR samples');
+ const relayPlan={elevationProfile:[
+   {lat:44.47,lon:-73.21,distanceM:0,elevationFt:500},{lat:44.475,lon:-73.21,distanceM:600,elevationFt:950},
+   {lat:44.48,lon:-73.21,distanceM:1200,elevationFt:1400},{lat:44.485,lon:-73.21,distanceM:1800,elevationFt:900}
+ ]};
+ const relayItems=w.FIELD_RELAY.candidates(relayPlan,[],[
+   {lat:44.482,lon:-73.21,rssi:-112,snr:-4,quality:'weak'},{lat:44.483,lon:-73.211,rssi:-118,snr:-8,quality:'dead'}
+ ]);
+ assert.ok(relayItems.length>0);assert.ok(relayItems[0].elevationFt>=900);assert.ok(relayItems[0].score>0);
+ w.FIELD_RELAY.render(relayItems);assert.ok(d.querySelectorAll('#relayRecommendList .relay-recommend-row').length>=1);
+ console.log('PASS feature 11 Relay Recommendation scores elevated reachable candidates against weak mesh coverage zones');
+
 
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
