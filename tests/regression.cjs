@@ -271,6 +271,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes('function routeCorridorBounds('));assert.ok(appJs.includes('function packCoversBounds('));assert.ok(appJs.includes('activateBestRoutePack'));
  assert.ok(html.includes('id="routeCorridorPadding"'));assert.ok(html.includes('id="checkRouteOffline"'));assert.ok(html.includes('id="activateRouteOffline"'));
  console.log('PASS browser offline-route corridor coverage controls and pack selection are wired');
+ assert.ok(appJs.includes('corridorTemplateUrl'));assert.ok(appJs.includes('downloadRouteCorridorPack'));assert.ok(html.includes('id="routeCorridorTemplate"'));assert.ok(html.includes('id="downloadRouteCorridor"'));
+ console.log('PASS provider-safe automatic route corridor download workflow is wired');
+
  assert.ok(routePlannerJs.includes("fieldos-route-cache-v1"));assert.ok(routePlannerJs.includes('offlineTrailGraph'));assert.ok(routePlannerJs.includes('persistTrailNetwork'));
  assert.ok(appJs.includes('ensureMapStorageCapacity'));assert.ok(appJs.includes('fmtMapPackAge'));assert.ok(html.includes('id="offlineMapAge"'));assert.ok(html.includes('id="offlineMapOrigin"'));
  console.log('PASS persistent offline trail graph recovery, storage preflight, and map freshness metadata are wired');
