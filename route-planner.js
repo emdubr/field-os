@@ -1765,7 +1765,7 @@
   const watchdog=setInterval(()=>{
     watchdogCount++;
     if(routeVisible())kickPlanner();
-    if(initialized&&state()||watchdogCount>24)clearInterval(watchdog);
+    if((initialized&&state())||watchdogCount>24)clearInterval(watchdog);
   },500);
 
   if(routeVisible())setTimeout(kickPlanner,0);
