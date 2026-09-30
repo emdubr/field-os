@@ -20,10 +20,13 @@
   let initialized=false;
   let plannerMap=null;
   let plannerRouteLayer=null;
+  let plannerPreviewLayer=null;
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerBaseFallbackActive=false;
   let hasActivated=false;
+  let hoverPoint=null;
+  let routingResolvedAnchors=0;
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -134,10 +137,21 @@
     hiking.addTo(plannerMap);
 
     plannerRouteLayer=L.layerGroup().addTo(plannerMap);
+    plannerPreviewLayer=L.layerGroup().addTo(plannerMap);
     plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
     plannerSnapLayer=L.layerGroup().addTo(plannerMap);
 
     plannerMap.on('click',e=>{if(!busy)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
+    plannerMap.on('mousemove',e=>{
+      if(busy||!anchors.length)return;
+      hoverPoint={lat:e.latlng.lat,lon:e.latlng.lng};
+      overlay(state()?.getPoints?.()||[]);
+    });
+    plannerMap.on('mouseout',()=>{
+      if(!hoverPoint)return;
+      hoverPoint=null;
+      overlay(state()?.getPoints?.()||[]);
+    });
     plannerMap.on('load',()=>requestAnimationFrame(()=>plannerMap?.invalidateSize(false)));
     return plannerMap;
   }
@@ -152,15 +166,42 @@
 
   function overlay(route=state()?.getPoints?.()||[]){
     const map=ensurePlannerMap();
-    if(map&&plannerRouteLayer&&plannerAnchorLayer&&plannerSnapLayer){
+    if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer){
       const c=plannerColors();
-      plannerRouteLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
+      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
       const pts=(Array.isArray(route)?route:[]).filter(valid);
+
+      // Gaia-style routed line: dark casing underneath a bright route line.
       if(pts.length>1){
-        L.polyline(pts.map(p=>[p.lat,p.lon]),{
-          color:c.route,weight:5,opacity:.96,lineCap:'round',lineJoin:'round'
+        const latlngs=pts.map(p=>[p.lat,p.lon]);
+        L.polyline(latlngs,{
+          color:'#101820',weight:10,opacity:.88,lineCap:'round',lineJoin:'round',interactive:false
+        }).addTo(plannerRouteLayer);
+        L.polyline(latlngs,{
+          color:c.route,weight:5,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
       }
+
+      // While planning, always show the unresolved leg(s) immediately as a dashed guide.
+      if(anchors.length){
+        const resolved=busy?Math.max(1,routingResolvedAnchors):Math.max(1,lastSuccessfulAnchors.length);
+        let guide=[];
+        if(resolved<anchors.length){
+          const start=pts.length?pts.at(-1):anchors[Math.max(0,resolved-1)];
+          if(valid(start))guide.push(start);
+          guide.push(...anchors.slice(resolved).filter(valid));
+        }
+        if(!busy&&valid(hoverPoint)){
+          const start=anchors.at(-1);
+          if(valid(start))guide=guide.length?[...guide,hoverPoint]:[start,hoverPoint];
+        }
+        if(guide.length>1){
+          L.polyline(guide.map(p=>[p.lat,p.lon]),{
+            color:c.route,weight:3,opacity:.82,dashArray:'10 8',lineCap:'round',interactive:false
+          }).addTo(plannerPreviewLayer);
+        }
+      }
+
       anchors.forEach((p,i)=>{
         if(!valid(p))return;
         const label=i===0?'S':i===anchors.length-1?'E':String(i);
@@ -267,9 +308,11 @@
   function addAnchor(p){
     if(!valid(p))return;
     if(anchors.length>=30)return status('Waypoint limit reached. Save this route before adding more.','error');
+    hoverPoint=null;
     anchors=[...anchors,{lat:+p.lat,lon:+p.lon}];
     navigator.vibrate?.(18);
     state()?.setMeta?.({anchors,routingMode:routeMode()});
+    // Draw the new leg immediately before the network snap begins.
     overlay();
     if(anchors.length>=2)recalculate();
     else{
@@ -660,11 +703,14 @@
   async function recalculate(){
     if(anchors.length<2)return;
     aborter?.abort();aborter=new AbortController();
-    const signal=aborter.signal;setBusy(true);snapped=[];
+    const signal=aborter.signal;setBusy(true);snapped=[];hoverPoint=null;
     const previousPoints=state()?.getPoints?.()||[],previousAnchors=lastSuccessfulAnchors.map(p=>({...p}));
+    routingResolvedAnchors=Math.max(1,Math.min(lastSuccessfulAnchors.length,anchors.length-1));
+    overlay(previousPoints);
     try{
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
+        routingResolvedAnchors=anchors.length;
         state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);
         lastSuccessfulAnchors=anchors.map(p=>({...p}));
         fitPlanner(direct,16);setBusy(false);
@@ -685,6 +731,12 @@
         if(i===1)snapped.push({lat:leg.startSnap.lat,lon:leg.startSnap.lon});
         snapped.push({lat:leg.endSnap.lat,lon:leg.endSnap.lon});
         full.push(...(i===1?leg.points:leg.points.slice(1)));
+        // Paint each solved trail leg immediately instead of waiting for the full route.
+        routingResolvedAnchors=i+1;
+        const partial=dedupe(full);
+        overlay(partial);
+        applyRouteStats(partial,null,'loading');
+        status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${routeDistanceMiles(partial).toFixed(2)} MI // ROUTING NEXT LEG`,'loading');
       }
       if(signal.aborted)return;
       const clean=dedupe(full);
@@ -692,6 +744,7 @@
       state()?.setPoints?.(clean);
       state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
       lastSuccessfulAnchors=anchors.map(p=>({...p}));
+      routingResolvedAnchors=anchors.length;
       overlay(clean);fitPlanner(clean,16);setBusy(false);
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
@@ -701,6 +754,7 @@
       if(signal.aborted)return;
       console.warn('FIELD/OS trail routing failed',err);
       if(previousPoints.length>1){anchors=previousAnchors;state()?.setMeta?.({anchors});}
+      routingResolvedAnchors=lastSuccessfulAnchors.length;
       status(`TRAIL ROUTE FAILED -- ${String(err.message||err).toUpperCase()}${previousPoints.length>1?' LAST WORKING ROUTE KEPT.':''}`,'error');
       overlay(previousPoints);
     }finally{if(aborter?.signal===signal)setBusy(false)}
