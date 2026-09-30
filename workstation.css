@@ -1342,3 +1342,57 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
   .tab-sheet{z-index:130!important}
   .tab-sheet-backdrop{z-index:125!important}
 }
+
+
+/* v3.18 home compass parity with NAV CORE */
+#home .home-compass-cluster{
+  display:grid;
+  justify-items:center;
+  gap:5px;
+  width:100%;
+}
+#home .home-field-compass{
+  width:170px!important;
+  height:170px!important;
+  margin:5px auto 2px!important;
+}
+#home .home-compass-readout{
+  display:grid;
+  grid-template-columns:auto auto;
+  align-items:baseline;
+  justify-content:center;
+  gap:4px 7px;
+  width:100%;
+  text-align:center;
+}
+#home .home-compass-readout strong{
+  color:var(--fg2);
+  font:700 19px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums;
+}
+#home .home-compass-readout small{
+  display:inline!important;
+  color:var(--fg);
+  font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+#home .home-compass-readout span{
+  grid-column:1/-1;
+  color:var(--dim);
+  font:700 9px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.04em;
+}
+#home .home-compass-enable{
+  width:min(100%,190px);
+  min-height:30px!important;
+  margin-top:2px!important;
+}
+#home #homeCompassPermissionState{
+  text-align:center;
+  max-width:210px;
+}
+@media(max-width:1180px){
+  #home .home-field-compass{width:150px!important;height:150px!important}
+}
+@media(max-width:700px){
+  #home .home-field-compass{width:146px!important;height:146px!important}
+}
