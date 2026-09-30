@@ -2441,7 +2441,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
     width:min(260px,calc(100% - 12px))!important;
     max-width:calc(100% - 12px)!important;
     grid-template-columns:1fr 1fr!important;
-    transform:translateX(-50%)!important;
+    transform:none!important;
   }
   #route .elevation-detail-grid{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
