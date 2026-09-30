@@ -3448,3 +3448,20 @@ input,select,textarea{
   .route-planner-toolbar>*{grid-column:1!important}
   .map-control-grid{grid-template-columns:1fr 1fr!important}
 }
+
+
+/* v3.54 route workspace: prevent the ETA card from stretching to map height. */
+@media(min-width:768px){
+  #route .module-grid{align-items:start!important}
+  #route .route-performance-panel{
+    align-self:start!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+  }
+  #route .route-performance-panel .route-performance-grid{align-items:stretch}
+  #route .route-performance-panel>p{margin-bottom:0}
+}
+@media(min-width:1200px){
+  #route .route-performance-panel{position:sticky;top:112px}
+}
