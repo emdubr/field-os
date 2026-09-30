@@ -384,6 +384,15 @@
       attribution:'OpenTopoMap'
     }).addTo(plannerMap);
 
+    if(navigator.onLine===false&&window.FIELD_OFFLINE_MAPS){
+      Promise.resolve(window.FIELD_OFFLINE_MAPS.leafletLayer()).then(result=>{
+        if(!result?.layer||!plannerMap)return;
+        try{plannerMap.removeLayer(osm);plannerMap.removeLayer(topo);plannerMap.removeLayer(hiking)}catch{}
+        result.layer.addTo(plannerMap);
+        status('OFFLINE PMTILES // '+String(result.pack?.name||'SAVED MAP').toUpperCase(),'ready');
+      }).catch(()=>status('OFFLINE MAP PACK COULD NOT BE OPENED','error'));
+    }
+
     let topoErrors=0;
     topo.on('tileerror',()=>{
       topoErrors++;
