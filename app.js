@@ -398,11 +398,11 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.17',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.18',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.17';
+        const key='fieldos-sw-reloaded-v3.18';
         if(sessionStorage.getItem(key))return;
         sessionStorage.setItem(key,'1');
         location.reload();
@@ -689,14 +689,16 @@ let fieldDeviceHeadingSource='';
 let fieldCompassEnabled=false;
 let fieldLocationPrompted=false;
 function renderFieldCompassTicks(){
-  const g=document.getElementById('navCompassTicks');if(!g||g.childNodes.length)return;
   const ns='http://www.w3.org/2000/svg';
-  for(let deg=0;deg<360;deg+=10){
-    const major=deg%30===0,line=document.createElementNS(ns,'line');
-    line.setAttribute('x1','100');line.setAttribute('x2','100');
-    line.setAttribute('y1',major?'18':'20');line.setAttribute('y2',major?'29':'25');
-    line.setAttribute('transform',`rotate(${deg} 100 100)`);
-    line.setAttribute('class',major?'major':'minor');g.appendChild(line);
+  for(const id of ['navCompassTicks','homeCompassTicks']){
+    const g=document.getElementById(id);if(!g||g.childNodes.length)continue;
+    for(let deg=0;deg<360;deg+=10){
+      const major=deg%30===0,line=document.createElementNS(ns,'line');
+      line.setAttribute('x1','100');line.setAttribute('x2','100');
+      line.setAttribute('y1',major?'18':'20');line.setAttribute('y2',major?'29':'25');
+      line.setAttribute('transform',`rotate(${deg} 100 100)`);
+      line.setAttribute('class',major?'major':'minor');g.appendChild(line);
+    }
   }
 }
 function handleFieldDeviceOrientation(e){
@@ -713,10 +715,13 @@ function handleFieldDeviceOrientation(e){
   updateLiveNavigationUI();
 }
 async function enableFieldDeviceCompass(){
-  const status=document.getElementById('compassPermissionState'),btn=document.getElementById('enableCompass');
+  const statuses=[document.getElementById('compassPermissionState'),document.getElementById('homeCompassPermissionState')].filter(Boolean);
+  const buttons=[document.getElementById('enableCompass'),document.getElementById('homeEnableCompass')].filter(Boolean);
+  const setStatuses=text=>statuses.forEach(el=>el.textContent=text);
+  const setButtons=text=>buttons.forEach(el=>el.textContent=text);
   if(typeof DeviceOrientationEvent==='undefined'){
-    if(status)status.textContent='Device orientation is unavailable in this browser.';
-    if(btn)btn.textContent='COMPASS UNAVAILABLE';
+    setStatuses('Device orientation is unavailable in this browser.');
+    setButtons('COMPASS UNAVAILABLE');
     return;
   }
   try{
@@ -729,16 +734,17 @@ async function enableFieldDeviceCompass(){
     window.addEventListener('deviceorientation',handleFieldDeviceOrientation,true);
     window.addEventListener('deviceorientationabsolute',handleFieldDeviceOrientation,true);
     fieldCompassEnabled=true;
-    if(status)status.textContent='Device compass enabled. Rotate the phone to test heading.';
-    if(btn)btn.textContent='DEVICE COMPASS ON';
+    setStatuses('Device compass enabled. Rotate the phone to test heading.');
+    setButtons('DEVICE COMPASS ON');
   }catch(err){
     fieldCompassEnabled=false;fieldDeviceHeading=null;fieldDeviceHeadingSource='';
-    if(status)status.textContent=String(err?.message||'Compass permission failed.');
-    if(btn)btn.textContent='ENABLE DEVICE COMPASS';
+    setStatuses(String(err?.message||'Compass permission failed.'));
+    setButtons('ENABLE DEVICE COMPASS');
     updateLiveNavigationUI();
   }
 }
 document.getElementById('enableCompass')?.addEventListener('click',enableFieldDeviceCompass);
+document.getElementById('homeEnableCompass')?.addEventListener('click',enableFieldDeviceCompass);
 renderFieldCompassTicks();
 
 // v1.8 — real OpenStreetMap + offline OSM-derived PMTiles
@@ -1142,15 +1148,16 @@ function updateLiveNavigationUI(){
   set('navCourseQuality',source);
   set('navHeadingMode',Number.isFinite(deviceHeading)?(fieldDeviceHeadingSource.includes('MAG')?'MAG':'DEVICE'):Number.isFinite(courseHeading)?'GNSS':'—');
 
-  const rotor=document.getElementById('navCompassRotor');
-  if(rotor){
-    rotor.setAttribute('transform',Number.isFinite(heading)?`rotate(${heading} 100 100)`:'rotate(0 100 100)');
-    rotor.classList.toggle('no-course',!Number.isFinite(heading));
+  for(const id of ['navCompassRotor','homeCompassRotor']){
+    const rotor=document.getElementById(id);
+    if(rotor){
+      rotor.setAttribute('transform',Number.isFinite(heading)?`rotate(${heading} 100 100)`:'rotate(0 100 100)');
+      rotor.classList.toggle('no-course',!Number.isFinite(heading));
+    }
   }
-  const homeHeading=document.getElementById('heading');
-  if(homeHeading)homeHeading.textContent=Number.isFinite(heading)?`${headingText} ${card}`:'---° --';
-  const homeNeedle=document.querySelector('#home .compass-needle');
-  if(homeNeedle)homeNeedle.style.transform=Number.isFinite(heading)?`rotate(${heading}deg)`:'rotate(0deg)';
+  set('homeHeading',headingText);
+  set('homeHeadingCardinal',card);
+  set('homeCompassSource',source);
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
