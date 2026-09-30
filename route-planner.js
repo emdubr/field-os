@@ -193,6 +193,19 @@
     hiking.on('tileerror',()=>{});
     hiking.addTo(plannerMap);
 
+    // Keep route geometry above all raster/trail tiles like Gaia GPS.
+    const routePane=plannerMap.createPane('fieldRoutePane');
+    routePane.style.zIndex='610';
+    routePane.style.pointerEvents='none';
+    const previewPane=plannerMap.createPane('fieldRoutePreviewPane');
+    previewPane.style.zIndex='605';
+    previewPane.style.pointerEvents='none';
+    const snapPane=plannerMap.createPane('fieldRouteSnapPane');
+    snapPane.style.zIndex='620';
+    snapPane.style.pointerEvents='none';
+    const anchorPane=plannerMap.createPane('fieldRouteAnchorPane');
+    anchorPane.style.zIndex='630';
+
     plannerRouteLayer=L.layerGroup().addTo(plannerMap);
     plannerPreviewLayer=L.layerGroup().addTo(plannerMap);
     plannerAnchorLayer=L.layerGroup().addTo(plannerMap);
@@ -228,15 +241,16 @@
       const c=plannerColors();
       plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
       const pts=(Array.isArray(route)?route:[]).filter(valid);
+      $('routePlannerMap')?.classList.toggle('route-has-line',pts.length>1);
 
       // Gaia-style routed line: dark casing underneath a bright route line.
       if(pts.length>1){
         const latlngs=pts.map(p=>[p.lat,p.lon]);
         L.polyline(latlngs,{
-          color:'#101820',weight:10,opacity:.88,lineCap:'round',lineJoin:'round',interactive:false
+          pane:'fieldRoutePane',color:'#050807',weight:11,opacity:.92,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
         L.polyline(latlngs,{
-          color:c.route,weight:5,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
+          pane:'fieldRoutePane',color:c.route,weight:6,opacity:1,lineCap:'round',lineJoin:'round',interactive:false
         }).addTo(plannerRouteLayer);
       }
 
@@ -255,7 +269,7 @@
         }
         if(guide.length>1){
           L.polyline(guide.map(p=>[p.lat,p.lon]),{
-            color:c.route,weight:3,opacity:.82,dashArray:'10 8',lineCap:'round',interactive:false
+            pane:'fieldRoutePreviewPane',color:c.route,weight:4,opacity:.95,dashArray:'10 8',lineCap:'round',interactive:false
           }).addTo(plannerPreviewLayer);
         }
       }
@@ -264,19 +278,19 @@
         if(!valid(p))return;
         const label=i===0?'S':i===anchors.length-1?'E':String(i);
         L.circleMarker([p.lat,p.lon],{
-          radius:8,color:c.fg,weight:2,fillColor:c.panel,fillOpacity:1
+          pane:'fieldRouteAnchorPane',radius:8,color:c.fg,weight:2,fillColor:c.panel,fillOpacity:1
         }).bindTooltip(label,{permanent:true,direction:'center',className:'planner-leaflet-label'}).addTo(plannerAnchorLayer);
         const sp=snapped[i];
         if(valid(sp)){
           L.polyline([[p.lat,p.lon],[sp.lat,sp.lon]],{
-            color:c.fg2,weight:1.5,opacity:.7,dashArray:'4 5'
+            pane:'fieldRouteSnapPane',color:c.fg2,weight:1.5,opacity:.7,dashArray:'4 5'
           }).addTo(plannerSnapLayer);
         }
       });
       snapped.forEach(p=>{
         if(!valid(p))return;
         L.circleMarker([p.lat,p.lon],{
-          radius:4,color:c.bg,weight:2,fillColor:c.fg2,fillOpacity:1
+          pane:'fieldRouteSnapPane',radius:4,color:c.bg,weight:2,fillColor:c.fg2,fillOpacity:1
         }).addTo(plannerSnapLayer);
       });
     }
@@ -1002,33 +1016,45 @@
         if(i===1)snapped.push({lat:leg.startSnap.lat,lon:leg.startSnap.lon});
         snapped.push({lat:leg.endSnap.lat,lon:leg.endSnap.lon});
         full.push(...(i===1?leg.points:leg.points.slice(1)));
-        // Paint each solved trail leg immediately instead of waiting for the full route.
+        // Gaia-style behavior: commit and paint every solved leg immediately.
         routingResolvedAnchors=i+1;
         const partial=dedupe(full);
+        state()?.setPoints?.(partial);
+        state()?.setMeta?.({
+          anchors:anchors.map(p=>({...p})),
+          routedAnchors:anchors.slice(0,i+1).map(p=>({...p})),
+          legs:[...legs],
+          routingMode:'trail',
+          routingSource:'OPENSTREETMAP / OVERPASS',
+          routeBuildState:'PARTIAL',
+          routeBuildLeg:i
+        });
         overlay(partial);
         applyRouteStats(partial,null,'loading');
-        status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${routeDistanceMiles(partial).toFixed(2)} MI // ROUTING NEXT LEG`,'loading');
+        status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${routeDistanceMiles(partial).toFixed(2)} MI // LINE DRAWN // ROUTING NEXT LEG`,'loading');
       }
       if(signal.aborted)return;
       const clean=dedupe(full);
       if(clean.length<2)throw rpError('RP-307','Trail router returned empty route geometry.',{rawPoints:full.length});
       state()?.setPoints?.(clean);
-      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap)});
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
       lastSuccessfulAnchors=anchors.map(p=>({...p}));
       routingResolvedAnchors=anchors.length;
       overlay(clean);fitPlanner(clean,16);setBusy(false);
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       const elev=enriched.profile?` // +${Math.round(enriched.profile.gainFt)} FT / -${Math.round(enriched.profile.lossFt)} FT`:' // ELEVATION N/A';
-      diagnostic('RP-000','ROUTE READY',`${enriched.dist.toFixed(2)} MI | MAX SNAP ${Math.round(maxSnap)} M`,{distanceMiles:enriched.dist,maxSnapM:Math.round(maxSnap),legs:anchors.length-1});
+      diagnostic('RP-000','ROUTE READY',`${enriched.dist.toFixed(2)} MI | ${clean.length} DRAWN PTS | MAX SNAP ${Math.round(maxSnap)} M`,{distanceMiles:enriched.dist,drawnPoints:clean.length,maxSnapM:Math.round(maxSnap),legs:anchors.length-1});
       status(`SNAPPED TO OSM TRAILS -- ${enriched.dist.toFixed(2)} MI${elev} // MAX SNAP ${Math.round(maxSnap)} M`,'ready');
       navigator.vibrate?.([20,35,20]);
     }catch(err){
       if(signal.aborted)return;
       console.warn('FIELD/OS trail routing failed',err);
-      if(previousPoints.length>1){anchors=previousAnchors;state()?.setMeta?.({anchors});}
-      routingResolvedAnchors=lastSuccessfulAnchors.length;
-      showRouteError(err,'TRAIL SNAP',previousPoints.length>1?' // LAST WORKING ROUTE KEPT':'');
-      overlay(previousPoints);
+      const partialNow=state()?.getPoints?.()||[];
+      const hasNewPartial=partialNow.length>1&&routeDistanceMiles(partialNow)>routeDistanceMiles(previousPoints)+.001;
+      if(!hasNewPartial&&previousPoints.length>1){anchors=previousAnchors;state()?.setMeta?.({anchors});}
+      routingResolvedAnchors=hasNewPartial?Math.max(1,routingResolvedAnchors):lastSuccessfulAnchors.length;
+      showRouteError(err,'TRAIL SNAP',hasNewPartial?' // COMPLETED LEGS KEPT':previousPoints.length>1?' // LAST WORKING ROUTE KEPT':'');
+      overlay(hasNewPartial?partialNow:previousPoints);
     }finally{if(aborter?.signal===signal)setBusy(false)}
   }
 
