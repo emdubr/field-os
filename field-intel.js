@@ -71,6 +71,69 @@
   if(read('mission-active',null))document.body.classList.add('mission-active');render(read('mission-pack',null));
 
 
+
+  // Feature 04 — Escape / Bailout Planner.
+  const bailoutTypeWeight={TRAILHEAD:.86,PARKING:.88,BASE:.90,SHELTER:.96,HUT:.98,CAMP:1.04,ROUTE_END:1.05,ROUTE_START:1.08,VILLAGE:1.10,TOWN:1.08,ROAD:1.18,JUNCTION:1.15};
+  function bailoutType(raw=''){
+    const s=String(raw).toUpperCase();
+    if(/TRAILHEAD/.test(s))return 'TRAILHEAD';if(/PARK/.test(s))return 'PARKING';if(/BASE|VEHICLE/.test(s))return 'BASE';if(/SHELTER/.test(s))return 'SHELTER';if(/HUT/.test(s))return 'HUT';if(/CAMP/.test(s))return 'CAMP';if(/VILLAGE|HAMLET/.test(s))return 'VILLAGE';if(/TOWN|CITY/.test(s))return 'TOWN';if(/ROAD/.test(s))return 'ROAD';if(/JUNCTION|BAILOUT/.test(s))return 'JUNCTION';return s||'EXIT';
+  }
+  function rankBailouts(candidates=[],position=getPosition()){
+    if(!validPoint(position))return [];
+    const seen=[];
+    for(const raw of Array.isArray(candidates)?candidates:[]){
+      if(!validPoint(raw))continue;
+      const type=bailoutType(raw.type||raw.category||''),distanceM=meters(position,{lat:Number(raw.lat),lon:Number(raw.lon)}),weight=bailoutTypeWeight[type]||1.12,score=distanceM*weight;
+      const item={...raw,lat:Number(raw.lat),lon:Number(raw.lon),type,name:String(raw.name||type.replaceAll('_',' ')),distanceM,score,source:String(raw.source||'LOCAL')};
+      if(seen.some(x=>meters(x,item)<35&&x.type===item.type))continue;
+      seen.push(item);
+    }
+    return seen.sort((a,b)=>a.score-b.score||a.distanceM-b.distanceM).slice(0,12);
+  }
+  function localBailoutCandidates(){
+    const out=[],plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},pts=cleanPoints(plan.points||[]),wps=read('waypoints',[]);
+    if(pts.length){out.push({name:'ROUTE START',type:'ROUTE_START',lat:pts[0].lat,lon:pts[0].lon,source:'ROUTE'});if(pts.length>1)out.push({name:'ROUTE END',type:'ROUTE_END',lat:pts.at(-1).lat,lon:pts.at(-1).lon,source:'ROUTE'})}
+    for(const w of Array.isArray(wps)?wps:[])if(validPoint(w)&&/BASE|CAMP|JUNCTION|BAILOUT|TRAILHEAD/i.test(String(w.type||'')+' '+String(w.name||'')))out.push({name:w.name,type:w.type,lat:w.lat,lon:w.lon,source:'WAYPOINT',notes:w.notes||''});
+    const cache=read('bailout-cache',null),pos=getPosition();
+    if(cache&&Array.isArray(cache.items)&&validPoint(cache.center)&&validPoint(pos)&&meters(cache.center,pos)<30000)out.push(...cache.items.map(x=>({...x,source:'OSM CACHE'})));
+    return out;
+  }
+  function renderBailouts(items=rankBailouts(localBailoutCandidates())){
+    const list=document.getElementById('bailoutList'),status=document.getElementById('bailoutStatus'),note=document.getElementById('bailoutSourceNote');if(!list)return items;
+    if(status)status.textContent=`${items.length} CANDIDATE${items.length===1?'':'S'}`;
+    list.innerHTML=items.length?items.map((x,i)=>`<div class="bailout-row"><i>${String(i+1).padStart(2,'0')}</i><div class="bailout-row-main"><b>${esc(x.name)}</b><small>${esc(x.type.replaceAll('_',' '))} // ${esc(x.source)}${x.notes?' // '+esc(x.notes):''}</small></div><div class="bailout-distance"><b>${(x.distanceM/1609.344).toFixed(2)} mi</b><small>STRAIGHT LINE</small></div><button class="bailout-save" type="button" data-bailout-save="${i}">SAVE EXIT</button></div>`).join(''):'<div class="terrain-risk-empty">NO LOCAL OR CACHED BAILOUT CANDIDATES</div>';
+    if(note){const cache=read('bailout-cache',null);note.textContent=`SOURCE // ROUTE + WAYPOINTS${cache?.retrievedAt?' + OSM CACHE '+new Date(cache.retrievedAt).toLocaleString():''} // RANK IS SCREENING ONLY`}
+    window.FIELD_BAILOUT._rendered=items;return items;
+  }
+  function normalizeOsmExit(el){
+    const t=el.tags||{},center=el.type==='node'?el:el.center;if(!center||!validPoint(center))return null;
+    let type='EXIT';
+    if(t.information==='trailhead')type='TRAILHEAD';else if(t.amenity==='shelter')type='SHELTER';else if(/hut/.test(t.tourism||''))type='HUT';else if(t.tourism==='camp_site')type='CAMP';else if(t.amenity==='parking')type='PARKING';else if(/town|city/.test(t.place||''))type='TOWN';else if(/village|hamlet/.test(t.place||''))type='VILLAGE';else if(t.highway)type='ROAD';
+    const name=t.name||t.ref||t.operator||type.replaceAll('_',' ');
+    return {id:`osm-${el.type}-${el.id}`,name,type,lat:Number(center.lat),lon:Number(center.lon),source:'OSM LIVE',notes:t.highway?`road ${t.highway}`:t.shelter_type||''};
+  }
+  async function searchBailoutsOnline(){
+    const pos=getPosition();if(!validPoint(pos))throw new Error('No valid position for bailout search.');
+    const q=`[out:json][timeout:18];(node(around:8000,${pos.lat},${pos.lon})[information=trailhead];node(around:8000,${pos.lat},${pos.lon})[amenity=shelter];node(around:8000,${pos.lat},${pos.lon})[tourism~"^(wilderness_hut|alpine_hut|camp_site)$"];node(around:8000,${pos.lat},${pos.lon})[amenity=parking];node(around:8000,${pos.lat},${pos.lon})[place~"^(town|village|hamlet)$"];way(around:5000,${pos.lat},${pos.lon})[highway~"^(primary|secondary|tertiary|unclassified|residential)$"][name];);out center tags 140;`;
+    const status=document.getElementById('bailoutStatus');if(status)status.textContent='SEARCHING OSM…';
+    const res=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)});
+    if(!res.ok)throw new Error(`OSM bailout search failed (HTTP ${res.status}).`);
+    const data=await res.json(),items=(data.elements||[]).map(normalizeOsmExit).filter(Boolean);
+    const cache={retrievedAt:new Date().toISOString(),center:{lat:pos.lat,lon:pos.lon},items:rankBailouts(items,pos).slice(0,60).map(({score,distanceM,...x})=>x)};
+    write('bailout-cache',cache);return renderBailouts(rankBailouts(localBailoutCandidates(),pos));
+  }
+  function clearBailoutCache(){try{localStorage.removeItem(key('bailout-cache'))}catch{}return renderBailouts()}
+  function saveBailoutCandidate(item){
+    if(!item||!validPoint(item))return false;
+    document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`BAILOUT — ${item.name}`,type:item.type==='CAMP'?'CAMP':item.type==='BASE'?'BASE':'JUNCTION',lat:item.lat,lon:item.lon,notes:`Bailout candidate from ${item.source}; straight-line screening distance ${(item.distanceM/1609.344).toFixed(2)} mi`}}));return true;
+  }
+  document.getElementById('bailoutRefresh')?.addEventListener('click',()=>renderBailouts());document.getElementById('bailoutSearchOnline')?.addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await searchBailoutsOnline()}catch(err){const s=document.getElementById('bailoutStatus');if(s)s.textContent='SEARCH FAILED';console.warn('FIELD/OS bailout search failed',err)}finally{e.currentTarget.disabled=false}});
+  document.getElementById('bailoutClearCache')?.addEventListener('click',clearBailoutCache);
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-bailout-save]');if(!b)return;const item=window.FIELD_BAILOUT?._rendered?.[Number(b.dataset.bailoutSave)];if(item){saveBailoutCandidate(item);b.textContent='SAVED';b.disabled=true}});
+  document.addEventListener('fieldos:positionchange',()=>renderBailouts());document.addEventListener('fieldos:routechange',()=>renderBailouts());document.addEventListener('fieldos:waypointschange',()=>renderBailouts());document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='trailreturn')renderBailouts()});
+  window.FIELD_BAILOUT={rank:rankBailouts,local:localBailoutCandidates,render:renderBailouts,searchOnline:searchBailoutsOnline,clearCache:clearBailoutCache,saveCandidate:saveBailoutCandidate,_rendered:[]};
+  setTimeout(()=>renderBailouts(),120);
+
   // Feature 03 — Terrain-Risk Analyzer. It only reports risks supported by route DEM/OSM/local waypoint data.
   const riskSeverityRank={info:0,watch:1,warn:2,high:3};
   function maxSustainedGrades(profile=[]){

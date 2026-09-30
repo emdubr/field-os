@@ -717,6 +717,13 @@ document.addEventListener('click',async e=>{
   const del=e.target.closest('[data-wp-delete]');if(del){const id=del.dataset.wpDelete;if(confirm('Delete this waypoint?')){waypoints=waypoints.filter(x=>x.id!==id);if(activeWaypointId===id){activeWaypointId='';storageRemove(STORE_PREFIX+'active-waypoint')}saveJSON('waypoints',waypoints);renderWaypoints()}}
 });
 renderWaypoints();
+document.addEventListener('fieldos:addwaypoint',e=>{
+  const p=e.detail||{};if(!validLatLon(p)||waypoints.length>=500)return;
+  const duplicate=waypoints.some(w=>haversineMiles(w,p)<.01&&String(w.name||'').toLowerCase()===String(p.name||'').toLowerCase());
+  if(duplicate)return;
+  const w={id:`wp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name:String(p.name||'BAILOUT'),type:String(p.type||'JUNCTION'),notes:String(p.notes||'Saved from FIELD/OS bailout planner'),lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,created:new Date().toISOString()};
+  waypoints.push(w);saveJSON('waypoints',waypoints);renderWaypoints();document.dispatchEvent(new CustomEvent('fieldos:waypointschange',{detail:{count:waypoints.length,added:w}}));
+});
 
 // Breadcrumb track recorder
 let recordedTrack=loadJSON('track',[]);if(!Array.isArray(recordedTrack))recordedTrack=[];recordedTrack=recordedTrack.filter(validLatLon).slice(-5000);let trackWatchId=null, trackStartedAt=Number(storageGet(STORE_PREFIX+'track-start')||0), trackStoppedAt=Number(storageGet(STORE_PREFIX+'track-stop')||0);

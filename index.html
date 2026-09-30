@@ -494,6 +494,13 @@
           <div class="button-row"><button id="usePhonePos" class="action">USE PHONE POSITION</button><button class="action" data-open="map">SHOW MAP</button><button class="action" data-open="lost">LOST MODE</button></div>
           <p class="muted">Return-to-Trail targets the nearest point on the saved route. Verify terrain before moving; the shortest straight line may cross cliffs, water, avalanche terrain, private land or other hazards.</p>
         </article>
+        <article class="panel bailout-panel">
+          <div class="panel-title"><span>ESCAPE / BAILOUT PLANNER</span><span class="tiny" id="bailoutStatus">LOCAL SOURCES</span></div>
+          <p class="muted">Ranks saved exits, route endpoints and cached/discovered OSM access points. Distances below are straight-line screening distances, not guaranteed walkable routes.</p>
+          <div class="button-row"><button id="bailoutRefresh" class="action" type="button">REFRESH LOCAL</button><button id="bailoutSearchOnline" class="action" type="button">FIND + CACHE OSM EXITS</button><button id="bailoutClearCache" class="danger-lite" type="button">CLEAR OSM CACHE</button></div>
+          <div id="bailoutList" class="bailout-list"><div class="terrain-risk-empty">NO BAILOUT CANDIDATES YET</div></div>
+          <div id="bailoutSourceNote" class="terrain-risk-confidence">SOURCE // ROUTE + LOCAL WAYPOINTS</div>
+        </article>
       </section>
 
       <section class="view" id="waypoints" data-view="waypoints">

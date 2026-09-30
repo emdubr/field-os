@@ -3060,3 +3060,10 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 .terrain-risk-item.risk-high{border-color:var(--danger)}.terrain-risk-item.risk-high>span,.terrain-risk-item.risk-high>b{color:var(--danger)}.terrain-risk-item.risk-warn{border-color:var(--warn)}.terrain-risk-item.risk-warn>span,.terrain-risk-item.risk-warn>b{color:var(--warn)}
 .terrain-risk-confidence{margin-top:6px;border-top:1px dotted color-mix(in srgb,var(--line) 35%,transparent);padding-top:5px;color:var(--dim);font-size:7px}.terrain-risk-empty{grid-column:1/-1;color:var(--dim);font-size:8px;padding:8px}
 @media(max-width:600px){.terrain-risk-list{grid-template-columns:1fr}.terrain-risk-item>p{font-size:9px}.terrain-risk-summary{font-size:9px}}
+
+
+/* feature 04 — escape / bailout planner */
+.bailout-panel{margin-top:7px}.bailout-list{display:grid;gap:5px;margin-top:8px}.bailout-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:7px;align-items:center;border:1px solid color-mix(in srgb,var(--line) 38%,transparent);background:var(--panel2);padding:7px;min-width:0}
+.bailout-row>i{font-style:normal;font-size:8px;color:var(--dim);text-align:center}.bailout-row-main{min-width:0}.bailout-row-main b{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bailout-row-main small{display:block;color:var(--dim);font-size:8px;line-height:1.3;white-space:normal}
+.bailout-distance{text-align:right;white-space:nowrap}.bailout-distance b{display:block;font-size:11px}.bailout-distance small{font-size:7px;color:var(--dim)}.bailout-save{min-height:36px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:8px/1.2 monospace;padding:5px 7px}
+@media(max-width:600px){.bailout-row{grid-template-columns:32px minmax(0,1fr) auto}.bailout-save{grid-column:2/-1;width:100%;min-height:42px}.bailout-distance b{font-size:10px}}

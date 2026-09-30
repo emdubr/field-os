@@ -58,6 +58,16 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
  assert.ok(syntheticRisk.flags.some(x=>x.id==='steep'));assert.ok(syntheticRisk.flags.some(x=>x.id==='technical'));assert.ok(syntheticRisk.flags.some(x=>x.id==='water'));assert.ok(syntheticRisk.flags.some(x=>x.id==='bailout'));
  w.FIELD_TERRAIN_RISK.render(syntheticRisk);assert.match(d.getElementById('terrainRiskSummary').textContent,/ACTIONABLE FLAG/);
  console.log('PASS feature 03 Terrain-Risk Analyzer flags sustained grade, technical tags, water crossings, major vertical, and bailout gaps');
+ const ranked=w.FIELD_BAILOUT.rank([
+   {name:'Far Road',type:'ROAD',lat:44.02,lon:-73,source:'TEST'},
+   {name:'Near Trailhead',type:'TRAILHEAD',lat:44.005,lon:-73,source:'TEST'},
+   {name:'Shelter',type:'SHELTER',lat:44.01,lon:-73,source:'TEST'}
+ ],{lat:44,lon:-73});
+ assert.equal(ranked[0].name,'Near Trailhead');assert.ok(ranked[0].distanceM<ranked[1].distanceM);
+ const beforeWp=JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints')).length;
+ w.FIELD_BAILOUT.saveCandidate(ranked[0]);await tick();
+ const afterWp=JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'));assert.equal(afterWp.length,beforeWp+1);assert.match(afterWp.at(-1).name,/BAILOUT/);
+ console.log('PASS feature 04 Bailout Planner ranks realistic exit types, works from local data, and saves exits as offline waypoints');
 
  const app=fs.readFileSync(dir+'/app.js','utf8');
  const sosBtn=d.getElementById('meshSos');
