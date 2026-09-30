@@ -434,7 +434,7 @@
         const pos={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude,accuracy:p.coords.accuracy,heading:p.coords.heading,source:'PHONE GPS'};
         publishPlannerPosition(pos);drawPlannerPosition(pos);
         const pts=state()?.getPoints?.()||[];
-        status(pts.length>1?'FOLLOWING ROUTE -- LIVE GPS':'LIVE GPS FOLLOW -- PLAN OR LOAD A ROUTE','ready');
+        if(!busy)status(pts.length>1?'FOLLOWING ROUTE -- LIVE GPS':'LIVE GPS FOLLOW -- PLAN OR LOAD A ROUTE','ready');
       },
       err=>{
         status(`GPS FOLLOW ERROR -- ${String(err.message||err).toUpperCase()}`,'error');
@@ -473,10 +473,26 @@
     const st=state(),points=st?.getPoints?.()||[];
     if(points.length<2){status('SAVE FAILED -- PLOT OR LOAD A ROUTE FIRST','error');return}
     const plan=st.getPlan?.()||{},name=$('routeName')?.value.trim()||plan.name||'FIELD ROUTE';
-    const snapshot={...plan,id:'route-'+Date.now(),name,savedAt:new Date().toISOString(),points:points.map(p=>({lat:+p.lat,lon:+p.lon})),anchors:sanitizeAnchors(anchors),distanceMiles:routeDistanceMiles(points)};
+    const snapshot={
+      id:'route-'+Date.now(),name,savedAt:new Date().toISOString(),
+      points:points.map(p=>({lat:+p.lat,lon:+p.lon})),
+      anchors:sanitizeAnchors(anchors),
+      routedAnchors:sanitizeAnchors(plan.routedAnchors||anchors),
+      routingMode:plan.routingMode||routeMode(),
+      routingSource:plan.routingSource||'FIELD/OS',
+      distanceMiles:routeDistanceMiles(points),
+      elevationSource:plan.elevationSource||null,
+      elevationGainFt:Number(plan.elevationGainFt)||0,
+      elevationLossFt:Number(plan.elevationLossFt)||0,
+      elevationMinFt:Number(plan.elevationMinFt)||0,
+      elevationMaxFt:Number(plan.elevationMaxFt)||0,
+      elevationProfile:Array.isArray(plan.elevationProfile)?plan.elevationProfile:null,
+      gain:Number(plan.gain)||0,grade:Number(plan.grade)||0,
+      terrain:plan.terrain||'maintained',notes:plan.notes||''
+    };
     const routes=readSavedRoutes();
     routes.unshift(snapshot);
-    if(routes.length>20)routes.length=20;
+    if(routes.length>10)routes.length=10;
     if(!writeSavedRoutes(routes)){status('SAVE FAILED -- LOCAL STORAGE UNAVAILABLE','error');return}
     st.setMeta?.({...plan,name,savedAt:snapshot.savedAt});st.save?.();
     renderSavedRoutes();
