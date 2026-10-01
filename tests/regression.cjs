@@ -55,6 +55,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(d.querySelector('#missionReadiness [data-readiness-id="contact"]').classList.contains('ok'));
  d.querySelector('#missionReadiness [data-readiness-id="route"]').click();await tick();assert.equal(d.querySelector('.view.active').id,'route');
  console.log('PASS feature 01 Mission Mode freezes pack data while actionable readiness cards update from live requirements');
+  assert.ok(fieldIntelJs.includes("'fieldos:tripchange'"));
+  assert.ok(fieldIntelJs.includes("tripReturn')?.addEventListener('input',refreshReadiness"));
+  console.log('PASS trip edits refresh readiness immediately without rebuilding the frozen mission snapshot');
  console.log('PASS feature 01 Mission Mode builds, freezes, starts, and ends a complete local trip pack');
  d.getElementById('mobileFixState').textContent='STALE';
  let priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'gnss');assert.match(d.getElementById('priorityTitle').textContent,/GNSS/);
@@ -434,6 +437,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(fieldIntelJs.includes('window.FIELD_MISSION_READINESS='));
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
  assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
+ assert.ok(workstationCss.includes('v3.82 UI EFFICIENCY'));
  console.log('PASS route planner hot-path optimizations and actionable mission readiness contracts are wired');
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
 
@@ -760,6 +764,9 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("lastOverlayGeometryKey"));
  assert.ok(routePlannerJs.includes("lastDirectionGeometryKey"));
  console.log('PASS route overlay projection is geometry-keyed so preview edits do not rebuild route directions');
+ assert.ok(routePlannerJs.includes("plannerHoverFrame=requestAnimationFrame"));
+ assert.ok(routePlannerJs.includes("(pointer:fine)"));
+ console.log('PASS route planner coalesces fine-pointer route hover and skips hover work on touch-only devices');
 assert.ok(workstationCss.includes('v3.81 UI STABILITY'));
 assert.ok(workstationCss.includes('v3.81 SAFE AREA GEOMETRY'));
 assert.ok(workstationCss.includes('--mobile-top-safe:env(safe-area-inset-top,0px)'));
