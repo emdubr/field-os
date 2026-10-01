@@ -90,6 +90,14 @@ const server=http.createServer((req,res)=>{
       return {paused,resumed:before!==document.querySelector('#route .ws-route-plot')};
     });assert.deepEqual(lifecycle,{paused:true,resumed:true});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
+    const satelliteState=await page.evaluate(async()=>{
+      document.getElementById('mapSatelliteMode').click();
+      await new Promise(r=>setTimeout(r,20));
+      await updateFieldMaps(false);
+      return {mode:FIELD_MAP_ENGINE.mode,stored:localStorage.getItem('fieldos-v12-map-source')};
+    });
+    assert.deepEqual(satelliteState,{mode:'satellite',stored:'satellite'});
+    console.log('PASS satellite mode survives app-level refresh without being coerced to topo');
     const terrainLayout=await page.evaluate(()=>{const map=document.querySelector('#map .main-real-map'),grid=document.querySelector('#map .module-grid');const mr=map.getBoundingClientRect(),gr=grid.getBoundingClientRect();return {mapHeight:mr.height,mapWidth:mr.width,gridWidth:gr.width,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};});
     assert.ok(terrainLayout.mapHeight>=440&&terrainLayout.mapHeight<=681,'Terrain map height remains bounded on desktop');
     assert.ok(terrainLayout.mapWidth/terrainLayout.gridWidth>.95,'Terrain map uses full workspace width');
