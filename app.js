@@ -11,6 +11,7 @@ const STORE_PREFIX = 'fieldos-v12-';
 const PREV_PREFIX = 'fieldos-v06-';
 const V05_PREFIX = 'fieldos-v05-';
 const LEGACY_PREFIX = 'fieldos-v04-';
+const DOT12_PREFIX = 'fieldos-v1.2-';
 function storageGet(key){try{return localStorage.getItem(key)}catch(err){console.warn('FIELD/OS storage unavailable',err);return null}}
 function storageSet(key,val){try{localStorage.setItem(key,String(val));return true}catch(err){console.warn('FIELD/OS storage write failed',key,err);return false}}
 function storageRemove(key){try{localStorage.removeItem(key);return true}catch(err){console.warn('FIELD/OS storage remove failed',key,err);return false}}
@@ -31,6 +32,12 @@ for(const key of storageKeys()){
 for(const key of storageKeys()){
   if(key.startsWith(LEGACY_PREFIX)){
     const next=STORE_PREFIX+key.slice(LEGACY_PREFIX.length),val=storageGet(key);
+    if(storageGet(next)==null && val!=null) storageSet(next,val);
+  }
+}
+for(const key of storageKeys()){
+  if(key.startsWith(DOT12_PREFIX)){
+    const next=STORE_PREFIX+key.slice(DOT12_PREFIX.length),val=storageGet(key);
     if(storageGet(next)==null && val!=null) storageSet(next,val);
   }
 }
@@ -1174,7 +1181,20 @@ async function resolveActiveFieldPack(){
   try{fieldActivePackRecord=await getFieldMapPack(fieldActivePackId);return fieldActivePackRecord;}catch{return null;}
 }
 async function updateFieldMaps(recenter=false){
-  if(window.FIELD_MAP_ENGINE_EXTERNAL)return window.FIELD_MAP_ENGINE?.refresh?.(recenter);
+  const pack=await resolveActiveFieldPack();
+  const useOffline=(fieldMapMode==='offline'||navigator.onLine===false)&&!!pack;
+  if(window.FIELD_MAP_ENGINE_EXTERNAL&&!useOffline&&navigator.onLine!==false&&fieldMapMode!=='offline'){
+    fieldLegacyDestroyAll();
+    const desiredMode=fieldMapMode==='osm'?'osm':'topo';
+    window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled});
+    window.FIELD_MAP_ENGINE?.refresh?.(recenter);
+    const src=document.getElementById('offlineMapSource');if(src)src.textContent=desiredMode==='osm'?'STREET OSM':'OPEN TOPO HIKING';
+    return;
+  }
+  if(useOffline){
+    window.FIELD_MAP_ENGINE?.unmount?.('homeRealMap');
+    window.FIELD_MAP_ENGINE?.unmount?.('realMap');
+  }
   const libs=await ensureFieldMapLibraries();
   const diag=document.getElementById('mapSourceDiag');
   if(!libs){
@@ -1189,9 +1209,12 @@ async function updateFieldMaps(recenter=false){
   ].filter(Boolean);
   if(!states.length)return;
   const trusted=hasTrustedMapPosition();
-  const pack=await resolveActiveFieldPack();
-  const useOffline=(fieldMapMode==='offline'||!navigator.onLine)&&!!pack;
   const canOnline=navigator.onLine!==false;
+  if(fieldMapMode==='offline'&&!pack){
+    states.forEach(s=>showFieldFallback(s,'OFFLINE MAP PACK NOT FOUND'));
+    setOfflineMapStatus('NO ACTIVE OFFLINE MAP PACK');
+    return;
+  }
   if(!useOffline&&!canOnline){
     states.forEach(s=>showFieldFallback(s,'NO NETWORK / NO OFFLINE PACK'));
     return;
@@ -1717,9 +1740,20 @@ function fieldNativeShow(st,label){
   st.el.hidden=false;if(st.fallback)st.fallback.hidden=true;if(st.label)st.label.textContent=label;
 }
 updateFieldMaps=async function(recenter=false){
-  if(window.FIELD_MAP_ENGINE_EXTERNAL)return window.FIELD_MAP_ENGINE?.refresh?.(recenter);
   const pack=await resolveActiveFieldPack();
   const useOffline=(fieldMapMode==='offline'||navigator.onLine===false)&&!!pack;
+  if(useOffline){
+    fieldNativeDestroyAll();
+    window.FIELD_MAP_ENGINE?.unmount?.('homeRealMap');
+    window.FIELD_MAP_ENGINE?.unmount?.('realMap');
+    return fieldLegacyUpdateFieldMaps(recenter);
+  }
+  if(window.FIELD_MAP_ENGINE_EXTERNAL){
+    fieldLegacyDestroyAll();
+    const desiredMode=fieldMapMode==='osm'?'osm':'topo';
+    window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled});
+    return window.FIELD_MAP_ENGINE?.refresh?.(recenter);
+  }
   if(useOffline){
     fieldNativeDestroyAll();
     return fieldLegacyUpdateFieldMaps(recenter);
