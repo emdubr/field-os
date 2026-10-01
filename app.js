@@ -866,8 +866,13 @@ function fitReferenceConsole(){
   const actualH=Math.max(930,shell.scrollHeight);
   vp.style.setProperty('--fit-console-h',`${Math.ceil(actualH*scale)}px`); vp.style.height=`${Math.ceil(actualH*scale)}px`;
 }
-window.addEventListener('resize',fitReferenceConsole,{passive:true});
-window.addEventListener('orientationchange',()=>setTimeout(fitReferenceConsole,80));
+let referenceFitFrame=0;
+function scheduleReferenceFit(){
+  if(referenceFitFrame)return;
+  referenceFitFrame=requestAnimationFrame(()=>{referenceFitFrame=0;fitReferenceConsole()});
+}
+window.addEventListener('resize',scheduleReferenceFit,{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(scheduleReferenceFit,80));
 requestAnimationFrame(fitReferenceConsole);
 // v1.2 handheld telemetry and resilience helpers
 function fmtAge(sec){sec=Math.max(0,Math.floor(sec));const h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor((sec%3600)/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');return h==='00'?`${m}:${s}`:`${h}:${m}:${s}`}
