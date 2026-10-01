@@ -287,7 +287,7 @@
   document.getElementById('recoveryFreezeTarget')?.addEventListener('click',()=>{const id=document.getElementById('recoveryTargetSelect')?.value,node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(id));if(node)activateRecovery(node)});
   document.getElementById('recoveryClear')?.addEventListener('click',clearRecovery);document.getElementById('recoverySaveWaypoint')?.addEventListener('click',()=>{if(!recoveryState.active||!recoveryState.target)return;document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`RECOVERY — ${recoveryState.target.name}`,type:'JUNCTION',lat:recoveryState.target.lat,lon:recoveryState.target.lon,notes:`Frozen separated-person last-known position at ${new Date(recoveryState.frozenAt).toISOString()}`}}))});
   document.addEventListener('click',e=>{const b=e.target.closest('[data-recovery-member]');if(!b)return;const node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(b.dataset.recoveryMember));if(node)activateRecovery(node)});
-  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderRecovery()});setInterval(()=>{if(!document.hidden&&recoveryState.active&&document.querySelector('#comms.active'))renderRecovery()},5000);setTimeout(renderRecovery,420);
+  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderRecovery()});setInterval(()=>{if(!document.hidden&&recoveryState.active&&document.querySelector('#comms.active,#loramap.active'))renderRecovery()},5000);setTimeout(renderRecovery,420);
   window.FIELD_RECOVERY={state:recoveryState,activate:activateRecovery,clear:clearRecovery,addBreadcrumb:addRecoveryBreadcrumb,guidance:recoveryGuidance,render:renderRecovery,mapSvg:recoveryMapSvg};
 
   // Feature 15 — Group Expedition Mode.
@@ -358,7 +358,7 @@
   }
   document.getElementById('groupExpeditionEnabled')?.addEventListener('change',e=>setGroupConfig({enabled:e.currentTarget.checked}));document.getElementById('groupAllNodes')?.addEventListener('change',e=>{if(!e.currentTarget.checked&&!(groupConfig.members||[]).length)groupConfig.members=(window.FIELD_MESH?.state?.nodes||[]).map(n=>String(n.id));setGroupConfig({allNodes:e.currentTarget.checked,members:groupConfig.members})});document.getElementById('groupSeparationLimit')?.addEventListener('change',e=>setGroupConfig({separationMi:e.currentTarget.value}));
   document.addEventListener('click',e=>{const b=e.target.closest('[data-group-member]');if(!b||groupConfig.allNodes)return;const id=String(b.dataset.groupMember),set=new Set((groupConfig.members||[]).map(String));set.has(id)?set.delete(id):set.add(id);setGroupConfig({members:[...set]})});
-  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderGroup()});setInterval(()=>{if(!document.hidden&&groupConfig.enabled&&document.querySelector('#comms.active'))renderGroup()},15000);setTimeout(()=>renderGroup(),380);
+  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderGroup()});setInterval(()=>{if(!document.hidden&&groupConfig.enabled&&document.querySelector('#comms.active,#loramap.active'))renderGroup()},15000);setTimeout(()=>renderGroup(),380);
   window.FIELD_GROUP={config:groupConfig,state:groupState,record:recordGroupHistory,movement:groupMovement,evaluate:evaluateGroup,render:renderGroup,setConfig:setGroupConfig};
 
   // Feature 14 — Automatic Check-ins.
@@ -472,7 +472,7 @@
   document.addEventListener('fieldos:devicealert',e=>{const d=e.detail||{};ingestInbox({id:d.id,createdAt:d.createdAt,source:d.source||'DEVICE',category:'ALERT',text:d.text||d.message,title:d.title||'DEVICE ALERT',direction:'IN',severity:d.severity||'warn',status:'alert',meta:d})});
   document.addEventListener('fieldos:sensoralert',e=>{const d=e.detail||{};ingestInbox({id:d.id,createdAt:d.createdAt,source:d.source||'SENSOR',category:'ALERT',text:d.text||d.message,title:d.title||'SENSOR ALERT',direction:'IN',severity:d.severity||'warn',status:'alert',meta:d})});
   document.getElementById('unifiedInboxFilter')?.addEventListener('change',e=>{inboxState.filter=e.currentTarget.value;renderInbox()});document.getElementById('unifiedInboxMarkRead')?.addEventListener('click',markInboxRead);document.getElementById('unifiedInboxClear')?.addEventListener('click',clearInbox);
-  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderInbox()});renderInbox();
+  document.addEventListener('fieldos:viewchange',e=>{if(['comms','lorachat'].includes(e.detail?.view))renderInbox()});renderInbox();
   window.FIELD_INBOX={ingest:ingestInbox,update:updateInboxMessage,render:renderInbox,markRead:markInboxRead,clear:clearInbox,state:inboxState};
 
   // Feature 12 — Store-and-Forward Messaging.
@@ -538,7 +538,7 @@
   document.addEventListener('fieldos:outgoingmessage',e=>{const item=queueMessage(e.detail?.text,{channel:e.detail?.channel||'PRIMARY',meta:e.detail?.meta||{}});if(item)e.preventDefault()});
   document.addEventListener('fieldos:transportchange',e=>{if(e.detail?.name)setTransportAvailability(e.detail.name,e.detail.available)});
   window.addEventListener('online',flushMessageQueue);document.getElementById('storeForwardRetry')?.addEventListener('click',flushMessageQueue);document.getElementById('storeForwardClearSent')?.addEventListener('click',clearSentMessages);
-  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMessageQueue()});
+  document.addEventListener('fieldos:viewchange',e=>{if(['comms','lorachat'].includes(e.detail?.view))renderMessageQueue()});
   loadMessageQueue();renderMessageQueue();
   window.FIELD_TRANSPORT={register:registerTransport,setAvailable:setTransportAvailability,flush:flushMessageQueue,queue:queueMessage,clearSent:clearSentMessages,active:activeTransports,state:messageQueueState};
 
@@ -589,7 +589,7 @@
     document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`RELAY — ${item.name}`,type:'JUNCTION',lat:item.lat,lon:item.lon,alt:item.elevationFt??null,notes:`Relay candidate score ${item.score}/100 from FIELD/OS; verify line of sight and access before use.`}}));return true;
   }
   document.getElementById('relayRecommendRefresh')?.addEventListener('click',()=>renderRelayRecommendations());document.addEventListener('click',e=>{const b=e.target.closest('[data-relay-save]');if(!b)return;const item=window.FIELD_RELAY?._rendered?.[Number(b.dataset.relaySave)];if(item){saveRelayCandidate(item);b.textContent='SAVED';b.disabled=true}});
-  document.addEventListener('fieldos:routechange',()=>renderRelayRecommendations());document.addEventListener('fieldos:waypointschange',()=>renderRelayRecommendations());document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderRelayRecommendations()});setTimeout(()=>renderRelayRecommendations(),300);
+  document.addEventListener('fieldos:routechange',()=>renderRelayRecommendations());document.addEventListener('fieldos:waypointschange',()=>renderRelayRecommendations());document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderRelayRecommendations()});setTimeout(()=>renderRelayRecommendations(),300);
   window.FIELD_RELAY={candidates:relayCandidates,render:renderRelayRecommendations,save:saveRelayCandidate,weakCentroid:weakCoverageCentroid,_rendered:[]};
 
   // Feature 10 — Mesh Coverage Heatmap.
@@ -632,7 +632,7 @@
   function clearMeshCoverage(){meshCoverage.samples=[];try{localStorage.removeItem(key('mesh-coverage'))}catch{}renderMeshCoverage()}
   const savedCoverage=read('mesh-coverage',null);if(Array.isArray(savedCoverage?.samples))meshCoverage.samples=savedCoverage.samples.map(normalizeCoverageSample).filter(Boolean);
   document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},m=d.mesh||{},rssi=Number(m.rssi??d.rssi),snr=Number(m.snr??d.snr),pos=getPosition();if(validPoint(pos)&&(Number.isFinite(rssi)||Number.isFinite(snr)))addCoverageSample({lat:pos.lat,lon:pos.lon,rssi,snr,time:Date.now()})});
-  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshCoverage()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshCoverage()});document.getElementById('meshCoverageClear')?.addEventListener('click',clearMeshCoverage);setTimeout(renderMeshCoverage,260);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active,#loramap.active'))renderMeshCoverage()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderMeshCoverage()});document.getElementById('meshCoverageClear')?.addEventListener('click',clearMeshCoverage);setTimeout(renderMeshCoverage,260);
   window.FIELD_MESH_COVERAGE={add:addCoverageSample,render:renderMeshCoverage,clear:clearMeshCoverage,classify:classifyMeshCoverage,state:meshCoverage};
 
   // Feature 09 — Mesh Network Map / topology cache.
@@ -687,7 +687,7 @@
   function ingestMeshNodes(list=[]){mergeMeshNodes(list);renderMeshNetwork();document.dispatchEvent(new CustomEvent('fieldos:meshroster',{detail:{count:meshState.nodes.length}}));return meshState.nodes}
   const savedMesh=read('mesh-roster',null);if(Array.isArray(savedMesh?.nodes))meshState.nodes=savedMesh.nodes.map(normalizeMeshNode).filter(Boolean);
   document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},nodes=Array.isArray(d.mesh?.nodeList)?d.mesh.nodeList:Array.isArray(d.mesh?.nodes)?d.mesh.nodes:Array.isArray(d.nodes)?d.nodes:null;if(nodes)ingestMeshNodes(nodes)});
-  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
+  document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
 
   // Feature 08 — Position Confidence.
