@@ -106,7 +106,7 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,resizeObserver:null
+      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null
     };
 
     const transformLayers=(transform,origin='50% 50%')=>{
@@ -349,7 +349,8 @@
     const corner=st.el.querySelector('.native-map-corner');
     if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
     updateDiag();
-    setTimeout(()=>{
+    clearTimeout(st.failureTimer);
+    st.failureTimer=setTimeout(()=>{
       if(token!==st.token)return;
       if(st.loaded===0)setFallback(st,'0 TILES LOADED — CHECK INTERNET / CONTENT BLOCKER');
       else{
