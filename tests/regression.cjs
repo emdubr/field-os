@@ -16,7 +16,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  await tick();
  {
    const launcher=d.getElementById('workspaceSearch'),switcher=d.getElementById('workspaceSwitcher');
-   const nativeShow=switcher.showModal;try{switcher.showModal=undefined;launcher.click();assert.ok(switcher.hasAttribute('data-open'));assert.equal(launcher.getAttribute('aria-expanded'),'true');switcher.querySelector('.switcher-close').click();assert.equal(launcher.getAttribute('aria-expanded'),'false');}finally{if(nativeShow)switcher.showModal=nativeShow}
+   const nativeShow=switcher.showModal;try{switcher.showModal=undefined;launcher.click();assert.ok(switcher.hasAttribute('data-open'));assert.equal(launcher.getAttribute('aria-expanded'),'true');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'true');switcher.querySelector('.switcher-close').click();assert.equal(launcher.getAttribute('aria-expanded'),'false');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'false');}finally{if(nativeShow)switcher.showModal=nativeShow}
    console.log('PASS module finder fallback opens, exposes state, and closes without native dialog support');
  }
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
@@ -277,6 +277,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("window.FIELD_MAP_ENGINE?.unmount?.('homeRealMap')"));
  assert.ok(appJs.includes("if(useOffline){\n    fieldNativeDestroyAll();"));
  assert.ok(appJs.includes("return fieldLegacyUpdateFieldMaps(recenter)"));
+ assert.ok(appJs.includes("if(action==='location')return engine?.toggleLiveLocation?.()"));
  assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
  assert.ok(mapEngineJs.includes("function isVisible(st)"));
  assert.ok(mapEngineJs.includes("function unmount(id)"));
@@ -322,6 +323,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(routePlannerJs.includes("expired.forEach(old=>store.delete(old.key))"));
  assert.ok(routePlannerJs.includes("nearbySegments(graph,p,maxMeters)"));
  assert.ok(routePlannerJs.includes("spatial:buildSpatialIndex(segments)"));
+ assert.ok(routePlannerJs.includes("SPATIAL_MAX_CELLS=512"));
+ assert.ok(routePlannerJs.includes("new Set(graph.spatial.get('*')||[])"));
+ assert.ok(!routePlannerJs.includes("return found.size?[...found]:graph.segments"));
  assert.ok(!routePlannerJs.includes("for(const old of all.slice(TRAIL_CACHE_MAX)){const d=await trailDb()"));
 
 
