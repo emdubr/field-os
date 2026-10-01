@@ -333,7 +333,6 @@
   .compass-label.ne{right:22px;top:21px}.compass-label.se{right:22px;bottom:21px}.compass-label.sw{left:22px;bottom:21px}.compass-label.nw{left:22px;top:21px}
   .nav-compass-needle{inset:20px}
   .nav-compass-needle:before{height:46px}.nav-compass-needle:after{height:39px}
-  .sunlight-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   .sunlight-summary b{font-size:10px}
   .map-source-bar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
@@ -1007,7 +1006,6 @@ body #home .sensor-lines{gap:8px!important}body #home .console-command-strip{dis
 @media(max-width:1023px){
   body #home .detail-main-grid{display:flex!important;flex-direction:column!important}
   body #home .detail-main-grid .detail-right-stack{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
-  body #home .detail-right-stack .detailed-nav,body #home .detail-right-stack .detailed-sensors,body #home .detail-right-stack .detailed-route-info{grid-column:1!important;grid-row:auto!important}
   body .module-grid{grid-template-columns:minmax(0,1fr)!important}
   body .module-grid>*{grid-column:1!important}
   body .route-planner-real-map{height:380px}
@@ -3984,8 +3982,6 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
    display:none!important;
  }
  #home .map-meta,#home .map-footer{display:flex!important}
- #home .detailed-route-info{display:block!important}
- #home .console-mid-grid,#home .console-bottom-grid{display:grid!important}
  #home .console-mid-grid>.terminal-panel,#home .console-bottom-grid>.terminal-panel,#home .detailed-route-info{
    content-visibility:auto;contain-intrinsic-size:150px;
  }
@@ -4105,7 +4101,6 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
 .mission-readiness-action{grid-column:3;grid-row:1/3;align-self:center;color:var(--fg2);font-size:7px;white-space:nowrap}
 .mission-readiness-item.warn{border-color:#b59b47}.mission-readiness-item.bad{border-color:#a74a4a}
 .mission-readiness-item:hover,.mission-readiness-item:focus-visible{background:var(--panel3);outline:1px solid var(--fg2);outline-offset:1px}
-.mission-readiness-item:active{transform:translateY(1px)}
 @media(max-width:760px){
  .mission-readiness-grid{grid-template-columns:1fr 1fr!important;gap:4px!important}
  .mission-readiness-item{min-height:58px;padding:7px!important}
