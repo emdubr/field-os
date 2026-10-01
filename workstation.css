@@ -3954,3 +3954,47 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  #nav .nav-primary-compass{grid-template-columns:138px 1fr!important}
  #nav .field-compass{width:132px!important;height:132px!important}
 }
+
+/* v3.76 MOBILE PERFORMANCE BUDGET — one authoritative cheap handheld render path. */
+@media(max-width:767px){
+ /* GPU/compositor budget: keep glow on text/borders, remove full-surface effects. */
+ body{text-shadow:none!important}
+ body::after{display:none!important}
+ .shell,.view,.panel,.terminal-panel,.module-grid .panel,.priority-now,.topbar,.tabbar,
+ #home .map-console,#home .handheld-status button,.field-real-map{
+   box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ }
+ .field-real-map .native-map-tile,.native-map-base,.native-map-terrain,.native-map-trails{
+   will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+ }
+ .native-map-overlay,.native-map-editor-overlay,.native-map-grid{will-change:transform}
+ .native-route-line,.native-self-marker,.field-map-route,.field-map-track,.field-map-self{
+   filter:none!important;
+ }
+ .native-satellite-tile,.native-terrain-tile{filter:none!important}
+ /* Inactive workspaces cost no layout/paint; long modules render lazily as they approach viewport. */
+ .view:not(.active){display:none!important;content-visibility:hidden!important}
+ .view.active:not(#home) .panel,.view.active:not(#home) .module-slot{
+   content-visibility:auto;contain-intrinsic-size:180px;
+ }
+ .module-secondary-grid{display:none!important}
+ /* Home: only the field-critical instrument bank participates in layout. */
+ #home .console-mid-grid,#home .console-bottom-grid,#home .detailed-route-info,
+ #home .console-header,#home .detail-statusline,#home .console-rail,#home .map-meta,#home .map-footer{
+   display:none!important;
+ }
+ #home .detail-console{contain:layout style!important}
+ #home .console-main-grid{contain:layout style!important}
+ #home .terminal-panel{contain:layout paint style!important}
+ #home .home-real-map{contain:strict!important}
+ /* Avoid animated layout/property transitions during field interaction. */
+ #home *,#map *{transition-property:color,background-color,border-color!important;transition-duration:80ms!important}
+ .field-real-map *{transition:none!important}
+ /* Smaller DOM paint area while retaining a useful map viewport. */
+ #home .home-real-map{height:min(48dvh,460px)!important;min-height:320px!important}
+ #home .detailed-nav{padding:5px!important;gap:3px!important}
+ #home .detailed-sensors{padding:5px!important;gap:3px 7px!important}
+ #home .sensor-lines span{padding:2px 0!important}
+ #home .mini-chart{height:76px!important}
+ .tabbar{contain:layout paint style!important}
+}
