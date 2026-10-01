@@ -389,10 +389,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(routePlannerJs.includes("if(routeVisible()&&!initialized)activate()"));
  assert.ok(routePlannerJs.includes("expired.forEach(old=>store.delete(old.key))"));
  assert.ok(routePlannerJs.includes("nearbySegments(graph,p,maxMeters)"));
- assert.ok(routePlannerJs.includes("spatial:buildSpatialIndex(segments)"));
+ assert.ok(routePlannerJs.includes("segments=[],spatial=new Map()"));assert.ok(routePlannerJs.includes("addSpatialSegment(spatial,seg)"));
  assert.ok(routePlannerJs.includes("SPATIAL_MAX_CELLS=512"));
  assert.ok(routePlannerJs.includes("new Set(graph.spatial.get('*')||[])"));
  assert.ok(!routePlannerJs.includes("return found.size?[...found]:graph.segments"));
+ assert.ok(!routePlannerJs.includes('way.geometry.map((_,i)'));console.log('PASS trail graph construction builds nodes, edges and spatial buckets in one pass');
  assert.ok(!routePlannerJs.includes("for(const old of all.slice(TRAIL_CACHE_MAX)){const d=await trailDb()"));
 
 
