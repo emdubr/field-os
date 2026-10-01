@@ -66,18 +66,30 @@
     el.setAttribute('aria-pressed',on?'true':'false');
   }
 
+  let locationLabelNodes=null;
+  function getLocationLabelNodes(){
+    if(locationLabelNodes)return locationLabelNodes;
+    return locationLabelNodes={
+      buttons:[...document.querySelectorAll('.map-location-toggle')],
+      state:document.getElementById('homeLocationState'),
+      age:document.getElementById('homeLiveFixAge'),
+      accuracy:document.getElementById('homeLiveAccuracy'),
+      oldAge:document.getElementById('homeFixAge'),
+      oldAccuracy:document.getElementById('homeAccuracy')
+    };
+  }
   function updateLocationLabels(){
-    const state=liveEnabled?(watchId!=null?(livePosition?'LIVE':'ACQUIRING'):'STARTING'):(livePosition?'PAUSED':'OFF');
-    const buttons=[...document.querySelectorAll('.map-location-toggle')];
-    buttons.forEach(btn=>{
+    const state=liveEnabled?(watchId!=null?(livePosition?'LIVE':'ACQUIRING'):'STARTING'):(livePosition?'PAUSED':'OFF'),nodes=getLocationLabelNodes();
+    nodes.buttons.forEach(btn=>{
       btn.textContent=`LIVE LOCATION ${liveEnabled?'ON':'OFF'}`;
       setPressed(btn,liveEnabled);
     });
-    const ls=document.getElementById('homeLocationState');if(ls)ls.textContent=state;
-    const age=document.getElementById('homeLiveFixAge');if(age)age.textContent=formatAge();
-    const acc=document.getElementById('homeLiveAccuracy');if(acc)acc.textContent=locationAccuracy!=null?`±${Math.round(locationAccuracy)} m`:'—';
-    const oldAge=document.getElementById('homeFixAge');if(oldAge)oldAge.textContent=lastFixTime?formatAge():'—';
-    const oldAcc=document.getElementById('homeAccuracy');if(oldAcc)oldAcc.textContent=locationAccuracy!=null?`±${Math.round(locationAccuracy)} m`:'—';
+    if(nodes.state)nodes.state.textContent=state;
+    if(nodes.age)nodes.age.textContent=formatAge();
+    const accuracy=locationAccuracy!=null?`±${Math.round(locationAccuracy)} m`:'—';
+    if(nodes.accuracy)nodes.accuracy.textContent=accuracy;
+    if(nodes.oldAge)nodes.oldAge.textContent=lastFixTime?formatAge():'—';
+    if(nodes.oldAccuracy)nodes.oldAccuracy.textContent=accuracy;
   }
 
   function updateLabels(){
