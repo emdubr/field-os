@@ -3560,3 +3560,90 @@ input,select,textarea{
   body #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   body #map .terrain-controls-below{grid-template-columns:1fr!important}
 }
+
+
+/* v3.68 TERRAIN MAP REPAIR — final authority.
+   Keep the map workspace deterministic across desktop/tablet/mobile and prevent
+   legacy masonry/min-height rules from manufacturing blank vertical regions. */
+#map.active{
+  align-content:start!important;
+}
+#map .module-grid{
+  min-height:0!important;
+  align-content:start!important;
+  grid-auto-rows:max-content!important;
+}
+#map .module-grid>*,
+#map .terrain-map-card,
+#map .terrain-controls-below,
+#map .offline-map-manager,
+#map .route-offline-readiness,
+#map .field-tools-panel{
+  min-height:0!important;
+  align-self:start!important;
+}
+#map .terrain-map-card{
+  display:flex!important;
+  flex-direction:column!important;
+  padding-bottom:8px!important;
+}
+#map .main-real-map{
+  flex:none!important;
+  width:100%!important;
+  aspect-ratio:auto!important;
+  contain:layout paint!important;
+  touch-action:none!important;
+  overscroll-behavior:contain!important;
+}
+#map .map-quick-actions,
+#map .terrain-controls-below{
+  margin-top:0!important;
+}
+#map .terrain-controls-below{
+  height:auto!important;
+  min-height:0!important;
+  align-items:start!important;
+}
+#map .terrain-controls-below .map-control-group{
+  height:auto!important;
+  min-height:0!important;
+}
+@media(min-width:1024px){
+  #map .module-grid{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:10px!important;
+    columns:auto!important;
+  }
+  #map .module-grid>*{margin:0!important;width:100%!important}
+  #map .main-real-map{
+    height:clamp(440px,58dvh,680px)!important;
+    min-height:440px!important;
+    max-height:680px!important;
+  }
+}
+@media(min-width:768px) and (max-width:1023px){
+  #map .module-grid{display:flex!important;flex-direction:column!important;gap:8px!important;columns:auto!important}
+  #map .main-real-map{
+    height:clamp(380px,54dvh,600px)!important;
+    min-height:380px!important;
+    max-height:600px!important;
+  }
+  #map .terrain-controls-below{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:767px){
+  #map .module-grid{display:flex!important;flex-direction:column!important;gap:7px!important;columns:auto!important}
+  #map .main-real-map{
+    height:clamp(300px,48dvh,460px)!important;
+    min-height:300px!important;
+    max-height:460px!important;
+  }
+  #map .terrain-controls-below{grid-template-columns:1fr!important}
+}
+@media(max-width:430px){
+  #map .main-real-map{
+    height:clamp(280px,44dvh,400px)!important;
+    min-height:280px!important;
+    max-height:400px!important;
+  }
+}
