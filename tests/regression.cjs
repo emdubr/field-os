@@ -588,10 +588,10 @@ console.log('PASS Adaptive ETA panel sizes to content instead of stretching with
 assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
  assert.ok(workstationCss.includes('v3.72 MAP GESTURE'));
  assert.ok(workstationCss.includes('v3.72 MOBILE TASK-FIRST'));
- assert.ok(workstationCss.includes('v3.77 MOBILE COMMAND UI'));
- assert.ok(workstationCss.includes('v3.77 PHOSPHOR WORKSTATION'));
- assert.ok(workstationCss.includes('v3.77 MOBILE CRT LAYOUT'));
- assert.ok(workstationCss.includes('v3.77 MOBILE PERFORMANCE BUDGET'));
+ assert.ok(workstationCss.includes('v3.73 MOBILE COMMAND UI'));
+ assert.ok(workstationCss.includes('v3.74 PHOSPHOR WORKSTATION'));
+ assert.ok(workstationCss.includes('v3.75 MOBILE CRT LAYOUT'));
+ assert.ok(workstationCss.includes('v3.76 MOBILE PERFORMANCE BUDGET'));
  assert.ok(workstationCss.includes('v3.77 HOME DASHBOARD RESTORE'));
  assert.ok(workstationCss.includes('#home .console-mid-grid{display:grid!important'));
  assert.ok(workstationCss.includes('#home .console-bottom-grid{display:grid!important'));
