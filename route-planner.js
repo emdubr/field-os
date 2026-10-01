@@ -1294,10 +1294,15 @@
       const w=meters(node,point)*wayFactor(seg.tags);
       graph.adj.get(id).push({to,w,tags:seg.tags});mutableAdjacency(graph,to,true).push({to:id,w,tags:seg.tags});
     }
-    const first={...seg,b:id,pb:node},second={...seg,a:id,pa:node},segIndex=graph.segments.indexOf(seg);
-    if(graph.spatial)removeSpatialSegmentMutable(graph,seg);
-    graph.segments.splice(segIndex,1,first,second);
-    if(graph.spatial){addSpatialSegmentMutable(graph,first);addSpatialSegmentMutable(graph,second)}
+    const first={...seg,b:id,pb:node},second={...seg,a:id,pa:node};
+    if(graph.spatial?.size){
+      // Spatial buckets are authoritative for later endpoint snaps; avoid
+      // O(n) indexOf + splice on large trail arrays for every snapped point.
+      removeSpatialSegmentMutable(graph,seg);addSpatialSegmentMutable(graph,first);addSpatialSegmentMutable(graph,second);
+    }else{
+      const segIndex=graph.segments.indexOf(seg);
+      if(segIndex>=0)graph.segments.splice(segIndex,1,first,second);
+    }
     return {id,node,d:best.d};
   }
 
