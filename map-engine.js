@@ -131,7 +131,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,lastRenderKey:''
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:''
     };
 
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
@@ -231,17 +231,23 @@
         const visualZoom=pinch.visualZoom??Math.max(2,Math.min(maxZoom(),pinch.zoom+Math.log2(Math.max(.5,Math.min(2,ratio)))));
         const midX=pinch.lastMidX??pinch.midX,midY=pinch.lastMidY??pinch.midY;
         st.pinchStart=null;st.pointerDownOrigin=null;
-        // iOS releases the two pinch pointers one at a time. Continue from the
-        // remaining finger instead of ending the gesture and starting a second
-        // drag, which caused a visible jump at pinch release.
         const remaining=[...st.pointers.values()][0];
-        settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);
         if(remaining){
-          st.dragStart={x:remaining.x,y:remaining.y,center:{...st.center}};
-          st.pointerDownOrigin={x:remaining.x,y:remaining.y};
+          // Do not reconcile the compositor preview while iOS still owns one
+          // finger from the pinch. Freeze the exact visual frame and commit
+          // only when the final pointer is released.
+          st.deferredPinch={visualZoom,midX,midY,anchor:pinch.anchor};
+          st.dragStart=null;
         }else{
-          st.dragStart=null;st.el.classList.remove('native-map-dragging');
+          settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);
+          st.el.classList.remove('native-map-dragging');
         }
+        return;
+      }
+      if(st.deferredPinch){
+        const pinch=st.deferredPinch;st.deferredPinch=null;
+        st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');
+        settleFractionalZoom(pinch.visualZoom,pinch.midX,pinch.midY,pinch.anchor);
         return;
       }
       if(st.dragStart&&!wasTap){
@@ -260,7 +266,7 @@
       // A cancelled OS/browser gesture must never become a map tap.
       st.pointers.clear();
       try{st.el.releasePointerCapture?.(e.pointerId)}catch{}
-      st.dragStart=null;st.pinchStart=null;st.pointerDownOrigin=null;
+      st.dragStart=null;st.pinchStart=null;st.deferredPinch=null;st.pointerDownOrigin=null;
       st.el.classList.remove('native-map-dragging');
       if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
       clearTimeout(st.settleTimer);
