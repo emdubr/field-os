@@ -188,6 +188,17 @@
         </div></div>
       </section>
 
+      <section class="view" id="loramap" data-view="loramap">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA MAP</h2><div class="view-head-actions"><button class="ghost" id="loraMapFit">FIT NODES</button></div></div>
+        <article class="panel lora-map-card"><div class="panel-title"><span>MESHTASTIC NODE MAP</span><span class="tiny" id="loraMapState">WAITING FOR RADIO DATA</span></div><div id="loraRealMap" class="field-real-map lora-real-map" aria-label="Map of real Meshtastic node positions"></div><p class="muted" id="loraMapEmpty">No positioned Meshtastic nodes received. FIELD/OS will not invent node locations.</p></article>
+        <article class="panel"><div class="panel-title"><span>NODE LINKS</span><span class="tiny" id="loraNodeCount">0 NODES</span></div><div id="loraNodeList" class="mesh-node-roster"><p class="muted">Waiting for Meshtastic telemetry.</p></div></article>
+      </section>
+
+      <section class="view" id="lorachat" data-view="lorachat">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA CHAT</h2></div>
+        <article class="panel lora-chat-card"><div class="panel-title"><span>MESHTASTIC CHAT</span><span class="tiny" id="loraChatState">RADIO QUEUE</span></div><div id="loraChatLog" class="terminal-log lora-chat-log"><p class="muted">No LoRa messages in this session.</p></div><label class="field-label" for="loraChatChannel">CHANNEL</label><input id="loraChatChannel" class="terminal-input" value="PRIMARY" maxlength="32"/><label class="field-label" for="loraChatInput">MESSAGE</label><textarea id="loraChatInput" class="terminal-input" rows="3" maxlength="240" placeholder="Message over the connected Meshtastic transport"></textarea><div class="button-row"><button class="action" id="loraChatSend" type="button">SEND LORA MESSAGE</button></div><p class="muted">Messages are handed to the FIELD/OS transport queue. Delivery requires a connected Meshtastic transport.</p></article>
+      </section>
+
       <section class="view" id="map" data-view="map">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TERRAIN PLOT</h2><div class="view-head-actions"><button class="ghost map-location-toggle" id="requestLiveLocation" data-map-action="location-toggle" aria-pressed="false">LIVE LOCATION OFF</button><button class="ghost" id="centerBtn" data-map-action="center">CENTER</button></div></div>
         <article class="panel full-map terrain-map-card">
