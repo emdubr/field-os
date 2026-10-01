@@ -4267,3 +4267,24 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  #mission .mission-readiness-grid{grid-template-columns:1fr!important}
  #route .route-planner-toolbar{grid-template-columns:1fr 1fr!important}
 }
+
+/* v3.84 ROUTE EDIT + UI EFFICIENCY — deterministic touch editing, clearer hierarchy. */
+#routeEditPoints.active{border-color:var(--fg2)!important;background:color-mix(in srgb,var(--fg2) 16%,var(--panel2))!important;color:var(--fg2)!important}
+#routePlannerMap.route-edit-mode{cursor:crosshair}
+#routePlannerMap.route-edit-mode .planner-anchor-touch{background:var(--fg2)!important;color:var(--bg)!important;transform:scale(1.08)}
+@media(max-width:767px){
+ #route .route-planner-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #route .route-planner-mode,#route .route-anchor-readout{grid-column:1/-1!important}
+ #routeEditPoints{min-height:46px!important}
+ #routePlannerMap.route-edit-mode{outline:2px solid var(--fg2);outline-offset:-2px}
+ #routePlannerMap.route-edit-mode::after{content:"EDIT // TAP POINT → TAP NEW LOCATION";position:absolute;left:8px;right:8px;top:8px;z-index:700;padding:6px 8px;border:1px solid var(--fg2);background:rgba(1,10,5,.9);color:var(--fg2);font:700 8px/1.2 ui-monospace,monospace;pointer-events:none;text-align:center}
+ #route .route-live-telemetry{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ #route .route-live-telemetry>div{min-width:0!important;padding:6px!important}
+ #route .route-live-telemetry span{font-size:7px!important}
+ #route .route-live-telemetry b{font-size:10px!important}
+ #route .route-confidence-panel,#route .terrain-risk-panel,#route .trail-intel-panel{content-visibility:auto;contain-intrinsic-size:180px}
+ #mission .mission-readiness-action{min-width:52px;text-align:right}
+}
+@media(max-width:390px){
+ #route .route-live-telemetry{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
