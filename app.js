@@ -1183,20 +1183,21 @@ async function updateFieldMaps(recenter=false){
     return;
   }
   if(diag)diag.textContent='MAP ENGINE READY';
-  const states=[
-    ensureFieldMap('homeRealMap','homeMapFallback','homeMapModeLabel'),
-    ensureFieldMap('realMap','mapFallback','mapModeLabel')
-  ].filter(Boolean);
-  if(!states.length)return;
+  const activeView=document.querySelector('.view.active')?.id||'';
+  const states=[];
+  if(activeView==='home'||recenter)states.push(ensureFieldMap('homeRealMap','homeMapFallback','homeMapModeLabel'));
+  if(activeView==='map'||recenter)states.push(ensureFieldMap('realMap','mapFallback','mapModeLabel'));
+  const liveStates=states.filter(Boolean);
+  if(!liveStates.length)return;
   const trusted=hasTrustedMapPosition();
   const pack=await resolveActiveFieldPack();
   const useOffline=(fieldMapMode==='offline'||!navigator.onLine)&&!!pack;
   const canOnline=navigator.onLine!==false;
   if(!useOffline&&!canOnline){
-    states.forEach(s=>showFieldFallback(s,'NO NETWORK / NO OFFLINE PACK'));
+    liveStates.forEach(s=>showFieldFallback(s,'NO NETWORK / NO OFFLINE PACK'));
     return;
   }
-  for(const state of states){
+  for(const state of liveStates){
     try{
       const onlineKind=fieldMapMode==='osm'?'osm':'topo';
       await setFieldBase(state,useOffline?'offline':onlineKind,pack);
