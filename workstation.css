@@ -3738,3 +3738,14 @@ input,select,textarea{
  #sensors .sensor-list{grid-template-columns:1fr!important}
  #sensors .sensor-chart{height:175px!important}
 }
+
+/* v3.72 MAP GESTURE — GPU-backed continuous mobile pan/pinch preview. */
+.native-map-base,.native-map-terrain,.native-map-trails,.native-map-grid,.native-map-overlay,.native-map-editor-overlay{will-change:transform;backface-visibility:hidden;transform:translateZ(0)}
+.field-real-map.native-map-dragging{cursor:grabbing}
+@media(max-width:760px){
+ .field-real-map{touch-action:none!important;-webkit-user-select:none;user-select:none;overscroll-behavior:contain}
+ .native-map-corner{pointer-events:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .native-map-base,.native-map-terrain,.native-map-trails,.native-map-grid,.native-map-overlay,.native-map-editor-overlay{transition:none!important}
+}
