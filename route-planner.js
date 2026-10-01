@@ -579,12 +579,12 @@
         if(plannerHoverFrame)return;
         plannerHoverFrame=requestAnimationFrame(()=>{
           plannerHoverFrame=0;if(!pendingHoverPoint)return;
-          hoverPoint=pendingHoverPoint;pendingHoverPoint=null;drawPlannerPreview(authoritativeGeometry(state()?.getPoints?.()||[]));
+          hoverPoint=pendingHoverPoint;pendingHoverPoint=null;drawPlannerPreview(plannerDomRouteGeometry.length?plannerDomRouteGeometry:authoritativeGeometry(state()?.getPoints?.()||[]));
         });
       });
       plannerMap.on('mouseout',()=>{
         cancelAnimationFrame(plannerHoverFrame);plannerHoverFrame=0;pendingHoverPoint=null;
-        if(!hoverPoint)return;hoverPoint=null;drawPlannerPreview(authoritativeGeometry(state()?.getPoints?.()||[]));
+        if(!hoverPoint)return;hoverPoint=null;drawPlannerPreview(plannerDomRouteGeometry.length?plannerDomRouteGeometry:authoritativeGeometry(state()?.getPoints?.()||[]));
       });
     }
     plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
