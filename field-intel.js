@@ -871,8 +871,10 @@
   }
   document.addEventListener('click',e=>{const b=e.target.closest('[data-reroute]');if(!b)return;b.disabled=true;applyReroute(b.dataset.reroute).catch(()=>{}).finally(()=>b.disabled=false)});
   document.getElementById('restoreOriginalRoute')?.addEventListener('click',restoreOriginalRoute);
-  document.addEventListener('fieldos:positionchange',refreshReroute);document.addEventListener('fieldos:routechange',()=>setTimeout(refreshReroute,0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')refreshReroute()});
-  window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&document.querySelector('#nav.active'))refreshReroute()},5000);window.FIELD_RUNTIME.idle(refreshReroute,500);
+  const rerouteVisible=()=>!!document.querySelector('#nav.active');
+  const refreshVisibleReroute=()=>{if(rerouteVisible())refreshReroute()};
+  document.addEventListener('fieldos:positionchange',refreshVisibleReroute);document.addEventListener('fieldos:routechange',()=>window.FIELD_RUNTIME.frame('reroute-ui',refreshVisibleReroute));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')refreshReroute()});
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&rerouteVisible())refreshReroute()},5000);window.FIELD_RUNTIME.idle(refreshVisibleReroute,500);
   window.FIELD_REROUTE={compute:computeReroute,apply:applyReroute,restore:restoreOriginalRoute,refresh:refreshReroute,saveOriginal:saveOriginalForReroute};
 
   // Feature 04 — Escape / Bailout Planner.
