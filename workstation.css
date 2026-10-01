@@ -4112,3 +4112,25 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  .mission-readiness-action{font-size:6px}
 }
 @media(max-width:390px){.mission-readiness-grid{grid-template-columns:1fr!important}.mission-readiness-item{min-height:52px}}
+
+/* v3.81 MOBILE ROUTE EDITOR — draggable control points and efficient planner controls. */
+.planner-anchor-touch-wrap{background:transparent!important;border:0!important}
+.planner-anchor-touch{
+ display:grid;width:32px;height:32px;place-items:center;border-radius:50%;
+ border:2px solid var(--fg2);background:var(--panel);color:var(--fg2);
+ font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+ box-shadow:0 0 0 2px rgba(0,0,0,.7);
+ touch-action:none;user-select:none;-webkit-user-select:none;
+}
+@media(max-width:767px){
+ #route .route-planner-panel{padding:7px!important}
+ #route .route-planner-toolbar{display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important;position:sticky;top:48px;z-index:18;background:var(--bg);padding:5px 0}
+ #route .route-planner-mode,#route .route-anchor-readout{grid-column:1/-1!important}
+ #route .route-planner-toolbar .action{min-height:44px!important}
+ #route .route-planner-real-map{height:56dvh!important;min-height:390px!important;touch-action:none!important}
+ #route .route-planner-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}
+ #route .route-planner-actions>*{min-height:44px!important}
+ #route .planner-anchor-touch{width:38px;height:38px;font-size:12px;border-width:2px}
+ #route .planner-anchor-touch-wrap{margin-left:-3px!important;margin-top:-3px!important}
+ #route .route-planner-helpbar{position:sticky;bottom:58px;z-index:16;background:rgba(1,8,4,.94);padding:6px!important}
+}
