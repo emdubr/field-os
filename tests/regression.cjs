@@ -363,7 +363,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- assert.ok(swJs.includes("field-os-v3-74"));
+ assert.ok(swJs.includes("field-os-v3-75"));
  assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
@@ -381,7 +381,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.74');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.75');assert.equal(packageJson.version,release+'.0');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
@@ -581,8 +581,8 @@ console.log('PASS Adaptive ETA panel sizes to content instead of stretching with
 assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
  assert.ok(workstationCss.includes('v3.72 MAP GESTURE'));
  assert.ok(workstationCss.includes('v3.72 MOBILE TASK-FIRST'));
- assert.ok(workstationCss.includes('v3.74 MOBILE COMMAND UI'));
- assert.ok(workstationCss.includes('v3.74 PHOSPHOR WORKSTATION'));
+ assert.ok(workstationCss.includes('v3.75 MOBILE COMMAND UI'));
+ assert.ok(workstationCss.includes('v3.75 PHOSPHOR WORKSTATION'));
  assert.ok(workstationCss.includes('v3.75 MOBILE CRT LAYOUT'));
  assert.ok(workstationCss.includes("grid-template-columns:minmax(145px,.8fr) minmax(0,1.2fr)"));
  assert.ok(workstationCss.includes("body .tabbar .tab-btn.active span"));
@@ -632,7 +632,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.74</b>')&&workstationJs.includes('<em>v3.74</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.75</b>')&&workstationJs.includes('<em>v3.75</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
@@ -683,6 +683,6 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-74'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-75'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine'));console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
