@@ -292,7 +292,9 @@
     });
     scheduleRefresh();
   });
-  window.FIELD_RUNTIME.every(()=>{if(!document.hidden)scheduleRefresh()},5000);refresh();
-  window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();});
+  // Time-only workstation bands do not justify rebuilding every module card.
+  // Refresh the active shell on minute boundaries; state changes remain event-driven.
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden)scheduleRefresh()},60000);refresh();
+  window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();},{passive:true});
 })();
 
