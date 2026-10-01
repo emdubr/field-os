@@ -3692,3 +3692,26 @@ input,select,textarea{
   #workspaceResults{max-height:58dvh}
   .ws-launcher{display:none}
 }
+
+
+/* v3.70 COMPACT WORKSTATION FLOW */
+@media(min-width:1024px){
+  body .module-grid{
+    display:flex!important;flex-direction:column!important;gap:10px!important;
+    columns:auto!important;min-height:0!important
+  }
+  body .module-grid>*{width:100%!important;min-width:0!important;margin:0!important}
+  body .module-secondary-grid{
+    display:block!important;columns:2!important;column-gap:10px!important;
+    width:100%!important;min-height:0!important
+  }
+  body .module-secondary-grid>.module-slot{
+    display:inline-block!important;width:100%!important;margin:0 0 10px!important;
+    break-inside:avoid!important;page-break-inside:avoid!important;vertical-align:top
+  }
+  body .module-secondary-grid>.module-slot>.panel{height:auto!important;min-height:0!important}
+}
+@media(max-width:1023px){
+  body .module-secondary-grid{display:flex!important;flex-direction:column!important;gap:8px!important;width:100%!important}
+  body .module-secondary-grid>.module-slot{width:100%!important;margin:0!important}
+}
