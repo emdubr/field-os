@@ -316,16 +316,17 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
  const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
- assert.ok(html.includes('styles.css?v=3.61')&&html.includes('workstation.css?v=3.61')&&html.includes('field-tools.js?v=3.61'));
- assert.ok(appJs.includes("sw.js?v=3.61")&&appJs.includes("fieldos-sw-reloaded-v3.61"));
- assert.ok(swJs.includes("field-os-v3-61")&&swJs.includes("field-tools.js?v=3.61"));
- assert.ok(manifest.includes("index.html?v=3.61"));
+ const release=(html.match(/app\\.js\\?v=([\\d.]+)/)||[])[1];assert.equal(release,'3.67');
+ for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
+ assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
+ assert.ok(swJs.includes(`field-tools.js?v=${release}`));
+ assert.ok(manifest.includes(`index.html?v=${release}`));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS v3.61 cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS release cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
- assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
- assert.ok(routePlannerJs.includes("'BUILD: v3.61'"));
- console.log('PASS runtime workstation and route diagnostics display FIELD OS v3.61');
+ assert.ok(workstationJs.includes(`FIELD / OS <b>${release}</b>`)&&workstationJs.includes(`<em>v${release}</em>`)&&workstationJs.includes(`FIELD/OS ${release}`));
+ assert.ok(routePlannerJs.includes(`'BUILD: v${release}'`));
+ console.log('PASS runtime workstation and route diagnostics match the shipped release');
  assert.ok(appJs.includes("zoomSnap:.125")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:.125")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
@@ -542,7 +543,7 @@ assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
 assert.ok(workstationCss.includes('v3.67 QA/UI hardening'));
 assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.61</b>')&&workstationJs.includes('<em>v3.61</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.67</b>')&&workstationJs.includes('<em>v3.67</em>'));
 console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
 
 
