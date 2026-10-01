@@ -149,14 +149,25 @@
       if(st.gestureFrame)return;
       st.gestureFrame=requestAnimationFrame(()=>{st.gestureFrame=0;const p=st.pendingGesture;st.pendingGesture=null;if(p)paintGesture(p)});
     };
+    const commitGesture=()=>{
+      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0}
+      const pending=st.pendingGesture;st.pendingGesture=null;
+      if(pending)paintGesture(pending);
+      clearTimeout(st.settleTimer);
+      // Keep the compositor preview visible until render() has staged the
+      // replacement tile frame. This removes the release-time map snap.
+      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},0);
+    };
     const settleFractionalZoom=(visualZoom,clientX,clientY,anchor)=>{
-      // Prevent a queued preview, calculated against the old zoom, from
-      // repainting after the fractional zoom has been committed.
-      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
+      // Commit the camera immediately but retain the final compositor preview
+      // until the replacement tile frame is ready.
+      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0}
+      const pending=st.pendingGesture;st.pendingGesture=null;
+      if(pending)paintGesture(pending);
       const next=Math.max(2,Math.min(maxZoom(),visualZoom));
       preserveAnchor(anchor,clientX,clientY,next);st.zoom=next;
       clearTimeout(st.settleTimer);
-      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},160);
+      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},0);
     };
     const previewZoom=(scale,clientX,clientY)=>queueGesture(0,0,scale,clientX,clientY);
     const previewPinch=(scale,clientX,clientY,startX,startY,baseDx=0,baseDy=0)=>{
@@ -219,8 +230,7 @@
       if(wasTap&&typeof st.tapHandler==='function'){
         try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
       }else{
-        clearTimeout(st.settleTimer);
-        st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},120);
+        commitGesture();
       }
     };
     st.onPointerCancel=e=>{
