@@ -43,6 +43,10 @@
   let followEnabled=false;
   let latestFollowPosition=null;
   let gaiaRouteEnabled=true;
+  let suppressPlannerClickUntil=0;
+  let anchorEditTimer=0;
+  let lastOverlayGeometryKey='';
+  let lastDirectionGeometryKey='';
   const SAVED_ROUTES_KEY='fieldos-v12-saved-routes';
   const GAIA_LAYER_KEY='fieldos-v12-gaia-route-layer';
 
@@ -166,6 +170,11 @@
       }
     }
     return dedupe(out);
+  }
+  function routeGeometryKey(points=[]){
+    let h=2166136261;
+    for(const p of points){h=Math.imul(h^Math.round(Number(p.lat)*1e5),16777619);h=Math.imul(h^Math.round(Number(p.lon)*1e5),16777619)}
+    return points.length+':'+(h>>>0).toString(36);
   }
   function authoritativeGeometry(route=state()?.getPoints?.()||[]){
     const shared=dedupe((Array.isArray(route)?route:[]).filter(valid));
@@ -467,7 +476,7 @@
     plannerDirectionLayer=L.layerGroup().addTo(plannerMap);
     plannerUserLayer=L.layerGroup().addTo(plannerMap);
 
-    plannerMap.on('click',e=>{if(!busy)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
+    plannerMap.on('click',e=>{if(!busy&&Date.now()>=suppressPlannerClickUntil)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
     plannerMap.on('mousemove',e=>{
       if(busy||!anchors.length)return;
       hoverPoint={lat:e.latlng.lat,lon:e.latlng.lng};
@@ -501,16 +510,23 @@
     const map=ensurePlannerMap();
     if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer&&plannerDirectionLayer){
       const c=plannerColors();
-      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();plannerDirectionLayer.clearLayers();
+      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
       const pts=authoritativeGeometry(route);
       $('routePlannerMap')?.classList.toggle('route-has-line',gaiaRouteEnabled&&pts.length>1);
       const geometryState=$('routeGeometryState');
       if(geometryState)geometryState.textContent=pts.length>1?`SNAPPED GEOMETRY // ${pts.length} PTS`:'SNAPPED GEOMETRY // NONE';
 
-      // Route Layer: draw the authoritative geometry in a dedicated DOM SVG
-      // above Leaflet. This avoids Canvas/SVG pane renderer differences.
-      drawDomRouteLayer(pts);
-      const arrowCount=gaiaRouteEnabled&&pts.length>1?drawRouteDirections(pts,c):0;
+      // Expensive route projection/direction markers are rebuilt only when
+      // the actual geometry changes. Preview/anchor updates stay cheap.
+      const geometryKey=routeGeometryKey(pts);
+      if(geometryKey!==lastOverlayGeometryKey){drawDomRouteLayer(pts);lastOverlayGeometryKey=geometryKey}
+      let arrowCount=plannerDirectionLayer.getLayers?.().length||0;
+      const directionKey=(gaiaRouteEnabled?'1:':'0:')+geometryKey;
+      if(directionKey!==lastDirectionGeometryKey){
+        plannerDirectionLayer.clearLayers();
+        arrowCount=gaiaRouteEnabled&&pts.length>1?drawRouteDirections(pts,c):0;
+        lastDirectionGeometryKey=directionKey;
+      }
       if(geometryState&&pts.length>1)geometryState.textContent=`SNAPPED GEOMETRY // ${pts.length} PTS // ${arrowCount} ARROWS`;
 
       // While planning, always show the unresolved leg(s) immediately as a dashed guide.
@@ -537,9 +553,19 @@
       anchors.forEach((p,i)=>{
         if(!valid(p))return;
         const label=i===0?'S':i===anchors.length-1?'E':String(i);
-        L.circleMarker([p.lat,p.lon],{
-          pane:'fieldRouteAnchorPane',radius:8,color:c.fg,weight:2,fillColor:c.panel,fillOpacity:1
-        }).bindTooltip(label,{permanent:true,direction:'center',className:'planner-leaflet-label'}).addTo(plannerAnchorLayer);
+        const icon=L.divIcon({className:'planner-anchor-touch-wrap',html:`<span class="planner-anchor-touch">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]});
+        const marker=L.marker([p.lat,p.lon],{pane:'fieldRouteAnchorPane',icon,draggable:!busy,autoPan:true,keyboard:false,riseOnHover:true}).addTo(plannerAnchorLayer);
+        if(!busy){
+          marker.on('dragstart',()=>{suppressPlannerClickUntil=Date.now()+500;hoverPoint=null;status(`EDITING CONTROL POINT ${label} // DRAG TO NEW POSITION`,'loading')});
+          marker.on('dragend',e=>{
+            suppressPlannerClickUntil=Date.now()+500;
+            const ll=e.target.getLatLng();if(!Number.isFinite(ll.lat)||!Number.isFinite(ll.lng))return;
+            anchors=anchors.map((a,j)=>j===i?{lat:+ll.lat,lon:+ll.lng}:a);snapped=[];routingResolvedAnchors=0;
+            state()?.setMeta?.({anchors:anchors.map(a=>({...a})),routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'EDITING'});
+            overlay(state()?.getPoints?.()||[]);
+            clearTimeout(anchorEditTimer);anchorEditTimer=setTimeout(()=>recalculate(),90);
+          });
+        }
         const sp=snapped[i];
         if(valid(sp)){
           L.polyline([[p.lat,p.lon],[sp.lat,sp.lon]],{
@@ -1137,13 +1163,14 @@
     best.d=meters(p,best.node);if(best.d>maxMeters)return null;
     if(best.t<1e-8)return {id:best.seg.a,node:best.seg.pa,d:best.d};
     if(best.t>1-1e-8)return {id:best.seg.b,node:best.seg.pb,d:best.d};
-    const {seg,node}=best,id=`snap:${graph.nodes.size}`;node.id=id;graph.nodes.set(id,node);graph.adj.set(id,[]);
-    // Split the selected edge so two points on the same segment connect directly.
-    graph.adj.set(seg.a,(graph.adj.get(seg.a)||[]).filter(e=>e.to!==seg.b));
-    graph.adj.set(seg.b,(graph.adj.get(seg.b)||[]).filter(e=>e.to!==seg.a));
+    const {seg,node}=best,id=`snap:${graph.nodes.size}`;node.id=id;graph.nodes.set(id,node);graph.adj.set(id,[]);graph.adjOwned?.add(id);
+    // Split the selected edge using copy-on-write adjacency arrays so cached
+    // Overpass graphs remain immutable across route legs.
+    graph.adj.set(seg.a,(mutableAdjacency(graph,seg.a,true)||[]).filter(e=>e.to!==seg.b));graph.adjOwned?.add(seg.a);
+    graph.adj.set(seg.b,(mutableAdjacency(graph,seg.b,true)||[]).filter(e=>e.to!==seg.a));graph.adjOwned?.add(seg.b);
     for(const [to,point] of [[seg.a,seg.pa],[seg.b,seg.pb]]){
       const w=meters(node,point)*wayFactor(seg.tags);
-      graph.adj.get(id).push({to,w,tags:seg.tags});graph.adj.get(to).push({to:id,w,tags:seg.tags});
+      graph.adj.get(id).push({to,w,tags:seg.tags});mutableAdjacency(graph,to,true).push({to:id,w,tags:seg.tags});
     }
     const first={...seg,b:id,pb:node},second={...seg,a:id,pa:node},segIndex=graph.segments.indexOf(seg);
     if(graph.spatial)removeSpatialSegmentMutable(graph,seg);
@@ -1389,11 +1416,22 @@
     return {
       nodes:new Map(source.nodes),
       adj:new Map(source.adj),
+      adjShared:true,
+      adjOwned:new Set(),
       segments:source.segments.slice(),
       spatial:new Map(source.spatial),
       spatialShared:true,
       spatialOwned:new Set()
     };
+  }
+  function mutableAdjacency(graph,id,create=false){
+    let edges=graph.adj.get(id);
+    if(graph.adjShared&&!graph.adjOwned.has(id)){
+      edges=edges?edges.slice():(create?[]:null);
+      if(edges)graph.adj.set(id,edges);
+      graph.adjOwned.add(id);
+    }else if(!edges&&create){edges=[];graph.adj.set(id,edges)}
+    return edges;
   }
   function mutableSpatialBucket(graph,key,create=false){
     let bucket=graph.spatial.get(key);
@@ -1745,7 +1783,7 @@
       if(gradeInput)gradeInput.value=String(Math.round(profile.maxGrade));
       gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
       drawElevationProfile(profile,dist);
-      drawDomRouteLayer(authoritativeGeometry(pts));
+      refreshDomRouteLayer();
     }else{
       activeElevationProfile=null;
       const hasRoute=pts.length>1;
@@ -1757,7 +1795,6 @@
       set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
       set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
       renderElevationBreakdown(null,dist);
-      drawDomRouteLayer(authoritativeGeometry(pts));
     }
     return dist;
   }
