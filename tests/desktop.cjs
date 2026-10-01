@@ -111,6 +111,32 @@ const server=http.createServer((req,res)=>{
     for(const [key,value] of Object.entries(homeVisibility)){if(key!=='commands')assert.notEqual(value,'none',key+' should remain visible on mobile Home')}
     assert.equal(homeVisibility.commands,7);
     console.log('PASS full Home dashboard remains available on mobile while offscreen panes render lazily');
+    for(const width of [360,390,430]){
+      await page.setViewportSize({width,height:844});
+      await page.locator('#home .detailed-nav').scrollIntoViewIfNeeded();
+      const instruments=await page.evaluate(()=>{
+        const box=s=>document.querySelector(s).getBoundingClientRect();
+        const coords=box('#home .nav-toprow'),compass=box('#home .home-compass-cluster');
+        const title=box('#home .detailed-nav .terminal-title');
+        const chart=box('#home .detailed-sensors .mini-chart'),axis=box('#home .detailed-sensors .chart-axis');
+        const label=box('#home .detailed-sensors .mini-chart-title');
+        return {coordsClear:coords.bottom<=compass.top,titleVisible:title.height>0,labelAbove:label.bottom<=chart.top,axisBelow:axis.top>=chart.bottom};
+      });
+      for(const [name,ok] of Object.entries(instruments))assert.ok(ok,`${name} at ${width}px`);
+      await page.locator('#home .mesh-table').scrollIntoViewIfNeeded();
+      assert.ok(await page.locator('#home .mesh-table').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'Radio status and explanation wrap inside their panel');
+      await page.locator('#home .console-command-strip button').last().scrollIntoViewIfNeeded();
+      const commands=await page.evaluate(()=>{
+        const strip=document.querySelector('#home .console-command-strip');
+        const last=strip.querySelector('button:last-child').getBoundingClientRect();
+        const dock=document.querySelector('.tabbar').getBoundingClientRect();
+        return {position:getComputedStyle(strip).position,lastBottom:last.bottom,dockTop:dock.top};
+      });
+      assert.equal(commands.position,'static','Home commands must scroll with content');
+      assert.ok(commands.lastBottom<=commands.dockTop,'Last command is reachable above the fixed navigation');
+    }
+    console.log('PASS mobile coordinate/compass separation, chart label order, wrapped radio text and reachable commands');
+
 
     await page.setViewportSize({width:1280,height:900});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
