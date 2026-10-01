@@ -397,7 +397,9 @@
         return;
       }
       plannerMobileTap=null;
-      if(cancelled||tap.moved||plannerMobilePointers.size||busy||ignoreTarget(e))return;
+      if(cancelled||tap.moved||plannerMobilePointers.size||busy)return;
+      // pointerup may be retargeted after the browser's touch gesture lifecycle;
+      // eligibility is decided at pointerdown, where controls/anchors are excluded.
       if(Date.now()-tap.time>700||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>12)return;
       const rect=el.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
       if(x<0||y<0||x>rect.width||y>rect.height)return;
