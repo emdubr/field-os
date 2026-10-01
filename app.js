@@ -252,7 +252,7 @@ function headingCardinal(deg){
   return dirs[Math.round(deg / 45) % 8];
 }
 window.FIELD_RUNTIME.every(()=>{
-  if(document.hidden)return;
+  if(document.hidden||!document.querySelector('#home.active,#sensors.active,#nav.active,#map.active,#breadcrumb.active'))return;
   demo.heading = (demo.heading + (Math.random() > .5 ? 1 : -1) + 360) % 360;
   demo.alt += Math.random() > .5 ? 1 : -1;
   demo.press += Math.random() > .58 ? 0.1 : -0.1;
