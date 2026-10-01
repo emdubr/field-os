@@ -277,7 +277,9 @@
       if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{
         st.renderFrame=0;
         const delta=st.wheelDelta;st.wheelDelta=0;
-        st.wheelZoom=Math.max(-.9,Math.min(.9,st.wheelZoom-delta/420));
+        // Trackpads can deliver very dense wheel bursts. A slightly lower gain
+        // avoids oscillating across integer tile zoom boundaries every frame.
+        st.wheelZoom=Math.max(-.75,Math.min(.75,st.wheelZoom-delta/560));
         const previewAnchor=st.wheelAnchor;
         previewZoom(Math.pow(2,st.wheelZoom),previewAnchor?.x??anchorX,previewAnchor?.y??anchorY);
       });
@@ -286,7 +288,7 @@
         const fractional=st.wheelZoom,anchor=st.wheelAnchor;st.wheelZoom=0;st.wheelAnchor=null;
         if(Math.abs(fractional)<.04){applyRestingCamera();return}
         settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional)),anchor?.x??0,anchor?.y??0,anchor?.point);
-      },90);
+      },120);
     };
     st.onDbl=e=>{
       e.preventDefault();
