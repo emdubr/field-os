@@ -1053,7 +1053,7 @@
 
   document.addEventListener('fieldos:positionchange',e=>{
     const p=e.detail;
-    if(valid(p)){latestFollowPosition={...p};drawPlannerPosition(latestFollowPosition)}
+    if(valid(p)){latestFollowPosition={...p};if(routeVisible())drawPlannerPosition(latestFollowPosition)}
   });
 
 
