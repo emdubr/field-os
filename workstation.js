@@ -22,7 +22,7 @@
   // Offline keyboard launcher; native dialog supplies focus trapping and Escape.
   const launcher=document.createElement('button');
   launcher.type='button';launcher.className='ws-launcher';launcher.id='workspaceSearch';
-  launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-controls','workspaceSwitcher');
+  launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-controls','workspaceSwitcher');launcher.setAttribute('aria-expanded','false');
   launcher.innerHTML='<span>FIND A MODULE</span><kbd>Ctrl / ⌘ K</kbd>';
   nav.querySelector('.ws-brand').after(launcher);
   const switcher=document.createElement('dialog');switcher.id='workspaceSwitcher';switcher.className='workspace-switcher';
@@ -54,6 +54,7 @@
   }
   function switcherOpen(){return switcher.open||switcher.hasAttribute('data-open')}
   function closeSwitcher(){
+    launcher.setAttribute('aria-expanded','false');
     if(switcher.open&&typeof switcher.close==='function')switcher.close();
     else{switcher.removeAttribute('data-open');switcher.removeAttribute('open');switcher.dispatchEvent(new Event('close'))}
   }
@@ -62,7 +63,7 @@
     returnFocus=document.activeElement;query.value='';
     try{if(typeof switcher.showModal==='function')switcher.showModal();else throw new Error('dialog unsupported')}
     catch{switcher.setAttribute('open','');switcher.setAttribute('data-open','fallback')}
-    findModules();requestAnimationFrame(()=>query.focus({preventScroll:true}));
+    launcher.setAttribute('aria-expanded','true');findModules();requestAnimationFrame(()=>query.focus({preventScroll:true}));
   }
   function activateMatch(index){
     const item=matches[index];if(!item)return;
@@ -70,13 +71,17 @@
   }
   launcher.addEventListener('click',showSwitcher);
   switcher.querySelector('.switcher-close').addEventListener('click',closeSwitcher);
-  switcher.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+  switcher.addEventListener('close',()=>{launcher.setAttribute('aria-expanded','false');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
   switcher.addEventListener('click',e=>{
     const option=e.target.closest('[data-result-index]');
     if(option)activateMatch(Number(option.dataset.resultIndex));
-    else if(e.target===switcher){const r=switcher.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)switcher.close();}
+    else if(e.target===switcher){const r=switcher.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSwitcher();}
   });
   switcher.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();closeSwitcher();}});
+  document.addEventListener('pointerdown',e=>{
+    if(!switcher.hasAttribute('data-open'))return;
+    if(e.target!==launcher&&!switcher.contains(e.target))closeSwitcher();
+  },true);
   query.addEventListener('input',findModules);
   query.addEventListener('keydown',e=>{
     if(e.isComposing)return;
