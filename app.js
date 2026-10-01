@@ -1557,6 +1557,9 @@ document.addEventListener('click',e=>{
   const action=btn.dataset.mapAction,target=btn.dataset.mapTarget||'realMap';
   runMapControl(action,target);
 });
+const liveNavNodeIds=['navHeading','navHeadingCardinal','navAccuracy','navCompassSource','navPositionSource','navStripPos','navStripAcc','navStripSpeed','navStripHeading','navStripRoute','navStripTrack','navCourseQuality','navHeadingMode','homeHeading','homeHeadingCardinal','homeCompassSource'];
+const liveNavNodes=Object.fromEntries(liveNavNodeIds.map(id=>[id,document.getElementById(id)]));
+const liveNavRotors=['navCompassRotor','homeCompassRotor'].map(id=>document.getElementById(id)).filter(Boolean);
 function updateLiveNavigationUI(){
   const trusted=hasTrustedMapPosition();
   const deviceHeading=Number.isFinite(fieldDeviceHeading)?fieldDeviceHeading:null;
@@ -1565,7 +1568,7 @@ function updateLiveNavigationUI(){
   const source=Number.isFinite(deviceHeading)?(fieldDeviceHeadingSource||'DEVICE'):Number.isFinite(courseHeading)?'GNSS COURSE':trusted?'NO HEADING':'DEMO';
   const speed=trusted?(Number.isFinite(fieldLiveSpeed)?fieldLiveSpeed:null):demo.speed;
   const card=Number.isFinite(heading)?headingCardinal(heading):'--';
-  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+  const set=(id,value)=>{const el=liveNavNodes[id];if(el&&el.textContent!==value)el.textContent=value;};
   const headingText=Number.isFinite(heading)?String(Math.round(heading)).padStart(3,'0')+'°':'---°';
   set('navHeading',headingText);
   set('navHeadingCardinal',card);
@@ -1581,14 +1584,11 @@ function updateLiveNavigationUI(){
   set('navCourseQuality',source);
   set('navHeadingMode',Number.isFinite(deviceHeading)?(fieldDeviceHeadingSource.includes('MAG')?'MAG':'DEVICE'):Number.isFinite(courseHeading)?'GNSS':'—');
 
-  for(const id of ['navCompassRotor','homeCompassRotor']){
-    const rotor=document.getElementById(id);
-    if(rotor){
-      const angle=Number.isFinite(heading)?heading:0;
-      rotor.removeAttribute('transform');
-      rotor.style.setProperty('--compass-heading',`${angle}deg`);
-      rotor.classList.toggle('no-course',!Number.isFinite(heading));
-    }
+  for(const rotor of liveNavRotors){
+    const angle=Number.isFinite(heading)?heading:0;
+    rotor.removeAttribute('transform');
+    rotor.style.setProperty('--compass-heading',`${angle}deg`);
+    rotor.classList.toggle('no-course',!Number.isFinite(heading));
   }
   set('homeHeading',headingText);
   set('homeHeadingCardinal',card);
