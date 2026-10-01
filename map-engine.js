@@ -119,12 +119,21 @@
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null
     };
 
-    const transformLayers=(transform,origin='50% 50%')=>{
+    const transformLayers=(transform,origin='50% 50%',transition='')=>{
       for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){
-        layer.style.transformOrigin=origin;layer.style.transform=transform;
+        layer.style.transition=transition;layer.style.transformOrigin=origin;layer.style.transform=transform;
       }
     };
-    const resetTransform=()=>transformLayers('','50% 50%');
+    const resetTransform=(transition='')=>transformLayers('','50% 50%',transition);
+    const settleFractionalZoom=(visualZoom,clientX,clientY,anchor)=>{
+      const committed=Math.max(2,Math.min(maxZoom(),Math.round(visualZoom)));
+      preserveAnchor(anchor,clientX,clientY,committed);st.zoom=committed;
+      const residual=Math.pow(2,visualZoom-committed),rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
+      render(st);
+      transformLayers(`scale(${residual})`,`${x}px ${y}px`);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>resetTransform('transform 140ms cubic-bezier(.2,.8,.2,1)')));
+      setTimeout(()=>resetTransform(),170);
+    };
     const previewZoom=(scale,clientX,clientY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
       transformLayers(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
@@ -165,7 +174,7 @@
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
-        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;previewPinch(Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
+        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch(Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
         const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next.toFixed(1)}`;
       }
     };
@@ -175,10 +184,11 @@
       const origin=st.pointerDownOrigin;
       const wasTap=!!(origin&&old.length===1&&!st.pinchStart&&Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<7);
       if(st.pinchStart&&old.length>=2){
-        const dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,st.pinchStart.dist);
-        const nextZoom=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
-        preserveAnchor(st.pinchStart.anchor,st.pinchStart.lastMidX??st.pinchStart.midX,st.pinchStart.lastMidY??st.pinchStart.midY,nextZoom);st.zoom=nextZoom;
-        st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;resetTransform();render(st);return;
+        const pinch=st.pinchStart,dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,pinch.dist);
+        const visualZoom=pinch.visualZoom??Math.max(2,Math.min(maxZoom(),pinch.zoom+Math.log2(Math.max(.5,Math.min(2,ratio)))));
+        const midX=pinch.lastMidX??pinch.midX,midY=pinch.lastMidY??pinch.midY;
+        st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');
+        settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);return;
       }
       if(st.dragStart&&!wasTap){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
@@ -204,12 +214,9 @@
       });
       clearTimeout(st.wheelTimer);
       st.wheelTimer=setTimeout(()=>{
-        const step=Math.abs(st.wheelZoom)<.12?0:Math.sign(st.wheelZoom);
-        st.wheelZoom=0;resetTransform();
-        if(!step){st.wheelAnchor=null;return}
-        const nextZoom=Math.max(2,Math.min(maxZoom(),st.zoom+step)),anchor=st.wheelAnchor;st.wheelAnchor=null;
-        preserveAnchor(anchor?.point,anchor?.x??0,anchor?.y??0,nextZoom);st.zoom=nextZoom;
-        render(st);
+        const fractional=st.wheelZoom,anchor=st.wheelAnchor;st.wheelZoom=0;st.wheelAnchor=null;
+        if(Math.abs(fractional)<.04){resetTransform('transform 100ms ease-out');setTimeout(()=>resetTransform(),120);return}
+        settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional)),anchor?.x??0,anchor?.y??0,anchor?.point);
       },90);
     };
     st.onDbl=e=>{
