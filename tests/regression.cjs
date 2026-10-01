@@ -567,7 +567,11 @@ assert.ok(workstationCss.includes('#route .route-performance-panel{'));
 assert.ok(workstationCss.includes('align-self:start!important'));
 console.log('PASS Adaptive ETA panel sizes to content instead of stretching with route map');
 
-assert.ok(workstationCss.includes('MOBILE DOCK REBUILD'));
+assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
+ assert.ok(appJs.includes("function sensorSummary()"));
+ assert.ok(appJs.includes("devicePixelRatio"));
+ assert.ok(html.includes('class="sensor-live-summary"'));
+ assert.ok(workstationCss.includes('MOBILE DOCK REBUILD'));
 assert.ok(workstationCss.includes('grid-template-columns:repeat(5,minmax(0,1fr))!important'));
 assert.ok(workstationCss.includes('bottom:var(--mobile-dock-h)!important'));
 assert.ok(workstationCss.includes('.tab-sheet.open{'));
