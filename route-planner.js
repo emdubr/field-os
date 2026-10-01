@@ -1043,6 +1043,31 @@
     return 1.4;
   }
 
+  const SPATIAL_CELL=.01;
+  const spatialCell=v=>Math.floor(Number(v)/SPATIAL_CELL);
+  function spatialKeys(seg){
+    const minLat=spatialCell(Math.min(seg.pa.lat,seg.pb.lat)),maxLat=spatialCell(Math.max(seg.pa.lat,seg.pb.lat));
+    const minLon=spatialCell(Math.min(seg.pa.lon,seg.pb.lon)),maxLon=spatialCell(Math.max(seg.pa.lon,seg.pb.lon)),keys=[];
+    for(let y=minLat;y<=maxLat;y++)for(let x=minLon;x<=maxLon;x++)keys.push(y+':'+x);
+    return keys;
+  }
+  function addSpatialSegment(index,seg){
+    for(const key of spatialKeys(seg)){let bucket=index.get(key);if(!bucket)index.set(key,bucket=new Set());bucket.add(seg)}
+  }
+  function removeSpatialSegment(index,seg){
+    for(const key of spatialKeys(seg)){const bucket=index.get(key);if(!bucket)continue;bucket.delete(seg);if(!bucket.size)index.delete(key)}
+  }
+  function buildSpatialIndex(segments){
+    const index=new Map();for(const seg of segments)addSpatialSegment(index,seg);return index;
+  }
+  function nearbySegments(graph,p,maxMeters){
+    if(!graph.spatial?.size)return graph.segments;
+    const latPad=maxMeters/111320,cos=Math.max(.01,Math.cos(p.lat*Math.PI/180)),lonPad=maxMeters/(111320*cos);
+    const minLat=spatialCell(p.lat-latPad),maxLat=spatialCell(p.lat+latPad),minLon=spatialCell(p.lon-lonPad),maxLon=spatialCell(p.lon+lonPad),found=new Set();
+    for(let y=minLat;y<=maxLat;y++)for(let x=minLon;x<=maxLon;x++)for(const seg of graph.spatial.get(y+':'+x)||[])found.add(seg);
+    return found.size?[...found]:graph.segments;
+  }
+
   function buildGraph(elements){
     const nodes=new Map(),adj=new Map(),segments=[];
     const addNode=(id,p)=>{if(!nodes.has(id))nodes.set(id,{id,lat:+p.lat,lon:+p.lon})};
@@ -1061,13 +1086,13 @@
         segments.push({a,b,pa,pb,tags:way.tags||{}});
       }
     }
-    return {nodes,adj,segments};
+    return {nodes,adj,segments,spatial:buildSpatialIndex(segments)};
   }
 
   function nearestNode(graph,p,maxMeters=500){
     let best=null;
     const cos=Math.max(.01,Math.cos(p.lat*Math.PI/180));
-    for(const seg of graph.segments){
+    for(const seg of nearbySegments(graph,p,maxMeters)){
       const dx=(seg.pb.lon-seg.pa.lon)*cos,dy=seg.pb.lat-seg.pa.lat;
       const t=clamp(((p.lon-seg.pa.lon)*cos*dx+(p.lat-seg.pa.lat)*dy)/(dx*dx+dy*dy||1),0,1);
       const node={lat:seg.pa.lat+t*(seg.pb.lat-seg.pa.lat),lon:seg.pa.lon+t*(seg.pb.lon-seg.pa.lon)};
@@ -1084,7 +1109,10 @@
       const w=meters(node,point)*wayFactor(seg.tags);
       graph.adj.get(id).push({to,w,tags:seg.tags});graph.adj.get(to).push({to:id,w,tags:seg.tags});
     }
-    graph.segments.splice(graph.segments.indexOf(seg),1,{...seg,b:id,pb:node},{...seg,a:id,pa:node});
+    const first={...seg,b:id,pb:node},second={...seg,a:id,pa:node},segIndex=graph.segments.indexOf(seg);
+    if(graph.spatial)removeSpatialSegment(graph.spatial,seg);
+    graph.segments.splice(segIndex,1,first,second);
+    if(graph.spatial){addSpatialSegment(graph.spatial,first);addSpatialSegment(graph.spatial,second)}
     return {id,node,d:best.d};
   }
 
@@ -1334,7 +1362,8 @@
       throw e;
     }
 
-    const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments:source.segments.slice()};
+    const segments=source.segments.map(seg=>({...seg}));
+    const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments,spatial:buildSpatialIndex(segments)};
     const snapRadius=retry?1200:550;
 
     const sa=nearestNode(graph,a,snapRadius);
