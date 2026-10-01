@@ -4028,3 +4028,17 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  #home .event-lines{max-height:145px;overflow:auto}
  #home .survival-rich{display:grid!important;grid-template-columns:1fr 1fr!important}
 }
+
+/* v3.78 ACTIONABLE READINESS */
+.mission-readiness-item{
+  appearance:none;-webkit-appearance:none;width:100%;font:inherit;color:inherit;text-align:left;
+  cursor:pointer;position:relative;transition:border-color 90ms ease,background-color 90ms ease,transform 90ms ease;
+}
+.mission-readiness-item:hover,.mission-readiness-item:focus-visible{border-color:var(--fg2);background:var(--panel3);outline:1px solid var(--fg2);outline-offset:1px}
+.mission-readiness-item:active{transform:translateY(1px)}
+.mission-readiness-action{grid-column:2;color:var(--fg2);font-size:7px;font-weight:700;letter-spacing:.08em;line-height:1.2}
+.mission-readiness-item.ok .mission-readiness-action{color:var(--dim)}
+@media(max-width:760px){
+ .mission-readiness-item{min-height:78px;padding:9px!important}
+ .mission-readiness-action{font-size:8px}
+}
