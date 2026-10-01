@@ -644,6 +644,31 @@
   document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},nodes=Array.isArray(d.mesh?.nodeList)?d.mesh.nodeList:Array.isArray(d.mesh?.nodes)?d.mesh.nodes:Array.isArray(d.nodes)?d.nodes:null;if(nodes)ingestMeshNodes(nodes)});
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
+  // LoRa Map + Chat — first-class views backed by real Meshtastic telemetry/transport.
+  const loraChatState={messages:read('lora-chat',[])||[]};
+  function loraEsc(v){return esc(String(v??''))}
+  function renderLoraMap(){
+    const map=document.getElementById('loraRealMap'),empty=document.getElementById('loraMapEmpty'),roster=document.getElementById('loraMapRoster'),state=document.getElementById('loraMapState'),count=document.getElementById('loraPositionedCount');if(!map&&!roster)return;
+    const nodes=(meshState.nodes||[]),positioned=nodes.filter(n=>Number.isFinite(Number(n.lat))&&Number.isFinite(Number(n.lon)));
+    if(state)state.textContent=nodes.length?`${nodes.length} NODES // ${positioned.length} POSITIONED`:'NO RADIO DATA';if(count)count.textContent=`${positioned.length} POSITIONED`;
+    if(roster)roster.innerHTML=nodes.length?nodes.map(n=>`<div class="mesh-node-row ${meshQuality(n)}"><b>${loraEsc(n.name||n.id)}</b><span>${meshAgeLabel(n.lastHeard)} AGO</span><small>${Number.isFinite(Number(n.lat))?`${Number(n.lat).toFixed(5)}, ${Number(n.lon).toFixed(5)}`:'NO POSITION'} // ${Number.isFinite(n.rssi)?'RSSI '+Math.round(n.rssi)+' dBm':'RSSI —'} // ${Number.isFinite(n.snr)?'SNR '+Number(n.snr).toFixed(1)+' dB':'SNR —'} // ${Number.isFinite(n.hops)?n.hops+' HOPS':'HOPS —'}</small></div>`).join(''):'<p class="muted">No Meshtastic node telemetry received.</p>';
+    if(empty)empty.hidden=positioned.length>0;if(!map)return;
+    if(!positioned.length){map.innerHTML='';return}
+    const all=[...positioned,{lat:getPosition().lat,lon:getPosition().lon,name:'YOU',self:true}].filter(validPoint),minLat=Math.min(...all.map(n=>Number(n.lat))),maxLat=Math.max(...all.map(n=>Number(n.lat))),minLon=Math.min(...all.map(n=>Number(n.lon))),maxLon=Math.max(...all.map(n=>Number(n.lon))),dx=Math.max(.0001,maxLon-minLon),dy=Math.max(.0001,maxLat-minLat);
+    const pts=all.map(n=>({...n,x:40+720*(Number(n.lon)-minLon)/dx,y:380-340*(Number(n.lat)-minLat)/dy}));
+    map.innerHTML=`<svg viewBox="0 0 800 420" role="img" aria-label="Relative geographic plot of positioned LoRa nodes"><path d="M0 105H800M0 210H800M0 315H800M200 0V420M400 0V420M600 0V420" class="lora-grid"/>${pts.map(n=>`<g class="${n.self?'lora-self':'lora-node'}"><circle cx="${n.x}" cy="${n.y}" r="${n.self?9:7}"/><text x="${Math.min(730,n.x+12)}" y="${Math.max(16,n.y-8)}">${loraEsc(n.name||n.id)}</text></g>`).join('')}</svg>`;
+  }
+  function persistLoraChat(){write('lora-chat',loraChatState.messages.slice(-200))}
+  function renderLoraChat(){const box=document.getElementById('loraChatTimeline'),state=document.getElementById('loraChatState');if(!box)return;const msgs=loraChatState.messages.slice(-100);box.innerHTML=msgs.length?msgs.map(m=>`<div class="message ${m.direction==='out'?'lora-out':'lora-in'}"><b>${loraEsc(m.from||m.channel||'LORA')}</b><span>${new Date(m.time||Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span><p>${loraEsc(m.text)}</p></div>`).join(''):'<p class="muted">No LoRa messages received yet.</p>';if(state)state.textContent=`${msgs.length} MESSAGE${msgs.length===1?'':'S'}`}
+  function ingestLoraMessage(detail={}){const text=detail.text??detail.message??detail.payload?.text;if(!text)return;loraChatState.messages.push({text:String(text),from:detail.from||detail.sender||detail.node||'LORA',channel:detail.channel||'PRIMARY',time:Number(detail.time||detail.timestamp)||Date.now(),direction:'in'});persistLoraChat();renderLoraChat()}
+  function sendLoraMessage(){const input=document.getElementById('loraChatInput'),channel=document.getElementById('loraChatChannel')?.value||'PRIMARY',text=input?.value?.trim();if(!text)return;document.dispatchEvent(new CustomEvent('fieldos:outgoingmessage',{detail:{text,channel,meta:{source:'lora-chat',transport:'meshtastic'}},cancelable:true}));loraChatState.messages.push({text,from:'YOU',channel,time:Date.now(),direction:'out'});persistLoraChat();if(input)input.value='';renderLoraChat()}
+  document.getElementById('loraChatSend')?.addEventListener('click',sendLoraMessage);document.getElementById('loraChatInput')?.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendLoraMessage()}});
+  document.addEventListener('fieldos:meshroster',renderLoraMap);document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#loramap.active'))renderLoraMap()});
+  document.addEventListener('fieldos:meshtasticmessage',e=>ingestLoraMessage(e.detail||{}));document.addEventListener('fieldos:meshmessage',e=>ingestLoraMessage(e.detail||{}));
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='loramap')renderLoraMap();if(e.detail?.view==='lorachat')renderLoraChat()});
+  setTimeout(()=>{renderLoraMap();renderLoraChat()},260);
+  window.FIELD_LORA={renderMap:renderLoraMap,renderChat:renderLoraChat,ingestMessage:ingestLoraMessage,send:sendLoraMessage,state:loraChatState};
+
 
   // v3.67 dedicated real-data LoRa map + chat surfaces.
   let loraMap=null,loraLayer=null;
