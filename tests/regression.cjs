@@ -280,9 +280,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS mapped branch intersections generate junction-topology warnings with alternate trail labels');
  assert.ok(appJs.includes("const DOT12_PREFIX = 'fieldos-v1.2-'"));
  assert.ok(appJs.includes("window.FIELD_MAP_ENGINE?.unmount?.('homeRealMap')"));
- assert.ok(appJs.includes("if(useOffline){\n    fieldNativeDestroyAll();"));
- assert.ok(appJs.includes("return fieldLegacyUpdateFieldMaps(recenter)"));
- assert.ok(appJs.includes("if(action==='location')return engine?.toggleLiveLocation?.()"));
+ assert.ok(appJs.includes("setFieldBase(state,useOffline?'offline':onlineKind,pack)"));
+ assert.ok(appJs.includes("if(action==='location'||action==='location-toggle')return engine?.toggleLiveLocation?.()"));
  assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
  assert.ok(mapEngineJs.includes("function isVisible(st)"));
  assert.ok(mapEngineJs.includes("fieldos:mapstatechange"));
