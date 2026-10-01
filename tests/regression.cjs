@@ -353,7 +353,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
  assert.ok(mapEngineJs.includes("if(isVisible(st)){st.rendered=true;render(st)}"));
  assert.ok(mapEngineJs.includes("if(!isVisible(st))"));
- assert.ok(mapEngineJs.includes("drawOverlay(st,Math.max(250"));
+ assert.ok(mapEngineJs.includes("const overlaySize=st=>")&&mapEngineJs.includes("drawOverlay(st,w,h)"));
  assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
  assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
  assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
