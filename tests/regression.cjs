@@ -726,4 +726,15 @@ assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(Stri
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
 assert.ok(swJs.includes("const CACHE='field-os-v3-80'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
-assert.ok(!appJs.includes('/* v2.3 native online map engine'));console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
+assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
+ assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
+ assert.ok(routePlannerJs.includes("removeSpatialSegmentMutable"));
+ console.log('PASS route planner clones spatial index with copy-on-write spatial buckets');
+ assert.ok(mapEngineJs.includes("Invert the compositor's residual fractional-zoom transform"));
+ assert.ok(mapEngineJs.includes("dx/scale"));
+ console.log('PASS native map inverts residual zoom for touch anchors and drag commits');
+ assert.ok(workstationCss.includes('v3.78 READINESS + ROUTE EFFICIENCY'));
+ assert.ok(fieldIntelJs.includes('data-readiness-id'));
+ assert.ok(fieldIntelJs.includes('FIELD_MISSION_READINESS'));
+ console.log('PASS mission readiness is actionable and styled as touch controls');
+console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
