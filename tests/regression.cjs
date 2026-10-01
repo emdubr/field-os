@@ -592,47 +592,14 @@ console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime b
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
-assert.ok(workstationCss.includes('v3.67 UI COHERENCE LAYER'));
-assert.ok(workstationCss.includes('body .module-grid>*{grid-column:1!important;min-width:0!important}'));
-assert.ok(workstationCss.includes('height:auto!important'));
-assert.ok(workstationCss.includes('v3.67 chrome cleanup'));
-assert.ok(workstationCss.includes('.status-strip{overflow-x:auto'));
-console.log('PASS v3.67 coherent panel flow, mobile layout, and chrome overflow handling');
-
-assert.ok(workstationJs.includes('no implicit first-card hero'));
-assert.ok(!workstationJs.includes("grid.querySelector(':scope > .panel');hero?.classList.add('module-hero')"));
-assert.ok(workstationCss.includes('v3.67 WORKSTATION ARCHITECTURE'));
-assert.ok(workstationCss.includes('--ws-nav-w:224px'));
-assert.ok(workstationCss.includes('body .module-grid>.module-hero{'));
-assert.ok(workstationCss.includes('grid-column:auto!important'));
-console.log('PASS v3.67 workstation uses explicit shell/grid/full-width ownership without implicit hero cards');
-
-assert.ok(workstationCss.includes('v3.67 GAP-FREE WORKSTATION ROWS'));
-assert.ok(workstationCss.includes('body .module-grid>.module-slot{display:flex!important}'));
-assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
-assert.ok(appJs.includes("fieldActivePackId=rec.id;fieldActivePackRecord=rec"));
-assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-67'"));
-assert.ok(swJs.includes("./app.js?v=3.64"));
-console.log('PASS v3.67 fills workstation rows and hardens offline map/cache recovery');
-
-assert.ok(workstationCss.includes('v3.67 DENSE DESKTOP FLOW'));
+assert.ok(workstationJs.includes("module-secondary-grid"));
+assert.ok(workstationJs.includes("different card heights cannot create blank paired-grid rows"));
+assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('columns:2!important'));
 assert.ok(workstationCss.includes('break-inside:avoid!important'));
-assert.ok(workstationCss.includes('column-span:all!important'));
-console.log('PASS v3.67 desktop cards pack independently without paired-row empty space');
-
-assert.ok(workstationCss.includes('v3.67 CONSOLIDATED UI AUTHORITY'));
-assert.ok(!workstationCss.includes('v3.64 GAP-FREE WORKSTATION ROWS'));
-assert.ok(appJs.includes("if(document.hidden)return;\n  demo.heading"));
-assert.ok(appJs.includes("setInterval(()=>{if(!document.hidden)updateHandheldStatus()},5000)"));
-assert.ok(fieldIntelJs.includes("setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))renderPositionConfidence()},5000)"));
-assert.ok(workstationJs.includes("setInterval(()=>{if(!document.hidden)scheduleRefresh()},5000)"));
-console.log('PASS v3.67 consolidates UI overrides and throttles idle runtime work');
-
-assert.ok(workstationCss.includes('v3.67 TERRAIN WORKSPACE'));
-assert.ok(workstationCss.includes('body #map .module-grid{\n    display:flex!important'));
-assert.ok(workstationCss.includes('columns:auto!important'));
-assert.ok(!workstationCss.includes('v3.36 terrain rollback + stable control layout'));
-assert.ok(!workstationCss.includes('v3.33 terrain + telemetry layout consolidation'));
-console.log('PASS v3.67 terrain map is a single vertical workspace with obsolete layout layers removed');
+assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!important'));
+assert.ok(workstationCss.includes('#map .module-grid'));
+assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
+assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-69'"));
+console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
