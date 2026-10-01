@@ -33,7 +33,11 @@ const server=http.createServer((req,res)=>{
     await page.locator('#workspaceSearch').click();await page.keyboard.press('Escape');
     await page.waitForTimeout(30);
     assert.equal(await page.evaluate(()=>document.activeElement.id),'workspaceSearch');
-    await page.keyboard.press('Control+k');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+    await page.keyboard.press('Control+k');
+    await page.locator('#workspaceQuery').focus();
+    await page.keyboard.press('ArrowDown');
+    assert.equal(await page.locator('#workspaceQuery').getAttribute('aria-activedescendant'),'workspace-option-map');
+    await page.keyboard.press('Enter');
     assert.equal(await page.locator('.view.active').getAttribute('id'),'map');
     await page.keyboard.press('Control+k');await page.locator('#workspaceQuery').fill('weather');
     await page.locator('#workspace-option-weather').click();
