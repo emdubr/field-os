@@ -9,6 +9,11 @@
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const validPoint=p=>p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))&&Math.abs(Number(p.lat))<=90&&Math.abs(Number(p.lon))<=180;
   const cleanPoints=list=>(Array.isArray(list)?list:[]).filter(validPoint).slice(0,5000).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
+  const fetchBounded=async(url,init={},timeoutMs=12000)=>{
+    if(typeof AbortController==='undefined')return fetch(url,init);
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(1000,timeoutMs));
+    try{return await fetch(url,{...init,signal:controller.signal})}finally{clearTimeout(timer)}
+  };
   const toRad=d=>d*Math.PI/180;
   const meters=(a,b)=>{const R=6371000,dLat=toRad(b.lat-a.lat),dLon=toRad(b.lon-a.lon),la1=toRad(a.lat),la2=toRad(b.lat);const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(h)))};
   const routeMeters=pts=>pts.slice(1).reduce((sum,p,i)=>sum+meters(pts[i],p),0);
@@ -117,8 +122,8 @@
     const button=document.getElementById('weatherRefresh'),head=document.getElementById('weatherHeadState');if(button)button.disabled=true;if(head)head.textContent='DOWNLOADING…';
     try{
       const params=new URLSearchParams({latitude:String(pos.lat),longitude:String(pos.lon),current:'temperature_2m,relative_humidity_2m,precipitation,snowfall,snow_depth,freezing_level_height,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,surface_pressure',hourly:'temperature_2m,precipitation_probability,precipitation,snowfall,snow_depth,freezing_level_height,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,surface_pressure',forecast_days:'3',timezone:'auto',temperature_unit:'fahrenheit',wind_speed_unit:'mph',precipitation_unit:'inch'});
-      const res=await fetch('https://api.open-meteo.com/v1/forecast?'+params.toString());if(!res.ok)throw new Error(`Forecast HTTP ${res.status}`);const data=await res.json();
-      let alerts=[];if(pos.lat>=18&&pos.lat<=72&&pos.lon>=-180&&pos.lon<=-60){try{const ar=await fetch(`https://api.weather.gov/alerts/active?point=${pos.lat.toFixed(4)},${pos.lon.toFixed(4)}`);if(ar.ok){const aj=await ar.json();alerts=aj.features||[]}}catch{}}
+      const res=await fetchBounded('https://api.open-meteo.com/v1/forecast?'+params.toString(),{cache:'no-store'},12000);if(!res.ok)throw new Error(`Forecast HTTP ${res.status}`);const data=await res.json();
+      let alerts=[];if(pos.lat>=18&&pos.lat<=72&&pos.lon>=-180&&pos.lon<=-60){try{const ar=await fetchBounded(`https://api.weather.gov/alerts/active?point=${pos.lat.toFixed(4)},${pos.lon.toFixed(4)}`,{cache:'no-store'},8000);if(ar.ok){const aj=await ar.json();alerts=aj.features||[]}}catch{}}
       const cache=normalizeForecast(data,alerts,pos);setWeatherCache(cache);return cache;
     }finally{if(button)button.disabled=false}
   }
@@ -166,7 +171,7 @@
     const route=cleanPoints(window.FIELD_ROUTE_STATE?.getPlan?.()?.points||[]),screen=route.length?route:[anchor];
     const aqUrl=`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${anchor.lat.toFixed(5)}&longitude=${anchor.lon.toFixed(5)}&current=us_aqi,pm2_5&timezone=auto`;
     const quakeUrl='https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson';
-    const [aq,eq]=await Promise.allSettled([fetch(aqUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Air quality HTTP '+r.status);return r.json()}),fetch(quakeUrl,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('USGS HTTP '+r.status);return r.json()})]);
+    const [aq,eq]=await Promise.allSettled([fetchBounded(aqUrl,{cache:'no-store'},10000).then(r=>{if(!r.ok)throw new Error('Air quality HTTP '+r.status);return r.json()}),fetchBounded(quakeUrl,{cache:'no-store'},10000).then(r=>{if(!r.ok)throw new Error('USGS HTTP '+r.status);return r.json()})]);
     const previous=environmentState.cache||{},air=aq.status==='fulfilled'?{aqi:Number(aq.value?.current?.us_aqi),pm25:Number(aq.value?.current?.pm2_5),time:aq.value?.current?.time||null}:previous.air||null;
     let quakes=previous.quakes||[];
     if(eq.status==='fulfilled')quakes=(eq.value?.features||[]).map(f=>{const co=f?.geometry?.coordinates||[],point={lat:Number(co[1]),lon:Number(co[0])},d=minRouteDistanceM(point,screen);return {mag:Number(f?.properties?.mag)||0,place:String(f?.properties?.place||''),time:Number(f?.properties?.time)||0,lat:point.lat,lon:point.lon,distanceMi:d/1609.344};}).filter(q=>Number.isFinite(q.distanceMi)&&q.distanceMi<=100).sort((a,b)=>a.distanceMi-b.distanceMi).slice(0,25);
@@ -857,7 +862,7 @@
     const pos=getPosition();if(!validPoint(pos))throw new Error('No valid position for bailout search.');
     const q=`[out:json][timeout:18];(node(around:8000,${pos.lat},${pos.lon})[information=trailhead];node(around:8000,${pos.lat},${pos.lon})[amenity=shelter];node(around:8000,${pos.lat},${pos.lon})[tourism~"^(wilderness_hut|alpine_hut|camp_site)$"];node(around:8000,${pos.lat},${pos.lon})[amenity=parking];node(around:8000,${pos.lat},${pos.lon})[place~"^(town|village|hamlet)$"];way(around:5000,${pos.lat},${pos.lon})[highway~"^(primary|secondary|tertiary|unclassified|residential)$"][name];);out center tags 140;`;
     const status=document.getElementById('bailoutStatus');if(status)status.textContent='SEARCHING OSM…';
-    const res=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)});
+    const res=await fetchBounded('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'data='+encodeURIComponent(q)},22000);
     if(!res.ok)throw new Error(`OSM bailout search failed (HTTP ${res.status}).`);
     const data=await res.json(),items=(data.elements||[]).map(normalizeOsmExit).filter(Boolean);
     const cache={retrievedAt:new Date().toISOString(),center:{lat:pos.lat,lon:pos.lon},items:rankBailouts(items,pos).slice(0,60).map(({score,distanceM,...x})=>x)};
