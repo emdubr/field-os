@@ -275,6 +275,12 @@
     if(den<=0)return 0;
     return (num/den)/3.28084*100;
   }
+  function displayRoutePoints(pts,limit){
+    if(pts.length<=limit)return pts;
+    const step=Math.ceil((pts.length-1)/(limit-1)),out=[pts[0]];
+    for(let i=step;i<pts.length-1;i+=step)out.push(pts[i]);
+    out.push(pts.at(-1));return out;
+  }
   function drawRouteSlopeOverlay(svg,pts){
     const g=svg?.querySelector('.route-dom-slope-segments');
     if(!g)return;
@@ -285,9 +291,13 @@
     // Batch every slope class into one SVG path. Long routes used to create
     // hundreds/thousands of <line> nodes and rebuild them on every map move.
     const ns='http://www.w3.org/2000/svg',paths={easy:[],medium:[],hard:[]};
+    // The DEM profile is capped at 140 samples, so drawing thousands of tiny
+    // OSM vertices cannot add useful slope detail. Cap the display geometry
+    // while keeping the full route for navigation/export.
+    const slopePts=displayRoutePoints(pts,600),totalM=routeDistanceMiles(pts)*1609.344;
     let cumulative=0;
-    for(let i=1;i<pts.length;i++){
-      const a=pts[i-1],b=pts[i],segM=meters(a,b),mid=cumulative+segM/2;
+    for(let i=1;i<slopePts.length;i++){
+      const a=slopePts[i-1],b=slopePts[i],segM=meters(a,b),mid=Math.min(totalM,cumulative+segM/2);
       const cls=slopeClass(gradeAtDistance(activeElevationProfile,mid));
       cumulative+=segM;
       const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
@@ -310,8 +320,9 @@
     const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
     svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
     svg.setAttribute('width',String(w));svg.setAttribute('height',String(h));
-    const poly=gaiaRouteEnabled&&pts.length>1
-      ?pts.map(p=>{const q=plannerMap.latLngToContainerPoint([p.lat,p.lon]);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`}).join(' ')
+    const displayPts=displayRoutePoints(pts,1200);
+    const poly=gaiaRouteEnabled&&displayPts.length>1
+      ?displayPts.map(p=>{const q=plannerMap.latLngToContainerPoint([p.lat,p.lon]);return `${q.x.toFixed(1)},${q.y.toFixed(1)}`}).join(' ')
       :'';
     svg.querySelectorAll(':scope > polyline').forEach(el=>el.setAttribute('points',poly));
     drawRouteSlopeOverlay(svg,pts);
