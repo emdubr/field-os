@@ -439,6 +439,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("lastRenderKey:''")&&mapEngineJs.includes('st.lastRenderKey===renderKey'));
  assert.ok(mapEngineJs.includes('function metersBetween(a,b)')&&mapEngineJs.includes('drift>Math.max(12,(locationAccuracy||0)*.65)'));
  console.log('PASS native map deduplicates near-identical tile frames and suppresses stationary GPS jitter reloads');
+ assert.ok(mapEngineJs.includes('Continue from the')||mapEngineJs.includes('remaining finger instead of ending the gesture'));
+ assert.ok(mapEngineJs.includes('st.wheelZoom-delta/560')&&mapEngineJs.includes('},120);'));
+ console.log('PASS map gesture engine preserves pinch-to-drag continuity and damps dense wheel bursts');
  console.log('PASS native map stages replacement tiles progressively without the old long blank-frame wait');
  assert.ok(appJs.includes("zoomSnap:0")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:0")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
