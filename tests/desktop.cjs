@@ -11,10 +11,10 @@ const server=http.createServer((req,res)=>{
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const origin=`http://127.0.0.1:${server.address().port}`;
-  let browser;
+  let browser,page;
   try{
     browser=await chromium.launch({headless:true,...(process.env.FIELD_CHROMIUM?{executablePath:process.env.FIELD_CHROMIUM,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader']}: {})});
-    const page=await browser.newPage({serviceWorkers:'block'}),errors=[];
+    page=await browser.newPage({serviceWorkers:'block'});const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',r=>r.request().url().startsWith(origin)?r.continue():r.abort());
     await page.goto(origin);await page.waitForTimeout(800);
@@ -89,5 +89,8 @@ const server=http.createServer((req,res)=>{
     const deterministic=await page.evaluate(()=>{openView('nav');const grid=document.querySelector('#nav .module-grid'),secondary=grid.querySelector('.module-secondary-grid'),style=getComputedStyle(grid),secondaryStyle=getComputedStyle(secondary);return {display:style.display,columns:style.columnCount,secondaryDisplay:secondaryStyle.display,secondaryColumns:secondaryStyle.columnCount};});
     assert.equal(deterministic.display,'flex');assert.equal(deterministic.columns,'auto');assert.equal(deterministic.secondaryColumns,'2');
     assert.deepEqual(errors,[]);console.log('PASS compact desktop flow, Terrain sizing, full-width elevation, bounded schematic, full route preservation, stable redraw, hidden/resume lifecycle, and no page errors');
+  }catch(err){
+    if(page&&process.env.FIELD_SCREENSHOT){try{fs.mkdirSync(path.dirname(process.env.FIELD_SCREENSHOT),{recursive:true});await page.screenshot({path:process.env.FIELD_SCREENSHOT,fullPage:true});}catch{}}
+    throw err;
   }finally{await browser?.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
