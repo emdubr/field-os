@@ -3715,3 +3715,14 @@ input,select,textarea{
   body .module-secondary-grid{display:flex!important;flex-direction:column!important;gap:8px!important;width:100%!important}
   body .module-secondary-grid>.module-slot{width:100%!important;margin:0!important}
 }
+
+
+/* v3.70 MOBILE MODULE FINDER ENTRY */
+.mobile-workspace-search{display:none}
+@media(max-width:767px){
+  .mobile-workspace-search{
+    display:inline-flex;align-items:center;justify-content:center;margin-left:auto;
+    border:1px solid currentColor;background:transparent;color:inherit;padding:6px 9px;
+    font:inherit;font-size:10px;cursor:pointer
+  }
+}
