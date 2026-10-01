@@ -785,6 +785,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
  assert.ok(routePlannerJs.includes("removeSpatialSegmentMutable"));
  console.log('PASS route planner clones spatial index with copy-on-write spatial buckets');
+ assert.ok(routePlannerJs.includes('if(graph.spatial?.size)'));assert.ok(routePlannerJs.includes('avoid O(n) indexOf + splice'));console.log('PASS spatial endpoint snapping avoids full trail-array mutation on indexed graphs');
  assert.ok(routePlannerJs.includes("adjShared:true"));
  assert.ok(routePlannerJs.includes("function mutableAdjacency("));
  assert.ok(routePlannerJs.includes("planner-anchor-touch-wrap"));
