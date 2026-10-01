@@ -204,9 +204,9 @@
         settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);return;
       }
       if(st.dragStart&&!wasTap){
-        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
+        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,scale=Math.max(.001,st.dragStart.scale||1);
         const c=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
-        st.center=unworld(c.x-dx,c.y-dy,st.zoom);
+        st.center=unworld(c.x-dx/scale,c.y-dy/scale,st.zoom);
       }
       st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');applyResidual();
       if(wasTap&&typeof st.tapHandler==='function'){
@@ -531,7 +531,19 @@
 
   function screenToLatLon(st,clientX,clientY){
     const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
-    return unworld(c.x+(clientX-rect.left)-w/2,c.y+(clientY-rect.top)-h/2,st.zoom);
+    // Invert the compositor's residual fractional-zoom transform before
+    // converting screen pixels to map coordinates. Without this, the next
+    // pinch begins from a different geographic anchor and visibly jumps.
+    const scale=Math.max(.001,Number(st.residualScale)||1);
+    const raw=String(st.residualOrigin||'50% 50%').split(/\s+/);
+    const parseOrigin=(value,size)=>{
+      if(String(value).endsWith('%'))return size*(parseFloat(value)||50)/100;
+      const n=parseFloat(value);return Number.isFinite(n)?n:size/2;
+    };
+    const ox=parseOrigin(raw[0],w),oy=parseOrigin(raw[1]||raw[0],h);
+    const sx=clientX-rect.left,sy=clientY-rect.top;
+    const x=ox+(sx-ox)/scale,y=oy+(sy-oy)/scale;
+    return unworld(c.x+x-w/2,c.y+y-h/2,st.zoom);
   }
   function mount(id,opts={}){
     const st=ensure(id);if(!st)return null;
