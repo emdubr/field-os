@@ -2021,6 +2021,6 @@
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
-  window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,get anchors(){return anchors.map(p=>({...p}))}};
+  window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 })();
 
