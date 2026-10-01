@@ -185,8 +185,11 @@
     consoleBar.innerHTML='<strong>TAP V2 // <span class="ws-console-name">FIELD MODULE</span> <em>v3.67</em></strong><span class="ws-console-mode">OFFLINE MODE</span><span class="ws-console-pos">GPS: DEMO</span><span class="ws-console-track">TRACK: IDLE</span><span class="ws-console-clock">--:--:--</span><span class="ws-console-battery">▰▰▰▱ <b>'+val('mobileBattery')+'</b></span>';
     const band=document.createElement('div');band.className='module-band';band.innerHTML='<span class="ws-band-sector">SECTOR VT-021</span><span class="ws-band-module">MODULE</span><span class="ws-band-pos">POSITION</span><span class="ws-band-route">ROUTE</span><span class="ws-band-clock">--:--:--</span>';
     head.after(consoleBar);consoleBar.after(band);
-    for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');grid.append(holder);}
-    // v3.67: no implicit first-card hero. Full-width workstation surfaces are explicit in CSS/markup.
+    const secondary=document.createElement('div');secondary.className='module-secondary-grid';
+    for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');secondary.append(holder);}
+    if(secondary.childElementCount)grid.append(secondary);
+    // Generated diagnostic/readout cards live in their own compact flow so
+    // different card heights cannot create blank paired-grid rows.
   }
   const renderedHtml=new WeakMap();
   function updateHtml(el,html){
