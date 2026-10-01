@@ -293,6 +293,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("const preserveAnchor="));
  assert.ok(mapEngineJs.includes("preserveAnchor(st.pinchStart.anchor"));
  assert.ok(mapEngineJs.includes("preserveAnchor(anchor?.point"));
+ assert.ok(mapEngineJs.includes("e.detail?.view==='map'?'realMap'"));
+ assert.ok(mapEngineJs.includes("else{\n      let resizeTimer=0;"));
+
 
  assert.ok(routePlannerJs.includes("plannerKickFrame=requestAnimationFrame"));
  assert.ok(routePlannerJs.includes("if(initialized&&plannerMap)"));
