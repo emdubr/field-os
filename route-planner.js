@@ -927,7 +927,8 @@
       db=await trailDb();
       await new Promise((resolve,reject)=>{const tx=db.transaction(TRAIL_STORE,'readwrite'),s=tx.objectStore(TRAIL_STORE);s.put({key,box,elements,created:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
       const all=await savedTrailNetworks();all.sort((a,b)=>Number(b.created)-Number(a.created));
-      for(const old of all.slice(TRAIL_CACHE_MAX)){const d=await trailDb();await new Promise(resolve=>{const tx=d.transaction(TRAIL_STORE,'readwrite');tx.objectStore(TRAIL_STORE).delete(old.key);tx.oncomplete=resolve;tx.onerror=resolve;});d.close();}
+      const expired=all.slice(TRAIL_CACHE_MAX);
+      if(expired.length)await new Promise(resolve=>{const tx=db.transaction(TRAIL_STORE,'readwrite'),store=tx.objectStore(TRAIL_STORE);expired.forEach(old=>store.delete(old.key));tx.oncomplete=resolve;tx.onerror=resolve;});
     }catch{}finally{db?.close()}
   }
   async function offlineTrailGraph(a,b){
