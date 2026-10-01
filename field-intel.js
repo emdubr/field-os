@@ -962,7 +962,10 @@
     if(/OVERDUE/i.test(checkin))list.push({id:'checkin',score:88,level:'danger',title:'CHECK-IN OVERDUE',detail:'Your local check-in timer is overdue. Record or send a check-in when safe.',view:'trip',action:'CHECK IN'});
     else if(/DUE SOON/i.test(checkin))list.push({id:'checkin',score:68,level:'warn',title:'CHECK-IN DUE SOON',detail:'A planned check-in is approaching.',view:'trip',action:'TRIP / CHECK-IN'});
     if(Number.isFinite(drop)&&drop>=2)list.push({id:'pressure',score:82,level:'warn',title:'FAST PRESSURE FALL',detail:`Pressure fell ${drop.toFixed(1)} hPa in the recent 3-hour window. Recheck weather and exposure.`,view:'sensors',action:'SENSOR TREND'});
-    if(Number.isFinite(light)&&light<=60)list.push({id:'dark',score:76,level:'warn',title:'DARKNESS APPROACHING',detail:`Approximately ${light} minutes of daylight remain. Recheck route, turnaround and lighting.`,view:'nav',action:'SUN / NAV'});
+    const sunState=text('sunState'),sunNext=text('sunNextEvent');
+    if(/SUN HAS SET|POLAR NIGHT/i.test(sunState))list.push({id:'dark',score:48,level:'good',title:'SUN HAS SET',detail:sunNext&&sunNext!=='---'?sunNext:'Night navigation active. Check lighting and route conditions.',view:'nav',action:'SUN / NAV'});
+    else if(/CIVIL TWILIGHT/i.test(sunState))list.push({id:'dark',score:76,level:'warn',title:'CIVIL TWILIGHT',detail:sunNext&&sunNext!=='---'?sunNext:'Natural light is fading. Check lighting and route conditions.',view:'nav',action:'SUN / NAV'});
+    else if(Number.isFinite(light)&&light<=60)list.push({id:'dark',score:76,level:'warn',title:'DARKNESS APPROACHING',detail:`Approximately ${light} minutes of daylight remain. Recheck route, turnaround and lighting.`,view:'nav',action:'SUN / NAV'});
     else if(Number.isFinite(light)&&light<=120)list.push({id:'dark',score:58,level:'warn',title:'DAYLIGHT WINDOW CLOSING',detail:`Approximately ${light} minutes of daylight remain.`,view:'trip',action:'TRIP TIMING'});
     const active=read('mission-active',null),pack=read('mission-pack',null);
     if(!active&&!pack)list.push({id:'mission',score:35,level:'good',title:'BUILD MISSION PACK',detail:'No frozen pre-trip mission package is saved yet.',view:'mission',action:'MISSION MODE'});
