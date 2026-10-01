@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const STORE_PREFIX='fieldos-v1.2-';
+  const STORE_PREFIX='fieldos-v12-';
   const DEFAULT_CENTER={lat:44.4759,lon:-73.2121};
   const TILE=256;
   const states=new Map();
@@ -39,6 +39,12 @@
   function trailUrl(z,x,y){return validY(y,z)?`https://tile.waymarkedtrails.org/hiking/${z}/${wrapX(x,z)}/${y}.png`:''}
   function satelliteUrl(z,x,y){return validY(y,z)?`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${wrapX(x,z)}`:''}
   function hillshadeUrl(z,x,y){return validY(y,z)?`https://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/${z}/${y}/${wrapX(x,z)}`:''}
+
+  function isVisible(st){
+    if(!st?.el||st.el.hidden)return false;
+    const view=st.el.closest('.view');
+    return !view||view.classList.contains('active');
+  }
 
   function targetForButton(btn){return btn.dataset.mapTarget || (btn.closest('#home')?'homeRealMap':'realMap')}
   function centerCandidate(){return livePosition||DEFAULT_CENTER}
@@ -202,7 +208,11 @@
         render(st);
       },90);
     };
-    st.onDbl=e=>{e.preventDefault();st.zoom=Math.min(maxZoom(),st.zoom+1);render(st)};
+    st.onDbl=e=>{
+      e.preventDefault();
+      const anchor=screenToLatLon(st,e.clientX,e.clientY),nextZoom=Math.min(maxZoom(),st.zoom+1);
+      preserveAnchor(anchor,e.clientX,e.clientY,nextZoom);st.zoom=nextZoom;render(st);
+    };
 
     el.addEventListener('pointerdown',st.onPointerDown);
     el.addEventListener('pointermove',st.onPointerMove);
@@ -218,12 +228,12 @@
         if(Math.abs(w-lastW)<2&&Math.abs(h-lastH)<2)return;
         lastW=w;lastH=h;
         cancelAnimationFrame(resizeFrame);
-        resizeFrame=requestAnimationFrame(()=>{if(st.rendered&&st.el.offsetParent!==null)render(st)});
+        resizeFrame=requestAnimationFrame(()=>{if(st.rendered&&isVisible(st))render(st)});
       });
       st.resizeObserver.observe(el);
     }else{
       let resizeTimer=0;
-      st.onResize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&st.el.offsetParent!==null)render(st)},100)};
+      st.onResize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&isVisible(st))render(st)},100)};
       window.addEventListener('resize',st.onResize,{passive:true});
     }
     states.set(id,st);
@@ -319,7 +329,7 @@
     const failed=()=>{if(token!==st.token)return;st.errors++;updateDiag()};
     const make=(src,cls,frag,left,top)=>{
       if(!src)return;
-      const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;
+      const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
       img.style.left=left+'px';img.style.top=top+'px';img.onload=loaded;img.onerror=failed;img.src=src;frag.appendChild(img);
     };
 
@@ -369,7 +379,7 @@
     updateLabels();
     ['homeRealMap','realMap'].forEach(id=>ensure(id));
     for(const st of states.values()){
-      const visible=st.el.offsetParent!==null;
+      const visible=isVisible(st);
       if(!visible&&!recenter)continue;
       if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered)){
         if(plannedRoute().length>1&&!liveEnabled)st.routeFitted=false;
@@ -385,7 +395,7 @@
   document.addEventListener('fieldos:routechange',()=>{
     states.forEach(st=>{
       st.routeFitted=false;
-      if(st.el.offsetParent===null){
+      if(!isVisible(st)){
         const rect=st.el.getBoundingClientRect();
         drawOverlay(st,Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),Math.max(220,Math.round(rect.height||st.el.clientHeight||360)));
       }
@@ -421,7 +431,7 @@
     for(const id of ['homeRealMap','realMap']){
       const st=states.get(id);if(!st)continue;
       st.center={...livePosition};
-      if(st.el.offsetParent!==null){st.rendered=true;render(st)}
+      if(isVisible(st)){st.rendered=true;render(st)}
     }
     updateLocationLabels();
   }
@@ -487,6 +497,19 @@
   function setTapHandler(id,handler){const st=ensure(id);if(st)st.tapHandler=typeof handler==='function'?handler:null}
   function setGeoOverlay(id,data){const st=ensure(id);if(!st)return;st.geoOverlay=data||null;const rect=st.el.getBoundingClientRect();drawEditorOverlay(st,Math.max(250,Math.round(rect.width||600)),Math.max(220,Math.round(rect.height||360)))}
   function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
+  function unmount(id){
+    const st=states.get(id);if(!st)return false;
+    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);cancelAnimationFrame(st.renderFrame);
+    st.resizeObserver?.disconnect?.();
+    if(st.onResize)window.removeEventListener('resize',st.onResize);
+    st.el.removeEventListener('pointerdown',st.onPointerDown);
+    st.el.removeEventListener('pointermove',st.onPointerMove);
+    st.el.removeEventListener('pointerup',st.onPointerUp);
+    st.el.removeEventListener('pointercancel',st.onPointerUp);
+    st.el.removeEventListener('wheel',st.onWheel);
+    st.el.removeEventListener('dblclick',st.onDbl);
+    st.el.innerHTML='';states.delete(id);return true;
+  }
 
   function handleAction(btn){
     const action=btn.dataset.mapAction,target=targetForButton(btn);
@@ -539,7 +562,7 @@
 
   window.FIELD_MAP_ENGINE={
     refresh,setLayers,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
-    mount,setView,fitBounds,setTapHandler,setGeoOverlay,getView,
+    mount,setView,fitBounds,setTapHandler,setGeoOverlay,getView,unmount,
     get mode(){return mode},get trails(){return trails},get terrain(){return terrain},get grid(){return grid},get live(){return liveEnabled}
   };
 
