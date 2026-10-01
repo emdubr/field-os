@@ -438,14 +438,18 @@
     refresh(false);
   });
 
-  function setLayers(settings){
+  function setLayers(settings={},recenter=false){
+    const before=`${mode}|${trails}|${terrain}|${grid}`;
     if(['osm','topo','satellite'].includes(settings.mode))mode=settings.mode;
     if(typeof settings.trails==='boolean')trails=settings.trails;
     if(typeof settings.terrain==='boolean')terrain=settings.terrain;
     if(typeof settings.grid==='boolean')grid=settings.grid;
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     for(const [key,value] of [['hiking-routes',trails],['terrain-shade',terrain],['map-grid',grid]])localStorage.setItem(STORE_PREFIX+key,value?'on':'off');
-    emitState();refresh(false);
+    const changed=before!==`${mode}|${trails}|${terrain}|${grid}`;
+    emitState();
+    if(changed||recenter)refresh(recenter);else updateLabels();
+    return changed;
   }
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
