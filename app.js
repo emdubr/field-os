@@ -589,8 +589,17 @@ document.querySelectorAll('.power-mode').forEach(b=>b.addEventListener('click',(
 if(navigator.getBattery){navigator.getBattery().then(b=>{const update=()=>{const p=document.getElementById('powerPercent');if(p)p.textContent=`${Math.round(b.level*100)}%`};update();b.addEventListener('levelchange',update)}).catch(()=>{})}
 
 // Pressure trend canvas
+const pressureChartEl=document.getElementById('pressureChart'),pressureChartCtx=pressureChartEl?.getContext('2d')||null;
+let pressureChartTheme=null;
+function pressureChartColors(){
+  const theme=document.body.dataset.theme||'green';
+  if(pressureChartTheme?.theme===theme)return pressureChartTheme;
+  const styles=getComputedStyle(document.body);
+  return pressureChartTheme={theme,fg:styles.getPropertyValue('--fg2').trim()||'#6fcf82',line:styles.getPropertyValue('--line').trim()||'#2d6940'};
+}
 function drawPressureChart(){
-  const c=document.getElementById('pressureChart'); if(!c) return; const ctx=c.getContext('2d'); const w=c.width,h=c.height;ctx.clearRect(0,0,w,h);const styles=getComputedStyle(document.body), fg=styles.getPropertyValue('--fg2').trim()||'#6fcf82', line=styles.getPropertyValue('--line').trim()||'#2d6940';ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}const min=Math.min(...pressureHistory)-.3,max=Math.max(...pressureHistory)+.3;ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();pressureHistory.forEach((v,i)=>{const x=i/(pressureHistory.length-1)*w,y=h-(v-min)/(max-min)*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle=fg;ctx.font='22px monospace';ctx.fillText(`${pressureHistory.at(-1).toFixed(1)} hPa`,14,30);
+  const c=pressureChartEl,ctx=pressureChartCtx;if(!c||!ctx)return;
+  const w=c.width,h=c.height,{fg,line}=pressureChartColors();ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}const min=Math.min(...pressureHistory)-.3,max=Math.max(...pressureHistory)+.3;ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();pressureHistory.forEach((v,i)=>{const x=i/(pressureHistory.length-1)*w,y=h-(v-min)/(max-min)*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle=fg;ctx.font='22px monospace';ctx.fillText(`${pressureHistory.at(-1).toFixed(1)} hPa`,14,30);
 }
 drawPressureChart();
 
