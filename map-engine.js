@@ -116,7 +116,8 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null
+      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
+      residualScale:1,residualOrigin:'50% 50%'
     };
 
     const transformLayers=(transform,origin='50% 50%',transition='')=>{
@@ -124,15 +125,17 @@
         layer.style.transition=transition;layer.style.transformOrigin=origin;layer.style.transform=transform;
       }
     };
-    const resetTransform=(transition='')=>transformLayers('','50% 50%',transition);
+    const resetTransform=(transition='')=>{st.residualScale=1;st.residualOrigin='50% 50%';transformLayers('','50% 50%',transition)};
+    const applyResidual=()=>{
+      if(Math.abs(st.residualScale-1)<.001)transformLayers('','50% 50%');
+      else transformLayers(`scale(${st.residualScale})`,st.residualOrigin);
+    };
     const settleFractionalZoom=(visualZoom,clientX,clientY,anchor)=>{
       const committed=Math.max(2,Math.min(maxZoom(),Math.round(visualZoom)));
       preserveAnchor(anchor,clientX,clientY,committed);st.zoom=committed;
-      const residual=Math.pow(2,visualZoom-committed),rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
-      render(st);
-      transformLayers(`scale(${residual})`,`${x}px ${y}px`);
-      requestAnimationFrame(()=>requestAnimationFrame(()=>resetTransform('transform 140ms cubic-bezier(.2,.8,.2,1)')));
-      setTimeout(()=>resetTransform(),170);
+      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
+      st.residualScale=Math.pow(2,visualZoom-committed);st.residualOrigin=`${x}px ${y}px`;
+      render(st);applyResidual();
     };
     const previewZoom=(scale,clientX,clientY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
@@ -155,26 +158,27 @@
       st.el.setPointerCapture?.(e.pointerId);
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1){
-        st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center}};
+        st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center},scale:st.residualScale,origin:st.residualOrigin};
         st.pointerDownOrigin={x:e.clientX,y:e.clientY};
         st.el.classList.add('native-map-dragging');
       }else if(st.pointers.size===2){
         const p=[...st.pointers.values()];
         const midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
-        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:st.zoom,anchor:screenToLatLon(st,midX,midY),midX,midY};
+        const displayZoom=st.zoom+Math.log2(st.residualScale||1);
+        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:displayZoom,baseScale:st.residualScale||1,anchor:screenToLatLon(st,midX,midY),midX,midY};
       }
     };
     st.onPointerMove=e=>{
       if(!st.pointers.has(e.pointerId))return;
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1&&st.dragStart){
-        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,t=`translate(${dx}px,${dy}px)`;
-        st.base.style.transform=t;st.terrain.style.transform=t;st.trail.style.transform=t;st.grid.style.transform=t;st.overlay.style.transform=t;st.editor.style.transform=t;
+        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,t=`translate(${dx}px,${dy}px) scale(${st.dragStart.scale||1})`;
+        transformLayers(t,st.dragStart.origin||'50% 50%');
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
-        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch(Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
+        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch((st.pinchStart.baseScale||1)*Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
         const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next.toFixed(1)}`;
       }
     };
@@ -195,7 +199,7 @@
         const c=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
         st.center=unworld(c.x-dx,c.y-dy,st.zoom);
       }
-      st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');resetTransform();
+      st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');applyResidual();
       if(wasTap&&typeof st.tapHandler==='function'){
         try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
       }else render(st);
@@ -215,7 +219,7 @@
       clearTimeout(st.wheelTimer);
       st.wheelTimer=setTimeout(()=>{
         const fractional=st.wheelZoom,anchor=st.wheelAnchor;st.wheelZoom=0;st.wheelAnchor=null;
-        if(Math.abs(fractional)<.04){resetTransform('transform 100ms ease-out');setTimeout(()=>resetTransform(),120);return}
+        if(Math.abs(fractional)<.04){applyResidual();return}
         settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional)),anchor?.x??0,anchor?.y??0,anchor?.point);
       },90);
     };
@@ -384,6 +388,9 @@
     st.grid.classList.toggle('active',grid);
     drawOverlay(st,w,h);
     drawEditorOverlay(st,w,h);
+    if(st.residualScale&&Math.abs(st.residualScale-1)>.001){
+      for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){layer.style.transformOrigin=st.residualOrigin;layer.style.transform=`scale(${st.residualScale})`;}
+    }
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
