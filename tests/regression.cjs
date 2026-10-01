@@ -354,7 +354,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("if(isVisible(st)){st.rendered=true;render(st)}"));
  assert.ok(mapEngineJs.includes("if(!isVisible(st))"));
  assert.ok(mapEngineJs.includes("const overlaySize=st=>")&&mapEngineJs.includes("drawOverlay(st,w,h)"));
- assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
+ assert.ok(mapEngineJs.includes("if(!document.hidden&&locationUiVisible())updateLocationLabels()"));
  assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
  assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
  assert.ok(mapEngineJs.includes("const preserveAnchor="));
