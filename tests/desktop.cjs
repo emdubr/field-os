@@ -166,7 +166,7 @@ const server=http.createServer((req,res)=>{
 
     await page.evaluate(()=>openView('route'));await page.waitForTimeout(100);
     const routeTap=await page.evaluate(async()=>{
-      const el=document.getElementById('routePlannerMap'),before=FIELD_ROUTE_STATE.getPoints().length,box=el.getBoundingClientRect();
+      const el=document.getElementById('routePlannerMap'),before=FIELD_ROUTE_PLANNER.anchors.length,box=el.getBoundingClientRect();
       const map=window.FIELD_ROUTE_PLANNER?.map?.()||window.__fieldRoutePlannerMap;
       const x=box.left+box.width*.58,y=box.top+box.height*.48,id=77;
       const fire=(type,cx,cy)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,clientX:cx,clientY:cy,buttons:type==='pointerup'?0:1}));
@@ -174,10 +174,10 @@ const server=http.createServer((req,res)=>{
       // Browser synthetic PointerEvents do not automatically trigger Leaflet's
       // native gesture lifecycle; wait for FIELD/OS's dedicated mobile handler.
       await new Promise(r=>setTimeout(r,120));
-      const afterTap=FIELD_ROUTE_STATE.getPoints().length;
+      const afterTap=FIELD_ROUTE_PLANNER.anchors.length;
       fire('pointerdown',x,y);fire('pointermove',x+45,y+5);fire('pointerup',x+45,y+5);
       await new Promise(r=>setTimeout(r,80));
-      return {before,afterTap,afterDrag:FIELD_ROUTE_STATE.getPoints().length};
+      return {before,afterTap,afterDrag:FIELD_ROUTE_PLANNER.anchors.length};
     });
     assert.equal(routeTap.afterTap,routeTap.before+1,'Short mobile tap adds exactly one route point');
     assert.equal(routeTap.afterDrag,routeTap.afterTap,'Mobile drag/pan must not add a route point');
