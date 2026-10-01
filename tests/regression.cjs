@@ -394,10 +394,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  ]};
  assert.equal(r.slopeClass(r.gradeAtDistance(sustainedSteep,50)).key,'hard');
  console.log('PASS flat/noisy DEM route segment remains easy, not red');
- const css=fs.readFileSync(dir+'/workstation.css','utf8');
- assert.match(css,/#map \.module-grid>\.module-hero[\s\S]*?grid-column:1\/-1!important/);
- assert.match(css,/#map \.module-grid>\.terrain-controls-below[\s\S]*?grid-column:1\/-1!important/);
- console.log('PASS terrain map hero and controls are pinned full-width on desktop');
+ const css=workstationCss;
+ assert.ok(css.includes('#map .module-grid'));
+ assert.ok(css.includes('body #map .module-grid{\n    display:flex!important')||css.includes('#map .module-grid{\n    display:flex!important'));
+ assert.ok(css.includes('body .module-grid>*{width:100%!important')||css.includes('#map .module-grid>*{margin:0!important;width:100%!important}'));
+ assert.ok(css.includes('#map .terrain-controls-below'));
+ console.log('PASS terrain workspace uses deterministic vertical flow with full-width controls');
  assert.match(css,/has-slope-overlay \.route-dom-main[\s\S]*?stroke:transparent!important/);
  assert.match(planner,/classList\.toggle\('has-slope-overlay',hasSlope\)/);
  assert.match(css,/@media\(max-width:760px\)[\s\S]*?#map \.map-quick-actions[\s\S]*?repeat\(3,minmax\(0,1fr\)\)/);
