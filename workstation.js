@@ -52,23 +52,31 @@
     switcher.querySelector('#workspaceResultStatus').textContent=matches.length?matches.length+' workspaces':'No matches. Try a module name such as map or route.';
     selectMatch(0);
   }
+  function switcherOpen(){return switcher.open||switcher.hasAttribute('data-open')}
+  function closeSwitcher(){
+    if(switcher.open&&typeof switcher.close==='function')switcher.close();
+    else{switcher.removeAttribute('data-open');switcher.removeAttribute('open');switcher.dispatchEvent(new Event('close'))}
+  }
   function showSwitcher(){
-    if(switcher.open)return;
-    returnFocus=document.activeElement;query.value='';switcher.showModal();findModules();query.focus();
+    if(switcherOpen())return;
+    returnFocus=document.activeElement;query.value='';
+    try{if(typeof switcher.showModal==='function')switcher.showModal();else throw new Error('dialog unsupported')}
+    catch{switcher.setAttribute('open','');switcher.setAttribute('data-open','fallback')}
+    findModules();requestAnimationFrame(()=>query.focus({preventScroll:true}));
   }
   function activateMatch(index){
     const item=matches[index];if(!item)return;
-    returnFocus=document.getElementById('screen');switcher.close();openView(item[0]);
+    returnFocus=document.getElementById('screen');closeSwitcher();openView(item[0]);
   }
   launcher.addEventListener('click',showSwitcher);
-  switcher.querySelector('.switcher-close').addEventListener('click',()=>switcher.close());
+  switcher.querySelector('.switcher-close').addEventListener('click',closeSwitcher);
   switcher.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
   switcher.addEventListener('click',e=>{
     const option=e.target.closest('[data-result-index]');
     if(option)activateMatch(Number(option.dataset.resultIndex));
     else if(e.target===switcher){const r=switcher.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)switcher.close();}
   });
-  switcher.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();switcher.close();}});
+  switcher.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();closeSwitcher();}});
   query.addEventListener('input',findModules);
   query.addEventListener('keydown',e=>{
     if(e.isComposing)return;
@@ -76,7 +84,7 @@
     else if(e.key==='Enter'){e.preventDefault();activateMatch(selected);}
   });
   document.addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!e.altKey&&!e.isComposing){e.preventDefault();if(switcher.open)switcher.close();else showSwitcher();}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!e.altKey&&!e.isComposing){e.preventDefault();if(switcherOpen())closeSwitcher();else showSwitcher();}
   });
   const specs={
     map:[['Route geometry','SCHEMATIC','plot'],['Position solution','SOURCE / AGE','position'],['Active route','PLANNER DATA','route'],['Saved marks','LOCAL DATABASE','marks'],['Map coverage','AVAILABILITY','coverage'],['Recording summary','BREADCRUMBS','record'],['Navigation shortcuts','FIELD TOOLS','navtools']],
