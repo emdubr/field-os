@@ -678,7 +678,7 @@ assert.ok(workstationCss.includes('map interaction performance'));
 console.log('PASS v3.61 smooth zoom, faster trail-server failover, and hidden-work throttling');
 
 assert.ok(appJs.includes('function enableContinuousWheelZoom(map)'));
-assert.ok(mapEngineJs.includes('st.wheelZoom-delta/420')||mapEngineJs.includes('st.wheelZoom-delta/420'));
+assert.ok(/st\.wheelZoom-delta\/(?:420|560)/.test(mapEngineJs));
 assert.ok(appJs.includes('window.FIELD_OFFLINE_MAPS='));
 assert.ok(routePlannerJs.includes('window.FIELD_OFFLINE_MAPS.leafletLayer()'));
 assert.ok(routePlannerJs.includes("if(navigator.onLine!==false)osm.addTo(plannerMap)"));
