@@ -56,6 +56,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'route');assert.match(d.getElementById('priorityTitle').textContent,/ROUTE DEVIATION/);
  devBanner.textContent='ON ROUTE';devBanner.className='deviation-banner good-banner';w.FIELD_CONTEXT.refresh();
  console.log('PASS feature 02 What Matters Now reprioritizes GNSS, battery, and route hazards with one-tap navigation');
+  d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('mobileBattery').textContent='64%';devBanner.textContent='';devBanner.className='deviation-banner';
+  d.getElementById('sunState').textContent='SUN HAS SET';d.getElementById('sunNextEvent').textContent='MOONRISE 9:09 PM · SUNRISE 6:51 AM';d.getElementById('daylightRemaining').textContent='0h 00m';
+  priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'dark');assert.equal(priority.title,'SUN HAS SET');assert.match(priority.detail,/MOONRISE.*SUNRISE/);assert.doesNotMatch(priority.detail,/daylight remain/i);
+  console.log('PASS priority engine treats post-sunset as night state rather than darkness approaching');
  const syntheticRisk=w.FIELD_TERRAIN_RISK.analyze({
    points:[{lat:44,lon:-73},{lat:44.01,lon:-73}],distanceMiles:10,elevationGainFt:3200,elevationLossFt:3400,
    elevationProfile:[{distanceM:0,elevationFt:500},{distanceM:100,elevationFt:620},{distanceM:200,elevationFt:500}],
