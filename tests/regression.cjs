@@ -21,7 +21,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  }
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
  for(const btn of d.querySelectorAll('.workstation-nav [data-open]')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
- console.log('PASS all 16 modules initialize and navigation changes active view');
+ console.log('PASS all workstation modules initialize and navigation changes active view');
  for(const theme of ['amber','red','mono','green']){d.querySelector(`[data-theme-choice="${theme}"]`).click();await tick();assert.equal(d.body.dataset.theme,theme);assert.equal(w.localStorage.getItem('fieldos-v12-theme'),theme)}
  console.log('PASS four themes and preference persistence');
  d.getElementById('waypointName').value='QA Base';click('setBaseWaypoint');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'))[0].name,'QA Base');assert.match(d.getElementById('waypointList').textContent,/QA Base/);
@@ -273,6 +273,15 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const jWarn=r.junctionWarningsForPath(jPath,[{highway:'path',name:'Main Trail'},{highway:'path',name:'Main Trail'}],jGraph);
  assert.equal(jWarn.length,1);assert.equal(jWarn[0].alternates,1);assert.ok(jWarn[0].options.some(x=>/Side Trail/.test(x)));
  console.log('PASS mapped branch intersections generate junction-topology warnings with alternate trail labels');
+ assert.ok(appJs.includes("const DOT12_PREFIX = 'fieldos-v1.2-'"));
+ assert.ok(appJs.includes("window.FIELD_MAP_ENGINE?.unmount?.('homeRealMap')"));
+ assert.ok(appJs.includes("if(useOffline){\n    fieldNativeDestroyAll();"));
+ assert.ok(appJs.includes("return fieldLegacyUpdateFieldMaps(recenter)"));
+ assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
+ assert.ok(mapEngineJs.includes("function isVisible(st)"));
+ assert.ok(mapEngineJs.includes("function unmount(id)"));
+ assert.ok(mapEngineJs.includes("preserveAnchor(anchor,e.clientX,e.clientY,nextZoom)"));
+ console.log('PASS unified map storage, offline PMTiles ownership, external-engine unmount, and anchored double-click zoom');
  assert.ok(appJs.includes('function routeCorridorBounds('));assert.ok(appJs.includes('function packCoversBounds('));assert.ok(appJs.includes('activateBestRoutePack'));
  assert.ok(html.includes('id="routeCorridorPadding"'));assert.ok(html.includes('id="checkRouteOffline"'));assert.ok(html.includes('id="activateRouteOffline"'));
  console.log('PASS browser offline-route corridor coverage controls and pack selection are wired');
