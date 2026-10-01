@@ -227,6 +227,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const etaPlan={points:[{lat:44,lon:-73},{lat:44.04,lon:-73}],distanceMiles:4,elevationGainFt:1800,trailSections:[{surface:'ground',distanceM:3000}]};
  const eta=w.FIELD_ADAPTIVE_ETA.compute(etaPlan,{lat:44.01,lon:-73});assert.equal(eta.pace.source,'RECORDED TRACK');assert.ok(eta.totalHours>0);assert.ok(eta.remainingHours<eta.totalHours);w.FIELD_ADAPTIVE_ETA.render(eta);
  console.log('PASS feature 25 Adaptive ETA learns a bounded personal pace from recorded tracks and adjusts time for grade, conditions and route progress');
+ assert.ok(fieldOpsJs.includes('let routeGeometryCacheKey'));assert.ok(fieldOpsJs.includes('routeGeometryCacheKey===key&&routeGeometryCache'));assert.ok(!fieldOpsJs.includes('function routeCumulative('));console.log('PASS ETA and turn navigation reuse cached route geometry and cumulative distance');
 
  const fatigue=w.FIELD_FATIGUE.compute({points:[{lat:44,lon:-73},{lat:44.08,lon:-73}],distanceMiles:12,elevationGainFt:4500},.8);assert.ok(fatigue.factor>1.2);assert.ok(/ACCUMULATING|FATIGUED|HIGH/.test(fatigue.level));
  console.log('PASS feature 26 Fatigue Model increases the time factor as completed mileage and climbing accumulate');
