@@ -320,7 +320,9 @@
       st.resizeObserver=new ResizeObserver(entries=>{
         const box=entries[0]?.contentRect;if(!box||box.width<1||box.height<1)return;
         const w=Math.round(box.width),h=Math.round(box.height);
-        if(Math.abs(w-lastW)<2&&Math.abs(h-lastH)<2)return;
+        // Mobile browser chrome and safe-area settling can report a stream of
+        // 1–3 px resizes. They do not require rebuilding the raster tile frame.
+        if(lastW&&lastH&&Math.abs(w-lastW)<8&&Math.abs(h-lastH)<8)return;
         lastW=w;lastH=h;
         cancelAnimationFrame(resizeFrame);
         resizeFrame=requestAnimationFrame(()=>{if(st.rendered&&isVisible(st))render(st)});
