@@ -329,10 +329,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("next.toFixed(1)"));
  assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
  assert.ok(mapEngineJs.includes("const preserveAnchor="));
- assert.ok(mapEngineJs.includes("preserveAnchor(st.pinchStart.anchor"));
+ assert.ok(mapEngineJs.includes("preserveAnchor(anchor,clientX,clientY,committed)"));
  assert.ok(mapEngineJs.includes("previewPinch(Math.pow(2,next-st.pinchStart.zoom)"));
- assert.ok(mapEngineJs.includes("st.pinchStart.lastMidX??st.pinchStart.midX"));
- assert.ok(mapEngineJs.includes("preserveAnchor(anchor?.point"));
+ assert.ok(mapEngineJs.includes("st.pinchStart.visualZoom=next"));\n assert.ok(mapEngineJs.includes("transform 140ms cubic-bezier"));
+ assert.ok(mapEngineJs.includes("settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional))"));
  assert.ok(mapEngineJs.includes("e.detail?.view==='map'?'realMap'"));
  assert.ok(mapEngineJs.includes("else{\n      let resizeTimer=0;"));
  assert.ok(mapEngineJs.includes("clearTimeout(st.failureTimer)"));
