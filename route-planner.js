@@ -1043,19 +1043,24 @@
     return 1.4;
   }
 
-  const SPATIAL_CELL=.01;
+  const SPATIAL_CELL=.01,SPATIAL_MAX_CELLS=512;
   const spatialCell=v=>Math.floor(Number(v)/SPATIAL_CELL);
   function spatialKeys(seg){
     const minLat=spatialCell(Math.min(seg.pa.lat,seg.pb.lat)),maxLat=spatialCell(Math.max(seg.pa.lat,seg.pb.lat));
-    const minLon=spatialCell(Math.min(seg.pa.lon,seg.pb.lon)),maxLon=spatialCell(Math.max(seg.pa.lon,seg.pb.lon)),keys=[];
-    for(let y=minLat;y<=maxLat;y++)for(let x=minLon;x<=maxLon;x++)keys.push(y+':'+x);
+    const minLon=spatialCell(Math.min(seg.pa.lon,seg.pb.lon)),maxLon=spatialCell(Math.max(seg.pa.lon,seg.pb.lon));
+    if((maxLat-minLat+1)*(maxLon-minLon+1)>SPATIAL_MAX_CELLS)return null;
+    const keys=[];for(let y=minLat;y<=maxLat;y++)for(let x=minLon;x<=maxLon;x++)keys.push(y+':'+x);
     return keys;
   }
   function addSpatialSegment(index,seg){
-    for(const key of spatialKeys(seg)){let bucket=index.get(key);if(!bucket)index.set(key,bucket=new Set());bucket.add(seg)}
+    const keys=spatialKeys(seg);
+    if(!keys){let overflow=index.get('*');if(!overflow)index.set('*',overflow=new Set());overflow.add(seg);return}
+    for(const key of keys){let bucket=index.get(key);if(!bucket)index.set(key,bucket=new Set());bucket.add(seg)}
   }
   function removeSpatialSegment(index,seg){
-    for(const key of spatialKeys(seg)){const bucket=index.get(key);if(!bucket)continue;bucket.delete(seg);if(!bucket.size)index.delete(key)}
+    const keys=spatialKeys(seg);
+    if(!keys){const overflow=index.get('*');overflow?.delete(seg);if(overflow&&!overflow.size)index.delete('*');return}
+    for(const key of keys){const bucket=index.get(key);if(!bucket)continue;bucket.delete(seg);if(!bucket.size)index.delete(key)}
   }
   function buildSpatialIndex(segments){
     const index=new Map();for(const seg of segments)addSpatialSegment(index,seg);return index;
@@ -1063,9 +1068,9 @@
   function nearbySegments(graph,p,maxMeters){
     if(!graph.spatial?.size)return graph.segments;
     const latPad=maxMeters/111320,cos=Math.max(.01,Math.cos(p.lat*Math.PI/180)),lonPad=maxMeters/(111320*cos);
-    const minLat=spatialCell(p.lat-latPad),maxLat=spatialCell(p.lat+latPad),minLon=spatialCell(p.lon-lonPad),maxLon=spatialCell(p.lon+lonPad),found=new Set();
+    const minLat=spatialCell(p.lat-latPad),maxLat=spatialCell(p.lat+latPad),minLon=spatialCell(p.lon-lonPad),maxLon=spatialCell(p.lon+lonPad),found=new Set(graph.spatial.get('*')||[]);
     for(let y=minLat;y<=maxLat;y++)for(let x=minLon;x<=maxLon;x++)for(const seg of graph.spatial.get(y+':'+x)||[])found.add(seg);
-    return found.size?[...found]:graph.segments;
+    return [...found];
   }
 
   function buildGraph(elements){
