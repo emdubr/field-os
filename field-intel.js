@@ -56,9 +56,41 @@
     return {schema:1,builtAt:new Date(now).toISOString(),name:String(trip.tripName||document.getElementById('tripName')?.value||'FIELD MISSION'),trip:{...trip,tripReturn:returnAt,checkinInterval:String(interval),emergency},route:{name:String(route.name||document.getElementById('routeName')?.value||'FIELD ROUTE'),points,distanceM,distanceMi:distanceM/1609.344,gainFt:Number(route.elevationProfile?.gainFt??route.gain??0)||0,estimatedHours:Number(route.estimatedHours||0)||null,terrain:String(route.terrain||''),routingMode:String(route.routingMode||'')},waypoints,weather:{snapshot:weatherText,capturedAt:new Date(now).toISOString(),forecastCache:weatherCache},environment:environmentCache,emergencyContact:contactText,checkin:{intervalMinutes:interval,last:Number(checkin.last)||null,nextDue:due},offline:{hasOfflinePack:hasOffline,packId,mapSource,displaySource:text('offlineMapSource'),mode:offlineLabel,packAge:text('offlineMapAge'),packOrigin:text('offlineMapOrigin'),routeCorridorStatus:corridorStatus},device:{position,accuracy:text('homeAccuracy'),gnss:text('mobileFixState'),satellites:text('satCount'),meshNodes:text('meshCount'),batteryPercent:battery,powerMode:localStorage.getItem(key('power'))||'normal'},essentials:{checked,total:10},readiness};
   }
   const rows=(target,items)=>{const el=document.getElementById(target);if(!el)return;el.innerHTML=items.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join('')};
+  const readinessTarget={
+    route:{view:'route',focus:'routePlannerMap'},
+    offline:{view:'map',focus:'offlineMapManager'},
+    waypoints:{view:'waypoints'},
+    weather:{view:'weather',focus:'weatherRefresh',run:'weatherRefresh'},
+    environment:{view:'weather',focus:'environmentIntelRefresh',run:'environmentIntelRefresh'},
+    corridor:{view:'map',focus:'checkRouteOffline',run:'checkRouteOffline'},
+    contact:{view:'mission',focus:'missionContact'},
+    return:{view:'trip',focus:'tripReturn'},
+    checkin:{view:'trip',focus:'checkinInterval'},
+    battery:{view:'power'},
+    essentials:{view:'trip',focus:'essentialsChecklist'},
+    emergency:{view:'trip',focus:'tripEmergency'}
+  };
+  function liveReadiness(){return missionData().readiness||[]}
+  function readinessItem(id){return liveReadiness().find(item=>item.id===id)||null}
+  function focusReadinessTarget(target,run=false){
+    if(!target)return;
+    const el=target.focus&&document.getElementById(target.focus);
+    el?.scrollIntoView?.({block:'center',behavior:'smooth'});
+    if(el?.focus)el.focus({preventScroll:true});
+    if(run&&target.run)document.getElementById(target.run)?.click();
+  }
+  function completeReadiness(id){
+    const item=readinessItem(id),target=readinessTarget[id];if(!target)return;
+    const run=!item?.ok&&!!target.run;
+    if(target.view&&target.view!=='mission')window.FIELD_OPEN_VIEW?.(target.view);
+    setTimeout(()=>focusReadinessTarget(target,run),target.view&&target.view!=='mission'?80:0);
+    setStatus(item?.ok?`MISSION-121 // REVIEW ${item.label}`:`MISSION-120 // COMPLETE ${item?.label||String(id).toUpperCase()}`,'ready');
+  }
   function render(pack=read('mission-pack',null)){
-    const source=pack||missionData(),active=read('mission-active',null),ready=source.readiness||[],ok=ready.filter(x=>x.ok).length,grid=document.getElementById('missionReadiness');
-    if(grid)grid.innerHTML=ready.map(item=>{const cls=item.ok?'ok':item.level==='warn'?'warn':'bad';return `<div class="mission-readiness-item ${cls}"><i></i><b>${esc(item.label)}</b><small>${esc(item.detail)}</small></div>`}).join('');
+    // Mission pack summaries remain frozen snapshots. Readiness is intentionally
+    // live so completing a requirement immediately changes the checklist.
+    const source=pack||missionData(),active=read('mission-active',null),ready=liveReadiness(),ok=ready.filter(x=>x.ok).length,grid=document.getElementById('missionReadiness');
+    if(grid)grid.innerHTML=ready.map(item=>{const cls=item.ok?'ok':item.level==='warn'?'warn':'bad',verb=item.ok?'REVIEW':'COMPLETE →';return `<button type="button" class="mission-readiness-item ${cls}" data-readiness-id="${esc(item.id)}" aria-label="${esc(verb+' '+item.label)}"><i aria-hidden="true"></i><b>${esc(item.label)}</b><small>${esc(item.detail)}</small><span class="mission-readiness-action">${verb}</span></button>`}).join('');
     const score=document.getElementById('missionReadinessScore');if(score)score.textContent=`${ok} / ${ready.length}`;
     const head=document.getElementById('missionHeadState');if(head){head.textContent=active?'ACTIVE':pack?'PACK BUILT':'NOT BUILT';head.classList.toggle('active',!!active)}
     rows('missionTripRoute',[['MISSION',source.name||'—'],['ROUTE',source.route?.name||'—'],['DISTANCE',Number.isFinite(source.route?.distanceMi)?`${source.route.distanceMi.toFixed(2)} mi`:'—'],['GAIN',Number.isFinite(source.route?.gainFt)?`${Math.round(source.route.gainFt)} ft`:'—'],['RETURN',source.trip?.tripReturn?new Date(source.trip.tripReturn).toLocaleString():'NOT SET'],['CHECK-IN',source.checkin?.intervalMinutes?`Every ${source.checkin.intervalMinutes} min`:'MANUAL']]);
@@ -75,7 +107,12 @@
   async function copySummary(){const value=summary();try{await navigator.clipboard.writeText(value)}catch{const ta=document.createElement('textarea');ta.value=value;document.body.append(ta);ta.select();document.execCommand?.('copy');ta.remove()}setStatus('MISSION-110 // SUMMARY COPIED','ready')}
   function exportPack(){const pack=read('mission-active',null)||read('mission-pack',null)||build(),blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`fieldos-mission-${String(pack.name||'mission').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'mission'}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500)}
   document.getElementById('missionBuild')?.addEventListener('click',build);document.getElementById('missionStart')?.addEventListener('click',start);document.getElementById('missionEnd')?.addEventListener('click',end);document.getElementById('missionCopy')?.addEventListener('click',copySummary);document.getElementById('missionExport')?.addEventListener('click',exportPack);
+  document.getElementById('missionReadiness')?.addEventListener('click',e=>{const button=e.target.closest?.('[data-readiness-id]');if(button)completeReadiness(button.dataset.readinessId)});
+  const refreshReadiness=()=>{if(document.getElementById('mission')?.classList.contains('active'))render(read('mission-pack',null))};
+  for(const eventName of ['fieldos:routechange','fieldos:waypointschange','fieldos:weatherchange','fieldos:environmentchange'])document.addEventListener(eventName,refreshReadiness);
+  weather?.addEventListener('input',refreshReadiness);contact?.addEventListener('input',refreshReadiness);
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='mission')render(read('mission-pack',null))});
+  window.FIELD_MISSION_READINESS={items:liveReadiness,complete:completeReadiness,refresh:refreshReadiness};
   if(read('mission-active',null))document.body.classList.add('mission-active');render(read('mission-pack',null));
 
 
@@ -177,7 +214,7 @@
     if(eq.status==='fulfilled')quakes=(eq.value?.features||[]).map(f=>{const co=f?.geometry?.coordinates||[],point={lat:Number(co[1]),lon:Number(co[0])},d=minRouteDistanceM(point,screen);return {mag:Number(f?.properties?.mag)||0,place:String(f?.properties?.place||''),time:Number(f?.properties?.time)||0,lat:point.lat,lon:point.lon,distanceMi:d/1609.344};}).filter(q=>Number.isFinite(q.distanceMi)&&q.distanceMi<=100).sort((a,b)=>a.distanceMi-b.distanceMi).slice(0,25);
     if(aq.status==='rejected'&&eq.status==='rejected')throw new Error('Environmental sources unavailable.');
     environmentState.cache={downloadedAt:new Date().toISOString(),anchor:{lat:anchor.lat,lon:anchor.lon},air,quakes,sources:{air:'Open-Meteo Air Quality',earthquakes:'USGS Past Day'}};
-    write('environment-intel-cache',environmentState.cache);renderEnvironmentIntel();return environmentState.cache;
+    write('environment-intel-cache',environmentState.cache);renderEnvironmentIntel();document.dispatchEvent(new CustomEvent('fieldos:environmentchange'));return environmentState.cache;
   }
   document.getElementById('environmentIntelRefresh')?.addEventListener('click',()=>fetchEnvironmentIntel().catch(err=>{const s=document.getElementById('environmentIntelState');if(s)s.textContent='REFRESH FAILED';console.warn('FIELD/OS environment intelligence failed',err)}));
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='weather')renderEnvironmentIntel()});window.addEventListener('offline',renderEnvironmentIntel);window.addEventListener('online',renderEnvironmentIntel);setTimeout(renderEnvironmentIntel,500);
