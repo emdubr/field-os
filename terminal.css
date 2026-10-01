@@ -1,0 +1,187 @@
+/* Phosphor terminal finish. Shared tokens keep all three palettes coherent.
+   Geometry and map gestures stay owned by the existing workstation/map code. */
+body[data-theme="green"] {
+  --bg:#030b08; --panel:#06130e; --panel2:#0a1c14; --panel3:#102a1e;
+  --fg:#a0e8b9; --fg2:#7cdba0; --dim:#70a988; --line:#42775b;
+  --grid:rgba(124,219,160,.12);
+}
+body {
+  --crt-green:var(--fg2); --crt-green-hot:var(--fg); --crt-green-dim:var(--dim);
+  --crt-black:var(--bg); --crt-window:var(--panel); --crt-title:var(--fg2);
+  --crt-rule:var(--line);
+  background:var(--bg)!important; color:var(--fg)!important;
+  text-shadow:0 0 3px color-mix(in srgb,var(--fg2) 18%,transparent);
+}
+html {background:#030b08!important}
+body .shell,body .view,body .detail-console {
+  background:var(--bg)!important;
+}
+body .panel,body .terminal-panel,body .module-grid .panel,body .field-tools-panel {
+  background:var(--panel)!important; border:1px solid var(--fg2)!important;
+  border-radius:0!important;
+  box-shadow:inset 0 0 0 2px var(--bg),inset 0 0 0 3px var(--line)!important;
+}
+/* The reference's identifying feature: pale, solid window title bars. */
+body .panel-title,body .terminal-title,body .module-grid .panel-title,
+#home .terminal-title {
+  display:flex!important; align-items:center; gap:5px!important;
+  background:var(--fg2)!important; color:var(--bg)!important;
+  border:1px solid var(--fg2)!important;
+  margin:0 0 9px!important; padding:4px 6px 4px 20px!important;
+  min-height:25px!important; font-size:11px!important; line-height:1.3!important;
+  font-weight:700; letter-spacing:.025em!important; text-shadow:none!important;
+  position:relative; flex-wrap:wrap;
+}
+body .panel-title::before,body .terminal-title::before,
+#home .terminal-title::before,body .view .panel-title::before {
+  content:'▣'!important; position:absolute; left:5px; top:50%;
+  transform:translateY(-50%); color:var(--bg)!important; font-size:10px!important;
+}
+body .panel-title>span,body .terminal-title>span,
+body .panel-title .tiny,body .terminal-title .tiny {
+  color:var(--bg)!important; font-size:9px!important; margin-left:auto;
+  text-shadow:none!important; letter-spacing:0!important;
+}
+#home .map-console .terminal-title::after {content:none!important}
+body .topbar,body .console-header,body .module-console-header {
+  background:var(--panel)!important; border-color:var(--fg2)!important;
+  box-shadow:none!important; color:var(--fg)!important;
+}
+body .brand,body .ws-brand {color:var(--fg)!important; text-shadow:none!important}
+body .workstation-nav {background:var(--bg)!important;border-color:var(--fg2)!important}
+body .workstation-nav button {border-bottom:1px solid var(--line);font-size:11px}
+body .workstation-nav button.selected {background:var(--fg2)!important;color:var(--bg)!important}
+body .workstation-nav button.selected span {color:var(--bg)!important}
+body .ws-nav-label {border-bottom:1px solid var(--line);color:var(--fg)!important}
+body .module-band,body .detail-statusline,body .map-meta,body .map-footer {
+  background:var(--panel)!important;color:var(--dim)!important;border-color:var(--line)!important;
+}
+body .action,body .ghost,body .back,body .tiny-button,body .link-action,
+body .priority-action,body .ws-actions button,#home .console-command-strip button,
+#home .handheld-actions button:not(.handheld-sos),#home .vertical-keys button {
+  background:var(--fg2)!important;color:var(--bg)!important;
+  border:1px solid var(--fg2)!important;box-shadow:none!important;
+  text-shadow:none!important;font-weight:700;letter-spacing:.02em!important;
+}
+body button:focus-visible,body a:focus-visible {
+  outline:2px solid var(--fg)!important;outline-offset:3px;
+}
+body input,body select,body textarea,body .terminal-input,body .terminal-area {
+  background:var(--bg)!important;color:var(--fg)!important;border-color:var(--line)!important;
+}
+body .readouts dt,body .muted,body .tiny,body .sensor-source-note {color:var(--dim)!important}
+body .readouts dd,body strong,body b,body .big-readout {color:inherit}
+body .priority-now,body .handheld-status button {
+  background:var(--panel)!important;border-color:var(--line)!important;
+}
+body .sensor-chart {background:var(--panel)!important;border-color:var(--line)!important}
+/* No blur, distortion or animated scanlines over interactive maps. */
+body .crt-overlay,body .noise-overlay,body .grid-overlay,body::after {display:none!important}
+body .field-real-map {box-shadow:none!important}
+body .tabbar {background:var(--bg)!important;border-color:var(--fg2)!important;box-shadow:none!important}
+body .tabbar .tab-btn,body .tabbar .tab-btn:visited {
+  background:var(--panel)!important;color:var(--fg)!important;border:1px solid var(--line)!important;
+  box-shadow:none!important;text-shadow:none!important;
+}
+body .tabbar .tab-btn.active,body .tabbar .tab-btn[aria-current="page"] {
+  background:var(--panel3)!important;color:var(--fg)!important;
+  border:1px solid var(--fg2)!important;border-top:3px solid var(--fg)!important;
+  box-shadow:none!important;text-shadow:none!important;
+}
+body .tabbar .tab-btn.active span,body .tabbar .tab-btn.active small {color:var(--fg)!important}
+@media(min-width:1024px) {
+  body .workstation-nav {width:184px}
+  body .shell {width:calc(100% - 200px)!important;margin-left:200px!important}
+  #home .detail-main-grid {grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr)!important}
+  #home .terminal-panel {padding:8px!important}
+  #home .console-header {min-height:42px!important}
+  #home .detail-mid-grid,#home .detail-bottom-grid {gap:8px!important}
+}
+@media(max-width:767px) {
+  body {text-shadow:none!important}
+  body .screen {padding:6px!important}
+  #home .detail-console {gap:7px!important}
+  #home .handheld-status {gap:0!important;border:1px solid var(--fg2)!important}
+  #home .handheld-status button {min-height:57px!important;border:0!important;border-right:1px solid var(--line)!important;border-bottom:1px solid var(--line)!important}
+  #home .handheld-status button span,#home .handheld-status button small {font-size:9px!important;color:var(--dim)!important}
+  #home .handheld-status button b {font-size:14px!important;color:var(--fg)!important}
+  #home .handheld-actions {gap:5px!important}
+  #home .handheld-actions button {font-size:9px!important;min-height:44px!important}
+  #home .priority-now {margin:0!important;padding:8px!important}
+  #home .priority-now-copy strong {font-size:12px!important}
+  #home .priority-now-copy p {font-size:10px!important;line-height:1.45}
+  #home .terminal-panel,#home .detailed-nav,#home .detailed-sensors {padding:6px!important}
+  #home .terminal-title,body .module-grid .panel-title {font-size:10px!important;min-height:25px!important;margin:0 0 7px!important}
+  #home .terminal-title>span {font-size:8px!important}
+  #home .home-real-map {height:36dvh!important;min-height:270px!important;max-height:380px!important}
+  #home .map-controls button {background:var(--panel)!important;color:var(--fg)!important;border-color:var(--fg2)!important;min-height:44px!important}
+  #home .map-meta,#home .map-footer {font-size:9px!important;line-height:1.6!important}
+  #home .detailed-nav .nav-stats span,#home .sensor-lines span {font-size:10px!important;padding:5px 0!important}
+  #home .home-compass-enable {font-size:9px!important;min-height:44px!important}
+  #home #homeCompassPermissionState {font-size:8px!important}
+  #home .mini-chart-title,#home .chart-axis {font-size:9px!important}
+  #home .mini-chart {height:100px!important}
+  #home .route-info-split p,#home .track-rich p,#home .trip-console p,
+  #home .return-console p,#home .mesh-table,#home .event-lines {font-size:11px!important;line-height:1.65!important}
+  #home .console-mid-grid,#home .console-bottom-grid {gap:7px!important;margin-top:0!important}
+  #home .console-command-strip {gap:5px!important;padding:5px!important;background:var(--bg)!important}
+  #home .console-command-strip button {font-size:9px!important;min-height:44px!important}
+  body .tabbar .tab-btn small {font-size:10px!important}
+  body .tabbar .tab-btn span {font-size:17px!important}
+}
+@media(prefers-reduced-motion:reduce) {body {text-shadow:none!important}}
+/* Explicit root scope wins the older ID-scoped workstation skin. */
+body #app #home .terminal-title {
+  background:var(--fg2)!important;color:var(--bg)!important;
+  margin:0 0 7px!important;padding:4px 6px 4px 20px!important;
+  min-height:25px!important;font-size:11px!important;line-height:1.3!important;
+  letter-spacing:.025em!important;text-shadow:none!important;
+}
+body #app #home .terminal-title>span {font-size:9px!important;color:var(--bg)!important}
+body #app #home .detail-console {border-radius:0!important}
+@media(min-width:1024px) {
+  body .workstation-nav {width:224px!important}
+  body #app.shell {width:calc(100% - 250px)!important;margin:10px 10px 10px 240px!important}
+  body #app #home .detail-main-grid {display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr)!important;gap:8px!important}
+  body #app #home .detail-main-grid .detail-right-stack {display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+  body #app #home .detail-main-grid .map-console {min-width:0!important;align-self:start}
+  body #app #home .home-real-map {height:520px!important}
+}
+@media(max-width:767px) {
+  body #app #home .console-header {display:flex!important;height:32px!important;min-height:32px!important;padding:4px 7px!important}
+  body #app #home .console-header strong {font-size:13px!important;white-space:nowrap}
+  body #app #home .console-header>span {display:none!important}
+  body #app #home .handheld-status {grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  body #app #home .handheld-actions {grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  body #app #home .handheld-actions button {font-size:8px!important;padding:4px!important}
+  body #app #home .terminal-title {font-size:10px!important}
+  body #app #home .terminal-title>span {font-size:8px!important}
+}
+@media(min-width:1024px) {
+  body #app #home .detail-main-grid>.map-console {grid-column:1!important;grid-row:1!important}
+  body #app #home .detail-main-grid>.detail-right-stack {grid-column:2!important;grid-row:1!important;min-width:0!important}
+  body #app #home .detail-main-grid>.detail-right-stack>* {grid-column:1!important;grid-row:auto!important}
+}
+@media(max-width:767px) {
+  body #app #home .home-real-map {height:36dvh!important;min-height:270px!important;max-height:380px!important}
+  body #app #home .map-workarea {height:auto!important;min-height:0!important}
+}
+@media(min-width:1024px) {
+  body #app #home .detailed-nav {display:grid!important;grid-template-columns:150px minmax(0,1fr)!important;gap:5px 12px!important}
+  body #app #home .detailed-nav .terminal-title {grid-column:1/-1!important}
+  body #app #home .nav-toprow {grid-column:1/-1!important;margin:0!important;font-size:11px!important}
+  body #app #home .home-compass-cluster {grid-column:1!important;grid-row:3!important;margin:0!important}
+  body #app #home .home-field-compass {width:130px!important;height:130px!important}
+  body #app #home .home-compass-readout strong {font-size:20px!important}
+  body #app #home .home-compass-enable {min-height:32px!important;font-size:8px!important}
+  body #app #home .detailed-nav .nav-stats {grid-column:2!important;grid-row:3!important;align-self:start!important;font-size:11px!important}
+  body #app #home .detailed-sensors .mini-chart {height:70px!important;min-height:0!important}
+  body #app #home .detailed-sensors .sensor-lines span {font-size:10px!important;padding:2px 0!important}
+}
+@media(min-width:1024px) {
+  body #app #home .detail-main-grid>.detail-right-stack {display:contents!important}
+  body #app #home .detail-main-grid>.map-console {grid-row:1/span 2!important;align-self:stretch}
+  body #app #home .detail-main-grid>.detail-right-stack>.detailed-nav {grid-column:2!important;grid-row:1!important}
+  body #app #home .detail-main-grid>.detail-right-stack>.detailed-sensors {grid-column:2!important;grid-row:2!important}
+  body #app #home .detail-main-grid>.detail-right-stack>.detailed-route-info {grid-column:1/-1!important;grid-row:3!important}
+}

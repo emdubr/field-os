@@ -19,6 +19,15 @@ const server=http.createServer((req,res)=>{
     await page.route('**/*',r=>r.request().url().startsWith(origin)?r.continue():r.abort());
     await page.goto(origin);await page.waitForTimeout(800);
     await page.setViewportSize({width:1440,height:900});
+    const terminalLayout=await page.evaluate(()=>{
+      const map=document.querySelector('#home .map-console').getBoundingClientRect();
+      const side=document.querySelector('#home .detailed-nav').getBoundingClientRect();
+      const rail=document.querySelector('.workstation-nav').getBoundingClientRect();
+      const title=getComputedStyle(document.querySelector('#home .terminal-title'));
+      return {sideBySide:side.left>=map.right,railClear:map.left>=rail.right,titleFill:title.backgroundColor,titleInk:title.color};
+    });
+    assert.ok(terminalLayout.sideBySide&&terminalLayout.railClear,'Home instruments stay beside map and clear of navigation');
+    assert.notEqual(terminalLayout.titleFill,terminalLayout.titleInk,'Solid terminal title bars retain contrasting labels');
     await page.locator('#workspaceSearch').click();
     assert.equal(await page.locator('#workspaceSwitcher').evaluate(e=>e.open),true);
     await page.locator('#workspaceQuery').fill('gps');
