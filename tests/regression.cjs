@@ -569,6 +569,9 @@ console.log('PASS Adaptive ETA panel sizes to content instead of stretching with
 
 assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
  assert.ok(workstationCss.includes('v3.72 MAP GESTURE'));
+ assert.ok(workstationCss.includes('v3.72 MOBILE TASK-FIRST'));
+ assert.ok(workstationJs.includes("details.textContent='SHOW DETAILS'"));
+ assert.ok(workstationJs.includes("mobile-details-open"));
  assert.ok(appJs.includes("function sensorSummary()"));
  assert.ok(appJs.includes("devicePixelRatio"));
  assert.ok(html.includes('class="sensor-live-summary"'));
