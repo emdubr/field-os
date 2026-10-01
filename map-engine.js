@@ -216,6 +216,10 @@
         resizeFrame=requestAnimationFrame(()=>{if(st.rendered&&st.el.offsetParent!==null)render(st)});
       });
       st.resizeObserver.observe(el);
+    }else{
+      let resizeTimer=0;
+      st.onResize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&st.el.offsetParent!==null)render(st)},100)};
+      window.addEventListener('resize',st.onResize,{passive:true});
     }
     states.set(id,st);
     return st;
@@ -508,6 +512,17 @@
 
   setInterval(()=>{if(!document.hidden)updateLocationLabels()},1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateLocationLabels();refresh(false)}});
+
+  document.addEventListener('fieldos:viewchange',e=>{
+    const id=e.detail?.view==='map'?'realMap':e.detail?.view==='home'?'homeRealMap':null;
+    if(!id)return;
+    requestAnimationFrame(()=>{
+      const st=ensure(id);if(!st)return;st.rendered=true;
+      const route=plannedRoute();
+      if(!st.routeFitted&&route.length>1&&!liveEnabled){st.routeFitted=true;fitBounds(id,route,{padding:48,maxZoom:16});}
+      else render(st);
+    });
+  });
 
   window.FIELD_MAP_ENGINE={
     refresh,setLayers,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
