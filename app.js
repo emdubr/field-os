@@ -176,10 +176,12 @@ function applyTheme(name,persist=true){
 const savedTheme = storageGet(STORE_PREFIX+'theme') || storageGet('fieldos-theme') || 'green';
 applyTheme(savedTheme,false);
 
-function updateClock(){
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-  document.getElementById('date').textContent = now.toLocaleDateString([], {year:'numeric', month:'2-digit', day:'2-digit'});
+const clockEl=document.getElementById('clock'),dateEl=document.getElementById('date');
+let lastClockDate='';
+function updateClock(now=new Date()){
+  if(clockEl)clockEl.textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const dateKey=`${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  if(dateEl&&dateKey!==lastClockDate){dateEl.textContent = now.toLocaleDateString([], {year:'numeric', month:'2-digit', day:'2-digit'});lastClockDate=dateKey}
 }
 updateClock(); window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateClock()},1000);
 
@@ -281,13 +283,14 @@ function updatePositionDisplays(){
   updateSolar();
 }
 let lastFixAt=Date.now()-4000,fixAge=4;
+const fixAgeEl=document.getElementById('fixAge'),homeFixAgeEl=document.getElementById('homeFixAge');
 function refreshFixAge(now=Date.now()){
   fixAge=Math.max(0,Math.floor((now-lastFixAt)/1000));
   const h=String(Math.floor(fixAge/3600)).padStart(2,'0');
   const m=String(Math.floor((fixAge%3600)/60)).padStart(2,'0');
-  const s=String(fixAge%60).padStart(2,'0');
-  const el=document.getElementById('fixAge'); if(el) el.textContent=`${h}:${m}:${s}`;
-  const homeAge=document.getElementById('homeFixAge'); if(homeAge) homeAge.textContent=`${h}:${m}:${s}`;
+  const s=String(fixAge%60).padStart(2,'0'),text=`${h}:${m}:${s}`;
+  if(fixAgeEl)fixAgeEl.textContent=text;
+  if(homeFixAgeEl)homeFixAgeEl.textContent=text;
 }
 refreshFixAge();
 window.FIELD_RUNTIME.every(()=>{if(!document.hidden)refreshFixAge()},1000);
