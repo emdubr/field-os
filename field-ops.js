@@ -29,7 +29,6 @@
     if(key){routeGeometryCacheKey=key;routeGeometryCache=value}
     return value;
   }
-  const routeDistanceM=pts=>{const p=cleanPoints(pts);let d=0;for(let i=1;i<p.length;i++)d+=meters(p[i-1],p[i]);return d};
   const fmtMiles=m=>Number.isFinite(m)?(m/1609.344).toFixed(2)+' mi':'—';
   const fmtTime=h=>!Number.isFinite(h)||h<0?'—':h<1?Math.round(h*60)+' min':Math.floor(h)+'h '+Math.round((h%1)*60)+'m';
   const weatherCache=()=>window.FIELD_WEATHER?.state?.cache||null;
@@ -130,7 +129,6 @@
   // Feature 27 — Turn-by-turn trail instructions.
   const turnState={cues:[],index:0,haptics:true,lastVibrated:null};
   function deltaBearing(a,b){return ((b-a+540)%360)-180}
-  function routeCumulative(pts){const c=[0];for(let i=1;i<pts.length;i++)c[i]=c[i-1]+meters(pts[i-1],pts[i]);return c}
   function pointIndexAtDistance(cum,d){let best=0;for(let i=1;i<cum.length;i++)if(Math.abs(cum[i]-d)<Math.abs(cum[best]-d))best=i;return best}
   function generateTurns(plan=getPlan()){const {pts,cum}=routeGeometry(plan);if(pts.length<2){turnState.cues=[];return []}const cues=[{id:'start',index:0,distanceM:0,type:'start',instruction:'START ROUTE',trail:String(plan.name||'ROUTE'),bearing:bearing(pts[0],pts[1])}],minSpacing=80;let lastCueD=0;for(let i=1;i<pts.length-1;i++){const inB=bearing(pts[i-1],pts[i]),outB=bearing(pts[i],pts[i+1]),d=deltaBearing(inB,outB);if(Math.abs(d)>=38&&cum[i]-lastCueD>=minSpacing){cues.push({id:'turn-'+i,index:i,distanceM:cum[i],type:d>0?'right':'left',instruction:`${Math.abs(d)>=100?'SHARP ':''}TURN ${d>0?'RIGHT':'LEFT'}`,trail:'ROUTE',bearing:outB});lastCueD=cum[i]}}let secD=0,lastTrail='';for(const s of Array.isArray(plan.trailSections)?plan.trailSections:[]){const name=String(s.name||s.label||s.ref||'').trim();if(!name){secD+=Number(s.distanceM)||0;continue}const idx=pointIndexAtDistance(cum,secD);if(secD>0&&name.toLowerCase()!==lastTrail){const outB=idx<pts.length-1?bearing(pts[idx],pts[idx+1]):0;cues.push({id:'trail-'+cues.length,index:idx,distanceM:secD,type:'trail',instruction:`CONTINUE ON ${name.toUpperCase()}`,trail:name,bearing:outB});}lastTrail=name.toLowerCase();secD+=Number(s.distanceM)||0}cues.push({id:'finish',index:pts.length-1,distanceM:cum.at(-1),type:'finish',instruction:'ARRIVE AT ROUTE END',trail:String(plan.name||'ROUTE'),bearing:0});cues.sort((a,b)=>a.distanceM-b.distanceM);turnState.cues=cues;turnState.index=0;return cues}
   function nextTurn(position=getPosition(),plan=getPlan()){if(!turnState.cues.length)generateTurns(plan);const {pts,cum,total}=routeGeometry(plan);if(!pts.length||!turnState.cues.length)return null;const progress=routeProgressFraction(plan,position)*total;let ci=turnState.cues.findIndex(c=>c.distanceM>=progress-20);if(ci<0)ci=turnState.cues.length-1;turnState.index=ci;const cue=turnState.cues[ci],distanceM=Math.max(0,cue.distanceM-progress);return {...cue,distanceToCueM:distanceM,progressM:progress,totalM:total,remaining:Math.max(0,turnState.cues.length-ci-1)}}
