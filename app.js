@@ -201,13 +201,20 @@ const sensorHistory={
   battery:Array.from({length:36},(_,i)=>64-i*.05)
 };
 function pushSensorHistory(key,value){if(!Number.isFinite(Number(value))||!sensorHistory[key])return;sensorHistory[key].push(Number(value));if(sensorHistory[key].length>SENSOR_HISTORY_MAX)sensorHistory[key].shift()}
+let sensorChartThemeCache=null;
+function sensorChartColors(){
+  const theme=document.body.dataset.theme||'green';
+  if(sensorChartThemeCache?.theme===theme)return sensorChartThemeCache;
+  const st=getComputedStyle(document.body);
+  return sensorChartThemeCache={theme,fg:st.getPropertyValue('--fg2').trim()||'#72e58e',line:st.getPropertyValue('--line').trim()||'#245537',dim:st.getPropertyValue('--dim').trim()||'#64806a'};
+}
 function drawSensorSeries(canvasId,series,title){
   const c=document.getElementById(canvasId);if(!c)return;
   const rect=c.getBoundingClientRect(),cssW=Math.max(280,Math.round(rect.width||c.clientWidth||900)),cssH=Math.max(150,Math.round(rect.height||c.clientHeight||220)),dpr=Math.min(2,window.devicePixelRatio||1);
   const pxW=Math.round(cssW*dpr),pxH=Math.round(cssH*dpr);
   if(c.width!==pxW||c.height!==pxH){c.width=pxW;c.height=pxH}
   const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
-  const w=cssW,h=cssH,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
+  const w=cssW,h=cssH,{fg,line,dim}=sensorChartColors();
   ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;
   for(let i=1;i<4;i++){const y=30+(h-64)*i/4;ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-8,y);ctx.stroke()}
   const dashSets=[[],[8,5],[2,4]],plotTop=30,plotBottom=h-34,plotH=Math.max(30,plotBottom-plotTop);
