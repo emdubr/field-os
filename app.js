@@ -181,7 +181,7 @@ function updateClock(){
   document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
   document.getElementById('date').textContent = now.toLocaleDateString([], {year:'numeric', month:'2-digit', day:'2-digit'});
 }
-updateClock(); setInterval(()=>{if(!document.hidden)updateClock()},1000);
+updateClock(); window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateClock()},1000);
 
 let demo = {alt:3420, heading:37, speed:2.4, temp:31, press:898, hum:64, sats:18, mesh:7};
 const pressureHistory = Array.from({length:36},(_,i)=>899.4 - i*0.035 + Math.sin(i/4)*0.18);
@@ -243,12 +243,12 @@ function drawAllSensorCharts(){
 let sensorChartResizeTimer=0;
 window.addEventListener('resize',()=>{clearTimeout(sensorChartResizeTimer);sensorChartResizeTimer=setTimeout(()=>{if(document.querySelector('#sensors.active'))drawAllSensorCharts()},120)},{passive:true});
 document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='sensors')requestAnimationFrame(drawAllSensorCharts)});
-document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);drawAllSensorCharts()});
+document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);if(document.querySelector('#sensors.active'))window.FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)});
 function headingCardinal(deg){
   const dirs = ['N','NE','E','SE','S','SW','W','NW'];
   return dirs[Math.round(deg / 45) % 8];
 }
-setInterval(()=>{
+window.FIELD_RUNTIME.every(()=>{
   if(document.hidden)return;
   demo.heading = (demo.heading + (Math.random() > .5 ? 1 : -1) + 360) % 360;
   demo.alt += Math.random() > .5 ? 1 : -1;
@@ -257,7 +257,7 @@ setInterval(()=>{
   pushSensorHistory('gnssSats',demo.sats);pushSensorHistory('gnssAcc',4+Math.random()*2);
   pushSensorHistory('meshRssi',-84+Math.random()*12-6);pushSensorHistory('meshSnr',8+Math.random()*6-3);pushSensorHistory('meshNodes',demo.mesh);
   pushSensorHistory('temp',demo.temp);pushSensorHistory('humidity',demo.hum);pushSensorHistory('pitch',2+Math.random()*4-2);pushSensorHistory('roll',-1+Math.random()*4-2);pushSensorHistory('battery',64-Math.random()*.25);
-  drawAllSensorCharts();
+  if(document.querySelector('#sensors.active'))window.FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts);
   document.getElementById('altitude').textContent = `${demo.alt} ft`;
   document.getElementById('pressure').textContent = `${demo.press.toFixed(1)} hPa`;
   updateLiveNavigationUI?.();
@@ -287,7 +287,7 @@ function refreshFixAge(now=Date.now()){
   const homeAge=document.getElementById('homeFixAge'); if(homeAge) homeAge.textContent=`${h}:${m}:${s}`;
 }
 refreshFixAge();
-setInterval(()=>{if(!document.hidden)refreshFixAge()},1000);
+window.FIELD_RUNTIME.every(()=>{if(!document.hidden)refreshFixAge()},1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();refreshFixAge()}});
 
 
@@ -460,7 +460,7 @@ function updateSolar(){
   }
   return ev;
 }
-updateSolar(); setInterval(()=>{if(!document.hidden)updateSolar()},60000);
+updateSolar(); window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateSolar()},60000);
 
 const sendDemo=document.getElementById('sendDemo');
 sendDemo?.addEventListener('click', ()=>{
@@ -830,7 +830,7 @@ window.FIELD_MAP_DATA={
   track:()=>recordedTrack.map(p=>({...p})),
   current:()=>({...currentNavPosition,accuracy:currentAccuracy,fixAge,updatedAt:lastFixAt})
 };
-setInterval(()=>{if(document.hidden||trackWatchId==null)return;const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
+window.FIELD_RUNTIME.every(()=>{if(document.hidden||trackWatchId==null)return;const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
 // Local check-in countdown (no background guarantee on iOS)
 let checkinState=loadJSON('checkin',{last:0});if(!checkinState||typeof checkinState!=='object'||Array.isArray(checkinState))checkinState={last:0};checkinState.last=Number(checkinState.last)||0;
@@ -843,7 +843,7 @@ function updateCheckinTimer(){
   if(left<0){clock.textContent=`OVERDUE ${txt}`;clock.className='checkin-clock overdue';if(detail)detail.textContent='Record/send a check-in when safe. This local timer cannot guarantee background alerts on iOS.';if(home)home.textContent='OVERDUE';}
   else{clock.textContent=txt;clock.className=`checkin-clock ${left<600?'soon':''}`;if(detail)detail.textContent=`Next local check-in due ${new Date(due).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}.`;if(home)home.textContent=left<600?'due soon':`${Math.ceil(left/60)}m`;}
 }
-document.getElementById('resetCheckin')?.addEventListener('click',resetCheckinTimer);document.getElementById('checkinNow')?.addEventListener('click',resetCheckinTimer);document.getElementById('saveTrip')?.addEventListener('click',updateCheckinTimer);document.getElementById('checkinInterval')?.addEventListener('change',updateCheckinTimer);document.getElementById('copyCheckin')?.addEventListener('click',async()=>{await copyText(`FIELD/OS CHECK-IN\nTIME: ${new Date().toISOString()}\nPOSITION: ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}\nALT: ${Math.round(currentNavPosition.alt??demo.alt)} ft\nSTATUS: OK`)});setInterval(()=>{if(!document.hidden)updateCheckinTimer()},5000);updateCheckinTimer();
+document.getElementById('resetCheckin')?.addEventListener('click',resetCheckinTimer);document.getElementById('checkinNow')?.addEventListener('click',resetCheckinTimer);document.getElementById('saveTrip')?.addEventListener('click',updateCheckinTimer);document.getElementById('checkinInterval')?.addEventListener('change',updateCheckinTimer);document.getElementById('copyCheckin')?.addEventListener('click',async()=>{await copyText(`FIELD/OS CHECK-IN\nTIME: ${new Date().toISOString()}\nPOSITION: ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}\nALT: ${Math.round(currentNavPosition.alt??demo.alt)} ft\nSTATUS: OK`)});window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateCheckinTimer()},5000);updateCheckinTimer();
 
 updateRouteMonitor();
 
@@ -904,7 +904,7 @@ function updateHandheldStatus(){
     else {const left=Math.floor((checkinState.last+interval*60000-Date.now())/1000);hc.textContent=left<0?'OVERDUE':left<600?'DUE SOON':`${Math.ceil(left/60)}m`;hc.closest('button')?.classList.toggle('status-stale',left<0);hc.closest('button')?.classList.toggle('status-soon',left>=0&&left<600);}
   }
 }
-setInterval(()=>{if(!document.hidden)updateHandheldStatus()},5000);setTimeout(updateHandheldStatus,50);
+window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateHandheldStatus()},5000);setTimeout(updateHandheldStatus,50);
 if(navigator.getBattery){navigator.getBattery().then(b=>{const paint=()=>{const el=document.getElementById('mobileBattery'),ps=document.getElementById('mobilePowerState');if(el)el.textContent=`${Math.round(b.level*100)}%`;const db=document.getElementById('deskBatteryPct');if(db)db.textContent=`${Math.round(b.level*100)}%`;if(ps)ps.textContent=b.charging?'CHARGING':'PHONE';};paint();b.addEventListener('levelchange',paint);b.addEventListener('chargingchange',paint);}).catch(()=>{});}
 
 // v1.2 screen wake lock for active field navigation
