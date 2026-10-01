@@ -181,7 +181,7 @@ function updateClock(){
   document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
   document.getElementById('date').textContent = now.toLocaleDateString([], {year:'numeric', month:'2-digit', day:'2-digit'});
 }
-updateClock(); setInterval(updateClock,1000);
+updateClock(); setInterval(()=>{if(!document.hidden)updateClock()},1000);
 
 let demo = {alt:3420, heading:37, speed:2.4, temp:31, press:898, hum:64, sats:18, mesh:7};
 const pressureHistory = Array.from({length:36},(_,i)=>899.4 - i*0.035 + Math.sin(i/4)*0.18);
@@ -262,16 +262,19 @@ function updatePositionDisplays(){
   if(dms) dms.textContent=`${toDMS(currentNavPosition.lat,true)} ${toDMS(currentNavPosition.lon,false)}`;
   updateSolar();
 }
-let fixAge=4;
-setInterval(()=>{
-  if(document.hidden)return;
-  fixAge++;
+let lastFixAt=Date.now()-4000,fixAge=4;
+function refreshFixAge(now=Date.now()){
+  fixAge=Math.max(0,Math.floor((now-lastFixAt)/1000));
   const h=String(Math.floor(fixAge/3600)).padStart(2,'0');
   const m=String(Math.floor((fixAge%3600)/60)).padStart(2,'0');
   const s=String(fixAge%60).padStart(2,'0');
   const el=document.getElementById('fixAge'); if(el) el.textContent=`${h}:${m}:${s}`;
   const homeAge=document.getElementById('homeFixAge'); if(homeAge) homeAge.textContent=`${h}:${m}:${s}`;
-},1000);
+}
+refreshFixAge();
+setInterval(()=>{if(!document.hidden)refreshFixAge()},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateClock();refreshFixAge()}});
+
 
 function normalizeDeg(x){return ((x%360)+360)%360}
 function solarPosition(date, lat, lon){
@@ -708,6 +711,7 @@ const savedThreshold=storageGet(STORE_PREFIX+'deviation-threshold'); if(savedThr
 // Waypoints
 let waypoints=loadJSON('waypoints',[]);if(!Array.isArray(waypoints))waypoints=[];waypoints=waypoints.filter(validLatLon).map(w=>({...w,lat:Number(w.lat),lon:Number(w.lon),name:String(w.name||'WAYPOINT'),type:String(w.type||'NOTE'),notes:String(w.notes||'')}));let activeWaypointId=storageGet(STORE_PREFIX+'active-waypoint')||'';
 function waypointSymbol(type){return ({BASE:'⌂',CAMP:'△',WATER:'≈',HAZARD:'!',JUNCTION:'◇',NOTE:'•'})[type]||'•'}
+function notifyWaypointsChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:waypointschange',{detail:{count:waypoints.length,...detail}}))}
 function renderWaypoints(){
   const list=document.getElementById('waypointList'); if(!list)return;
   list.innerHTML=waypoints.map(w=>`<div class="waypoint-row"><div class="waypoint-symbol">${waypointSymbol(w.type)}</div><div class="waypoint-main"><b>${escapeHTML(w.name)} ${w.id===activeWaypointId?'[NAV]':''}</b><small>${w.type} // ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}${w.notes?` // ${escapeHTML(w.notes)}`:''}</small></div><div class="waypoint-actions"><button class="micro-btn" data-wp-nav="${w.id}">NAV</button><button class="micro-btn" data-wp-copy="${w.id}">COPY</button><button class="micro-btn danger" data-wp-delete="${w.id}">DEL</button></div></div>`).join('')||'<p class="muted">No waypoints saved yet.</p>';
@@ -718,7 +722,7 @@ function saveWaypointCurrent(forceBase=false){
   const name=(document.getElementById('waypointName')?.value||'').trim()||(forceBase?'BASE':'WAYPOINT '+String(waypoints.length+1).padStart(2,'0'));
   const type=forceBase?'BASE':document.getElementById('waypointType')?.value||'NOTE', notes=document.getElementById('waypointNotes')?.value||'';
   const w={id:`wp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name,type,notes,lat:currentNavPosition.lat,lon:currentNavPosition.lon,alt:currentNavPosition.alt??demo.alt,created:new Date().toISOString()};
-  waypoints.push(w); saveJSON('waypoints',waypoints); if(forceBase){activeWaypointId=w.id;storageSet(STORE_PREFIX+'active-waypoint',w.id)} renderWaypoints(); addLog(`WAYPOINT — ${name} at ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}.`,'POSITION'); navigator.vibrate?.(25);
+  waypoints.push(w); saveJSON('waypoints',waypoints); if(forceBase){activeWaypointId=w.id;storageSet(STORE_PREFIX+'active-waypoint',w.id)} renderWaypoints(); notifyWaypointsChange({added:w}); addLog(`WAYPOINT — ${name} at ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}.`,'POSITION'); navigator.vibrate?.(25);
 }
 function updateWaypointNav(){
   const w=waypoints.find(x=>x.id===activeWaypointId),t=document.getElementById('waypointTarget'),d=document.getElementById('waypointDistance'),b=document.getElementById('waypointBearing'),c=document.getElementById('waypointCoord'),a=document.getElementById('waypointArrow');
@@ -732,7 +736,7 @@ document.getElementById('exportWaypoints')?.addEventListener('click',()=>downloa
 document.addEventListener('click',async e=>{
   const nav=e.target.closest('[data-wp-nav]');if(nav){activeWaypointId=nav.dataset.wpNav;storageSet(STORE_PREFIX+'active-waypoint',activeWaypointId);renderWaypoints();navigator.vibrate?.(20)}
   const cp=e.target.closest('[data-wp-copy]');if(cp){const w=waypoints.find(x=>x.id===cp.dataset.wpCopy);if(w){await copyText(`${w.name}: ${w.lat.toFixed(6)}, ${w.lon.toFixed(6)}`);}}
-  const del=e.target.closest('[data-wp-delete]');if(del){const id=del.dataset.wpDelete;if(confirm('Delete this waypoint?')){waypoints=waypoints.filter(x=>x.id!==id);if(activeWaypointId===id){activeWaypointId='';storageRemove(STORE_PREFIX+'active-waypoint')}saveJSON('waypoints',waypoints);renderWaypoints()}}
+  const del=e.target.closest('[data-wp-delete]');if(del){const id=del.dataset.wpDelete;if(confirm('Delete this waypoint?')){waypoints=waypoints.filter(x=>x.id!==id);if(activeWaypointId===id){activeWaypointId='';storageRemove(STORE_PREFIX+'active-waypoint')}saveJSON('waypoints',waypoints);renderWaypoints();notifyWaypointsChange({removed:id})}}
 });
 renderWaypoints();
 document.addEventListener('fieldos:addwaypoint',e=>{
@@ -740,7 +744,7 @@ document.addEventListener('fieldos:addwaypoint',e=>{
   const duplicate=waypoints.some(w=>haversineMiles(w,p)<.01&&String(w.name||'').toLowerCase()===String(p.name||'').toLowerCase());
   if(duplicate)return;
   const w={id:`wp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name:String(p.name||'BAILOUT'),type:String(p.type||'JUNCTION'),notes:String(p.notes||'Saved from FIELD/OS bailout planner'),lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,created:new Date().toISOString()};
-  waypoints.push(w);saveJSON('waypoints',waypoints);renderWaypoints();document.dispatchEvent(new CustomEvent('fieldos:waypointschange',{detail:{count:waypoints.length,added:w}}));
+  waypoints.push(w);saveJSON('waypoints',waypoints);renderWaypoints();notifyWaypointsChange({added:w});
 });
 
 // Breadcrumb track recorder
@@ -750,11 +754,17 @@ function updateTrackUI(){
   const d=document.getElementById('trackDistance'),p=document.getElementById('trackPoints'),line=document.getElementById('trackLine');if(d)d.textContent=trackDistanceMiles().toFixed(2);if(p)p.textContent=recordedTrack.length;
   if(line){if(recordedTrack.length<2)line.setAttribute('points','');else{const lats=recordedTrack.map(x=>x.lat),lons=recordedTrack.map(x=>x.lon),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),latR=Math.max(maxLat-minLat,.00001),lonR=Math.max(maxLon-minLon,.00001);line.setAttribute('points',recordedTrack.map(x=>`${40+920*(x.lon-minLon)/lonR},${20+360*(maxLat-x.lat)/latR}`).join(' '));}}
 }
-function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;recordedTrack.push({lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy});if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI()}
+function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:trackchange',{detail:{count:recordedTrack.length,...detail}}))}
+function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};recordedTrack.push(point);if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({added:point})}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.67" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
-document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI()}});
+document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({cleared:true})}});
+window.FIELD_MAP_DATA={
+  waypoints:()=>waypoints.map(w=>({...w})),
+  track:()=>recordedTrack.map(p=>({...p})),
+  current:()=>({...currentNavPosition,accuracy:currentAccuracy,fixAge,updatedAt:lastFixAt})
+};
 setInterval(()=>{if(document.hidden||trackWatchId==null)return;const e=document.getElementById('trackDuration');if(!e)return;const start=trackStartedAt||Date.now(),end=trackWatchId!=null?Date.now():(trackStoppedAt||Date.now()),sec=trackStartedAt?Math.max(0,Math.floor((end-start)/1000)):0,h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor(sec%3600/60)).padStart(2,'0'),s=String(sec%60).padStart(2,'0');e.textContent=`${h}:${m}:${s}`},1000);updateTrackUI();
 
 // Local check-in countdown (no background guarantee on iOS)
@@ -1471,13 +1481,13 @@ function updateLiveNavigationUI(){
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
-  window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null};
+  window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null,timestamp:Date.now()};
   try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(window.FIELD_CURRENT_POSITION))}catch{}
   document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:currentAccuracy;
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
   fieldLiveHeading=Number.isFinite(p.coords.heading)?p.coords.heading:null;
-  fixAge=0;
+  lastFixAt=Date.now();fixAge=0;refreshFixAge(lastFixAt);
   updatePositionDisplays();
   updateReturnGuidance();
   updateWaypointNav();
