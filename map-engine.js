@@ -244,6 +244,14 @@
     return st;
   }
 
+  function bridgePosition(){
+    const p=window.FIELD_MAP_DATA?.current?.();
+    if(!p||!Number.isFinite(+p.lat)||!Number.isFinite(+p.lon)||String(p.source||'').toUpperCase().includes('DEMO'))return null;
+    return {lat:+p.lat,lon:+p.lon,accuracy:Number.isFinite(+p.accuracy)?+p.accuracy:null};
+  }
+  function bridgeWaypoints(){return (window.FIELD_MAP_DATA?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
+  function bridgeTrack(){return (window.FIELD_MAP_DATA?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
+
   function plannedRoute(){
     return (window.FIELD_ROUTE_STATE?.getPoints?.()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
   }
@@ -268,10 +276,23 @@
       }
       [pts[0],...(pts.length>1?[pts[pts.length-1]]:[])].forEach((p,i)=>parts.push(`<g class="planned-route-marker"><title>${i?'Route finish':'Route start'}</title><circle cx="${p.x}" cy="${p.y}" r="12"/><text x="${p.x}" y="${p.y+4}">${i?'E':'S'}</text></g>`));
     }
-    if(livePosition){
-      const p=world(livePosition.lat,livePosition.lon,st.zoom),x=p.x-c.x+w/2,y=p.y-c.y+h/2;
-      const mpp=Math.max(.01,156543.03392*Math.cos(livePosition.lat*Math.PI/180)/Math.pow(2,st.zoom));
-      const r=Math.max(5,Math.min(90,(locationAccuracy||8)/mpp));
+    const track=bridgeTrack(),trackStep=Math.max(1,Math.ceil(track.length/1500));
+    const trackPts=track.filter((_,i)=>i%trackStep===0);
+    if(trackPts.length>1){
+      const line=trackPts.map(p=>{const q=world(p.lat,p.lon,st.zoom);return `${(q.x-c.x+w/2).toFixed(1)},${(q.y-c.y+h/2).toFixed(1)}`}).join(' ');
+      parts.push(`<polyline points="${line}" class="native-track-line"/>`);
+    }
+    for(const wp of bridgeWaypoints().slice(0,200)){
+      const q=world(wp.lat,wp.lon,st.zoom),x=q.x-c.x+w/2,y=q.y-c.y+h/2;
+      if(x<-50||x>w+50||y<-50||y>h+50)continue;
+      const base=String(wp.type||'').toUpperCase()==='BASE',label=String(wp.name||wp.type||'WP').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])).slice(0,24);
+      parts.push(`<circle cx="${x}" cy="${y}" r="${base?6:4}" class="${base?'native-base-marker':'native-waypoint-marker'}"/><text x="${x+8}" y="${y-7}" class="native-waypoint-label">${label}</text>`);
+    }
+    const position=livePosition||bridgePosition();
+    if(position){
+      const p=world(position.lat,position.lon,st.zoom),x=p.x-c.x+w/2,y=p.y-c.y+h/2;
+      const mpp=Math.max(.01,156543.03392*Math.cos(position.lat*Math.PI/180)/Math.pow(2,st.zoom));
+      const r=Math.max(5,Math.min(90,(locationAccuracy||position.accuracy||8)/mpp));
       parts.push(`<circle cx="${x}" cy="${y}" r="${r}" class="native-accuracy-ring"/>`);
       parts.push(`<circle cx="${x}" cy="${y}" r="7" class="native-self-marker"/>`);
       parts.push(`<path d="M ${x} ${y-14} l -5 9 h 10 z" class="native-self-arrow"/>`);
@@ -395,6 +416,16 @@
       }else render(st);
     }
   }
+
+  const redrawDataOverlay=()=>{
+    states.forEach(st=>{
+      const rect=st.el.getBoundingClientRect(),w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
+      drawOverlay(st,w,h);
+    });
+  };
+  document.addEventListener('fieldos:waypointschange',redrawDataOverlay);
+  document.addEventListener('fieldos:trackchange',redrawDataOverlay);
+  document.addEventListener('fieldos:positionchange',()=>{if(!liveEnabled)redrawDataOverlay()});
 
   document.addEventListener('fieldos:routechange',()=>{
     states.forEach(st=>{
