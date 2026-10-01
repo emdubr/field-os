@@ -526,7 +526,7 @@ document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.61',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.67',{updateViaCache:'none'});
       await reg.update();
       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
