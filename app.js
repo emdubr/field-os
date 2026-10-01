@@ -294,6 +294,55 @@ function solarPosition(date, lat, lon){
   const az=normalizeDeg(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(dec)*Math.cos(phi))*deg+180);
   return {az,el:elev*deg};
 }
+function moonPosition(date,lat,lon){
+  const rad=Math.PI/180,jd=date.getTime()/86400000+2440587.5,d=jd-2451545.0;
+  const L=(218.316+13.176396*d)*rad,M=(134.963+13.064993*d)*rad,F=(93.272+13.229350*d)*rad;
+  const l=L+6.289*rad*Math.sin(M),b=5.128*rad*Math.sin(F),eps=23.4397*rad;
+  const ra=Math.atan2(Math.sin(l)*Math.cos(eps)-Math.tan(b)*Math.sin(eps),Math.cos(l));
+  const dec=Math.asin(Math.sin(b)*Math.cos(eps)+Math.cos(b)*Math.sin(eps)*Math.sin(l));
+  const H=(280.16+360.9856235*d+lon)*rad-ra,phi=lat*rad;
+  let h=Math.asin(Math.sin(phi)*Math.sin(dec)+Math.cos(phi)*Math.cos(dec)*Math.cos(H));
+  const base=Math.max(0,h);
+  h+=0.0002967/Math.tan(base+0.00312536/(base+0.08901179));
+  return {el:h/rad};
+}
+function findMoonCrossing(a,b,lat,lon,threshold,rising){
+  let lo=a.getTime(),hi=b.getTime();
+  for(let n=0;n<18;n++){
+    const mid=(lo+hi)/2,el=moonPosition(new Date(mid),lat,lon).el;
+    if(rising?el>threshold:el<=threshold)hi=mid;else lo=mid;
+  }
+  return new Date((lo+hi)/2);
+}
+function moonEventsForDate(date,lat,lon){
+  const start=new Date(date);start.setHours(0,0,0,0);
+  const end=new Date(start);end.setDate(end.getDate()+1);
+  const threshold=.133,step=10*60*1000;
+  let prevT=start,prevEl=moonPosition(prevT,lat,lon).el,rise=null,set=null;
+  for(let ms=start.getTime()+step;ms<=end.getTime();ms+=step){
+    const t=new Date(ms),el=moonPosition(t,lat,lon).el;
+    if(!rise&&prevEl<=threshold&&el>threshold)rise=findMoonCrossing(prevT,t,lat,lon,threshold,true);
+    if(!set&&prevEl>threshold&&el<=threshold)set=findMoonCrossing(prevT,t,lat,lon,threshold,false);
+    prevT=t;prevEl=el;
+  }
+  return {rise,set,start,end};
+}
+function nextMoonrise(date,lat,lon){
+  for(let offset=0;offset<4;offset++){
+    const day=new Date(date);day.setDate(day.getDate()+offset);
+    const rise=moonEventsForDate(day,lat,lon).rise;
+    if(rise&&rise>date)return rise;
+  }
+  return null;
+}
+function nextSunrise(date,lat,lon){
+  for(let offset=0;offset<3;offset++){
+    const day=new Date(date);day.setDate(day.getDate()+offset);
+    const rise=solarEventsForDate(day,lat,lon).sunrise;
+    if(rise&&rise>date)return rise;
+  }
+  return null;
+}
 function findSolarCrossing(a,b,lat,lon,threshold,rising){
   let lo=a.getTime(),hi=b.getTime();
   for(let n=0;n<18;n++){
@@ -367,7 +416,7 @@ function updateSolar(){
   set('daylightDuration',fmtDurationMs(ev.daylightMs));
 
   const isDay=p.el>-0.833,isCivil=p.el>-6;
-  const stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':'NIGHT';
+  const stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':'SUN HAS SET';
   set('sunState',stateText);
 
   let remaining='0h 00m',next='NO UPCOMING SOLAR EVENT';
@@ -380,9 +429,8 @@ function updateSolar(){
   }else if(ev.civilDusk&&now<ev.civilDusk){
     remaining='0h 00m';next=`CIVIL DUSK IN ${fmtDurationMs(ev.civilDusk-now)}`;
   }else{
-    const tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);
-    const nextDay=solarEventsForDate(tomorrow,lat,lon);
-    next=nextDay.civilDawn?`CIVIL DAWN ${fmtClock(nextDay.civilDawn)}`:'NIGHT';
+    const moonrise=nextMoonrise(now,lat,lon),sunrise=nextSunrise(now,lat,lon);
+    next=`MOONRISE ${moonrise?fmtClock(moonrise):'NONE'} · SUNRISE ${sunrise?fmtClock(sunrise):'NONE'}`;
   }
   set('daylightRemaining',remaining);set('sunNextEvent',next);
   set('solarLocation',`${lat.toFixed(4)}, ${lon.toFixed(4)} · DEVICE LOCAL TIME`);
