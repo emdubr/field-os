@@ -171,7 +171,7 @@
     st.onPointerDown=e=>{
       if(e.button!==undefined&&e.button>0)return;
       e.preventDefault();
-      st.el.setPointerCapture?.(e.pointerId);
+      try{st.el.setPointerCapture?.(e.pointerId)}catch{}
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1){
         st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center}};
