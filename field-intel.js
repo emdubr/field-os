@@ -768,15 +768,16 @@
     const mph=parseFloat(text('speed'));dr.speedMps=Number.isFinite(mph)?mph*.44704:0;dr.active=false;dr.estimated={...dr.anchor};dr.uncertaintyM=15;renderDr();return {...dr};
   }
   function resetDr(){dr.armed=false;dr.active=false;dr.anchor=null;dr.estimated=null;dr.uncertaintyM=null;renderDr()}
+  const drVisible=()=>!!document.querySelector('#nav.active');
   function updateDr(now=Date.now()){
     const fix=text('mobileFixState'),stale=/STALE|NO FIX|AWAITING|UNAVAILABLE/i.test(fix);
     if(!dr.armed&&stale)armDr();
-    if(!dr.armed){renderDr();return null}
-    if(!stale){dr.active=false;dr.lastFixTime=now;const p=getPosition();if(validPoint(p)){dr.anchor={lat:p.lat,lon:p.lon,alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=now;dr.estimated={...dr.anchor};dr.uncertaintyM=15}renderDr();return dr.estimated}
+    if(!dr.armed){if(drVisible())renderDr();return null}
+    if(!stale){dr.active=false;dr.lastFixTime=now;const p=getPosition();if(validPoint(p)){dr.anchor={lat:p.lat,lon:p.lon,alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=now;dr.estimated={...dr.anchor};dr.uncertaintyM=15}if(drVisible())renderDr();return dr.estimated}
     dr.active=true;
     const heading=Number.isFinite(dr.heading)?dr.heading:(parseHeading()??0),elapsed=(now-dr.anchorTime)/1000,est=estimateDr(dr.anchor,elapsed,dr.speedMps,heading,15);
     if(est){dr.estimated={lat:est.lat,lon:est.lon,alt:dr.anchor?.alt??null,source:'DEAD RECKONING ESTIMATE'};dr.uncertaintyM=est.uncertaintyM}
-    renderDr(now);return dr.estimated;
+    if(drVisible())renderDr(now);return dr.estimated;
   }
   function renderDr(now=Date.now()){
     const panel=document.querySelector('.dr-panel'),state=document.getElementById('drState'),warning=document.getElementById('drWarning'),set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
@@ -789,9 +790,10 @@
     set('drElapsed',dr.anchorTime?`${Math.max(0,Math.floor((now-dr.anchorTime)/1000))} s`:'---');set('drAnchorAge',dr.anchorTime?new Date(dr.anchorTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}):'---');
   }
   document.getElementById('drArm')?.addEventListener('click',armDr);document.getElementById('drReset')?.addEventListener('click',resetDr);
-  document.addEventListener('fieldos:positionchange',e=>{const p=e.detail;if(validPoint(p)){dr.anchor={lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.estimated={...dr.anchor};dr.uncertaintyM=Number(p.accuracy)||15;dr.active=false;if(dr.armed)renderDr()}});
+  document.addEventListener('fieldos:positionchange',e=>{const p=e.detail;if(validPoint(p)){dr.anchor={lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.estimated={...dr.anchor};dr.uncertaintyM=Number(p.accuracy)||15;dr.active=false;if(dr.armed&&drVisible())renderDr()}});
   document.addEventListener('fieldos:telemetry',e=>{const h=Number(e.detail?.heading),s=Number(e.detail?.speedMps);if(Number.isFinite(h))dr.heading=h;if(Number.isFinite(s))dr.speedMps=Math.max(0,s)});
-  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);window.FIELD_RUNTIME.idle(renderDr,500);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderDr()});
+  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);window.FIELD_RUNTIME.idle(()=>{if(drVisible())renderDr()},500);
   window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,state:dr};
 
   // Feature 06 — stripped-down breadcrumb navigation.
