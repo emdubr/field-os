@@ -756,7 +756,8 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(mapEngineJs.includes("const tileZoom=tileZoomFor(st.zoom)"));
  assert.ok(mapEngineJs.includes("st.center=unworld(c.x-dx,c.y-dy,st.zoom)"));
  assert.ok(mapEngineJs.includes("const hadTiles=st.base.childElementCount>0"));
- assert.ok(mapEngineJs.includes("setTimeout(commit,420)"));
+ assert.ok(mapEngineJs.includes("setTimeout(commit,260)"));
+ assert.ok(!mapEngineJs.includes("setTimeout(commit,420)"));
  assert.ok(!mapEngineJs.includes("residualScale"));
  console.log('PASS native map uses one fractional camera and stages replacement tiles without release-time blanking');
  assert.ok(workstationCss.includes('v3.78 READINESS + ROUTE EFFICIENCY'));
