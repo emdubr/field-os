@@ -4225,3 +4225,15 @@ select option{background:#010a05;color:var(--crt-green-hot)}
   #loramap .mesh-network-map{height:250px!important}
   #loramap .mesh-coverage-map{height:220px!important}
 }
+
+/* v3.83 ROUTE EDITOR MOBILE RELIABILITY — reliable editing without extra paint. */
+@media(max-width:767px){
+ #routePlannerMap{touch-action:none!important;overscroll-behavior:contain!important}
+ #routePlannerMap .leaflet-marker-pane{z-index:630!important}
+ #routePlannerMap .planner-anchor-touch-wrap{pointer-events:auto!important;touch-action:none!important}
+ #routePlannerMap .planner-anchor-touch{width:44px!important;height:44px!important;margin:-3px!important;box-shadow:none!important}
+ #route .route-planner-toolbar{contain:layout style!important}
+ #route .route-planner-actions{contain:layout style!important}
+ #route .route-planner-real-map{contain:layout paint style!important}
+ #route .route-planner-panel{overflow:visible!important}
+}
