@@ -154,7 +154,15 @@ const server=http.createServer((req,res)=>{
     });
     assert.ok(pinchResult.after>pinchResult.before+.25,'Pinch should continuously increase zoom');
     assert.ok(Math.abs(pinchResult.after-Math.round(pinchResult.after))>.03,'Touch release must retain a fractional zoom instead of snapping');
-    console.log('PASS mobile native map preserves fractional zoom after touch release');
+    const releaseLatency=await page.evaluate(async()=>{
+      const el=document.getElementById('realMap'),box=el.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,id=91;
+      const fire=(type,cx,cy)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,clientX:cx,clientY:cy,buttons:type==='pointerup'?0:1}));
+      fire('pointerdown',x,y);fire('pointermove',x+34,y+6);await new Promise(r=>requestAnimationFrame(r));
+      const t=performance.now();fire('pointerup',x+34,y+6);await new Promise(r=>setTimeout(r,35));
+      return performance.now()-t;
+    });
+    assert.ok(releaseLatency<100,'Map release should commit without the old 120–160 ms settle delay');
+    console.log('PASS mobile native map preserves fractional zoom and commits pan release without delayed snap');
 
     await page.evaluate(()=>openView('route'));await page.waitForTimeout(100);
     const routeTap=await page.evaluate(async()=>{
