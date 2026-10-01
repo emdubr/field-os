@@ -645,6 +645,40 @@
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
 
+  // v3.67 dedicated real-data LoRa map + chat surfaces.
+  let loraMap=null,loraLayer=null;
+  function positionedLoraNodes(){return (window.FIELD_MESH?.state?.nodes||[]).filter(n=>Number.isFinite(Number(n.lat))&&Number.isFinite(Number(n.lon)))}
+  function renderLoraMap(){
+    const host=document.getElementById('loraRealMap'),empty=document.getElementById('loraMapEmpty'),list=document.getElementById('loraNodeList'),state=document.getElementById('loraMapState'),fresh=document.getElementById('loraMapFreshness');
+    if(!host)return;
+    const nodes=positionedLoraNodes(),all=window.FIELD_MESH?.state?.nodes||[];
+    if(state)state.textContent=all.length?`${nodes.length} POSITIONED / ${all.length} NODES`:'NO RADIO DATA';
+    if(fresh){const newest=Math.max(0,...all.map(n=>Number(n.lastHeard)||0));fresh.textContent=newest?`LAST HEARD ${meshAgeLabel(newest)} AGO`:'WAITING'}
+    if(list)list.innerHTML=all.length?all.map(n=>`<div class="mesh-node-row ${meshQuality(n)}"><b>${esc(n.name||n.id)}</b><small>${Number.isFinite(Number(n.rssi))?'RSSI '+Math.round(n.rssi)+' dBm':'RSSI —'} // ${Number.isFinite(Number(n.snr))?'SNR '+Number(n.snr).toFixed(1)+' dB':'SNR —'} // ${Number.isFinite(Number(n.hops))?n.hops+' HOPS':'HOPS —'} // ${Number.isFinite(Number(n.lat))&&Number.isFinite(Number(n.lon))?Number(n.lat).toFixed(5)+', '+Number(n.lon).toFixed(5):'NO POSITION'}</small></div>`).join(''):'<p class="muted">Waiting for real Meshtastic node telemetry.</p>';
+    if(!nodes.length){if(empty)empty.hidden=false;if(loraMap){loraMap.remove();loraMap=null;loraLayer=null;host.innerHTML=''}return}
+    if(empty)empty.hidden=true;
+    if(!window.L){host.innerHTML='<p class="muted">Map engine unavailable. Node coordinates remain listed below.</p>';return}
+    if(!loraMap){loraMap=L.map(host,{zoomControl:true,attributionControl:true});loraLayer=L.layerGroup().addTo(loraMap);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(loraMap)}
+    loraLayer.clearLayers();
+    const bounds=[];
+    const me=getPosition();if(validPoint(me)){L.circleMarker([me.lat,me.lon],{radius:7}).bindTooltip('YOU').addTo(loraLayer);bounds.push([me.lat,me.lon])}
+    for(const n of nodes){const ll=[Number(n.lat),Number(n.lon)];bounds.push(ll);L.circleMarker(ll,{radius:7}).bindTooltip(`${n.name||n.id} // ${Number.isFinite(Number(n.rssi))?Math.round(n.rssi)+' dBm':'RSSI —'}`).addTo(loraLayer)}
+    if(bounds.length)loraMap.fitBounds(bounds,{padding:[28,28],maxZoom:15});requestAnimationFrame(()=>loraMap?.invalidateSize())
+  }
+  function renderLoraChat(){
+    const host=document.getElementById('loraChatTimeline'),state=document.getElementById('loraChatState');if(!host)return;
+    const items=(window.FIELD_TRANSPORT?.state?.items||[]).filter(x=>String(x.transport||x.meta?.transport||'').toLowerCase().includes('mesh')||String(x.channel||'').length);
+    host.innerHTML=items.length?items.slice(-50).reverse().map(x=>`<div class="message ${x.status==='failed'?'unread':''}"><b>${esc(x.channel||'PRIMARY')}</b><span>${esc(x.status||'queued')}</span><p>${esc(x.text||'')}</p></div>`).join(''):'<p class="muted">No real LoRa messages received or queued yet.</p>';
+    if(state)state.textContent=(window.FIELD_TRANSPORT?.active?.()||[]).some(t=>/mesh|lora|meshtastic/i.test(t.name||''))?'MESHTASTIC CONNECTED':'NO MESHTASTIC TRANSPORT';
+  }
+  document.addEventListener('fieldos:meshroster',renderLoraMap);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#loramap.active'))renderLoraMap()});
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='loramap')setTimeout(renderLoraMap,30);if(e.detail?.view==='lorachat')renderLoraChat()});
+  document.getElementById('loraChatSend')?.addEventListener('click',()=>{const input=document.getElementById('loraChatInput'),text=input?.value?.trim(),channel=document.getElementById('loraChatChannel')?.value?.trim()||'PRIMARY';if(!text)return;document.dispatchEvent(new CustomEvent('fieldos:outgoingmessage',{detail:{text,channel,meta:{transport:'meshtastic'}}}));input.value='';setTimeout(renderLoraChat,20)});
+  document.getElementById('loraChatRetry')?.addEventListener('click',()=>{window.FIELD_TRANSPORT?.flush?.();setTimeout(renderLoraChat,50)});
+  window.FIELD_LORA={renderMap:renderLoraMap,renderChat:renderLoraChat,positionedNodes:positionedLoraNodes};
+
+
   // v3.67 — dedicated real-data LoRa map + chat surfaces.
   const loraChatState={items:[]};
   function renderLoraMap(){
