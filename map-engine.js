@@ -119,6 +119,11 @@
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
       transformLayers(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
     };
+    const previewPinch=(scale,clientX,clientY,startX,startY)=>{
+      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,startX-rect.left)),y=Math.max(0,Math.min(rect.height,startY-rect.top));
+      const dx=clientX-startX,dy=clientY-startY;
+      transformLayers(`translate(${dx}px,${dy}px) scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
+    };
     const preserveAnchor=(anchor,clientX,clientY,newZoom)=>{
       if(!anchor)return;
       const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),a=world(anchor.lat,anchor.lon,newZoom);
@@ -150,7 +155,7 @@
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
-        previewZoom(Math.pow(2,next-st.pinchStart.zoom),midX,midY);
+        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;previewPinch(Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
         const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next.toFixed(1)}`;
       }
     };
@@ -162,7 +167,7 @@
       if(st.pinchStart&&old.length>=2){
         const dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,st.pinchStart.dist);
         const nextZoom=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
-        preserveAnchor(st.pinchStart.anchor,st.pinchStart.midX,st.pinchStart.midY,nextZoom);st.zoom=nextZoom;
+        preserveAnchor(st.pinchStart.anchor,st.pinchStart.lastMidX??st.pinchStart.midX,st.pinchStart.lastMidY??st.pinchStart.midY,nextZoom);st.zoom=nextZoom;
         st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;resetTransform();render(st);return;
       }
       if(st.dragStart&&!wasTap){
