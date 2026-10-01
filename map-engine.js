@@ -703,12 +703,14 @@
     e.stopPropagation();handleLayerInput(input);
   },true);
 
-  window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateLocationLabels()},1000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateLocationLabels();refresh(false)}});
+  const locationUiVisible=()=>!!document.querySelector('#home.active,#map.active');
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&locationUiVisible())updateLocationLabels()},1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(locationUiVisible())updateLocationLabels();refresh(false)}});
 
   document.addEventListener('fieldos:viewchange',e=>{
     const id=e.detail?.view==='map'?'realMap':e.detail?.view==='home'?'homeRealMap':null;
     if(!id)return;
+    updateLocationLabels();
     requestAnimationFrame(()=>{
       const st=ensure(id);if(!st)return;st.rendered=true;
       const route=plannedRoute();
