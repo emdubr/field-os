@@ -131,8 +131,14 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:''
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null
     };
+    const readLayout=()=>{
+      if(st.layoutRect)return st.layoutRect;
+      const rect=st.el.getBoundingClientRect();
+      return st.layoutRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height};
+    };
+    const invalidateLayout=()=>{st.layoutRect=null};
 
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
     const applyRestingCamera=()=>{
@@ -141,8 +147,9 @@
       for(const layer of vectorLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=''}
     };
     st.applyRestingCamera=applyRestingCamera;
+    st.invalidateLayout=invalidateLayout;
     const paintGesture=gesture=>{
-      const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
+      const rect=readLayout(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
       const ax=gesture.originX==null?w/2:Math.max(0,Math.min(w,gesture.originX-rect.left));
       const ay=gesture.originY==null?h/2:Math.max(0,Math.min(h,gesture.originY-rect.top));
       const baseScale=rasterScaleFor(st.zoom),g=Math.max(.5,Math.min(2,gesture.scale||1));
@@ -187,7 +194,7 @@
     };
     const preserveAnchor=(anchor,clientX,clientY,newZoom)=>{
       if(!anchor)return;
-      const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),a=world(anchor.lat,anchor.lon,newZoom);
+      const rect=readLayout(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),a=world(anchor.lat,anchor.lon,newZoom);
       st.center=unworld(a.x-(clientX-rect.left-w/2),a.y-(clientY-rect.top-h/2),newZoom);
     };
 
@@ -278,7 +285,7 @@
       if(e.ctrlKey)return;
       e.preventDefault();
       st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
-      const rect=st.el.getBoundingClientRect(),anchorX=e.clientX,anchorY=e.clientY;
+      const rect=readLayout(),anchorX=e.clientX,anchorY=e.clientY;
       st.wheelAnchor={point:screenToLatLon(st,anchorX,anchorY),x:anchorX,y:anchorY};
       if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{
         st.renderFrame=0;
@@ -614,7 +621,7 @@
   function toggleLiveLocation(){liveEnabled?stopLiveLocation():startLiveLocation()}
 
   function screenToLatLon(st,clientX,clientY){
-    const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
+    const rect=readLayout(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
     return unworld(c.x+(clientX-rect.left-w/2),c.y+(clientY-rect.top-h/2),st.zoom);
   }
   function mount(id,opts={}){
