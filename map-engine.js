@@ -54,6 +54,10 @@
     return sec<60?`${sec}s`:`${Math.floor(sec/60)}m ${String(sec%60).padStart(2,'0')}s`;
   }
 
+  function emitState(){
+    document.dispatchEvent(new CustomEvent('fieldos:mapstatechange',{detail:{mode,trails,terrain,grid,live:liveEnabled}}));
+  }
+
   function setPressed(el,on){
     if(!el)return;
     el.classList.toggle('active',!!on);
@@ -410,17 +414,17 @@
     if(typeof settings.grid==='boolean')grid=settings.grid;
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     for(const [key,value] of [['hiking-routes',trails],['terrain-shade',terrain],['map-grid',grid]])localStorage.setItem(STORE_PREFIX+key,value?'on':'off');
-    refresh(false);
+    emitState();refresh(false);
   }
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     states.forEach(st=>{st.zoom=Math.min(st.zoom,maxZoom())});
-    refresh(false);
+    emitState();refresh(false);
   }
-  function setTrails(on){trails=!!on;localStorage.setItem(STORE_PREFIX+'hiking-routes',trails?'on':'off');refresh(false)}
-  function setTerrain(on){terrain=!!on;localStorage.setItem(STORE_PREFIX+'terrain-shade',terrain?'on':'off');refresh(false)}
-  function setGrid(on){grid=!!on;localStorage.setItem(STORE_PREFIX+'map-grid',grid?'on':'off');refresh(false)}
+  function setTrails(on){trails=!!on;localStorage.setItem(STORE_PREFIX+'hiking-routes',trails?'on':'off');emitState();refresh(false)}
+  function setTerrain(on){terrain=!!on;localStorage.setItem(STORE_PREFIX+'terrain-shade',terrain?'on':'off');emitState();refresh(false)}
+  function setGrid(on){grid=!!on;localStorage.setItem(STORE_PREFIX+'map-grid',grid?'on':'off');emitState();refresh(false)}
   function zoom(target,delta){const st=ensure(target)||ensure('realMap');if(!st)return;st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+delta));render(st)}
   function center(target){const st=ensure(target)||ensure('realMap');if(!st)return;st.center={...centerCandidate()};render(st)}
 
@@ -443,7 +447,7 @@
       const d=document.getElementById('mapSourceDiag');if(d)d.textContent='GEOLOCATION UNAVAILABLE';
       return;
     }
-    liveEnabled=true;localStorage.setItem(STORE_PREFIX+'live-location','on');updateLabels();
+    liveEnabled=true;localStorage.setItem(STORE_PREFIX+'live-location','on');emitState();updateLabels();
     const d=document.getElementById('mapSourceDiag');if(d)d.textContent='STARTING LIVE LOCATION…';
     watchId=navigator.geolocation.watchPosition(
       p=>applyPosition(p),
@@ -458,7 +462,7 @@
 
   function stopLiveLocation(){
     if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
-    liveEnabled=false;localStorage.setItem(STORE_PREFIX+'live-location','off');
+    liveEnabled=false;localStorage.setItem(STORE_PREFIX+'live-location','off');emitState();
     updateLabels();refresh(false);
   }
 
