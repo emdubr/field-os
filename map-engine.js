@@ -131,7 +131,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null
     };
     const readLayout=()=>{
       if(st.layoutRect)return st.layoutRect;
@@ -319,7 +319,7 @@
       let resizeFrame=0,lastW=0,lastH=0;
       st.resizeObserver=new ResizeObserver(entries=>{
         const box=entries[0]?.contentRect;if(!box||box.width<1||box.height<1)return;
-        const w=Math.round(box.width),h=Math.round(box.height);st.layoutRect=null;
+        const w=Math.round(box.width),h=Math.round(box.height);st.layoutRect=null;st.renderSize=null;
         // Mobile browser chrome and safe-area settling can report a stream of
         // 1–3 px resizes. They do not require rebuilding the raster tile frame.
         if(lastW&&lastH&&Math.abs(w-lastW)<8&&Math.abs(h-lastH)<8)return;
@@ -330,7 +330,7 @@
       st.resizeObserver.observe(el);
     }else{
       let resizeTimer=0;
-      st.onResize=()=>{st.layoutRect=null;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&isVisible(st))render(st)},100)};
+      st.onResize=()=>{st.layoutRect=null;st.renderSize=null;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&isVisible(st))render(st)},100)};
       window.addEventListener('resize',st.onResize,{passive:true});
     }
     states.set(id,st);
@@ -436,6 +436,7 @@
     st.el.classList.remove('standalone-map-error');
     const token=++st.token,rect=st.el.getBoundingClientRect();
     const w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
+    st.renderSize={w,h};
     st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom));
     const tileZoom=tileZoomFor(st.zoom),renderScale=Math.pow(2,st.zoom-tileZoom),c=world(st.center.lat,st.center.lon,tileZoom);
     const renderKey=[mode,trails?1:0,terrain?1:0,tileZoom,Math.round(c.x/32),Math.round(c.y/32),Math.round(w/16),Math.round(h/16)].join('|');
@@ -526,11 +527,13 @@
     }
   }
 
+  const overlaySize=st=>{
+    if(st.renderSize)return st.renderSize;
+    const rect=st.el.getBoundingClientRect();
+    return {w:Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h:Math.max(220,Math.round(rect.height||st.el.clientHeight||360))};
+  };
   const redrawDataOverlay=()=>{
-    states.forEach(st=>{
-      const rect=st.el.getBoundingClientRect(),w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
-      drawOverlay(st,w,h);
-    });
+    states.forEach(st=>{const {w,h}=overlaySize(st);drawOverlay(st,w,h)});
   };
   document.addEventListener('fieldos:waypointschange',redrawDataOverlay);
   document.addEventListener('fieldos:trackchange',redrawDataOverlay);
@@ -539,10 +542,7 @@
   document.addEventListener('fieldos:routechange',()=>{
     states.forEach(st=>{
       st.routeFitted=false;
-      if(!isVisible(st)){
-        const rect=st.el.getBoundingClientRect();
-        drawOverlay(st,Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),Math.max(220,Math.round(rect.height||st.el.clientHeight||360)));
-      }
+      if(!isVisible(st)){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
     });
     refresh(false);
   });
@@ -587,9 +587,7 @@
       if(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65)){
         st.center={...next};
         if(isVisible(st)){st.rendered=true;render(st)}
-      }else{
-        const rect=st.el.getBoundingClientRect();drawOverlay(st,Math.max(250,Math.round(rect.width||600)),Math.max(220,Math.round(rect.height||360)));
-      }
+      }else{const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
     }
     updateLocationLabels();
   }
@@ -653,7 +651,7 @@
     st.zoom=chosen;st.rendered=true;render(st);
   }
   function setTapHandler(id,handler){const st=ensure(id);if(st)st.tapHandler=typeof handler==='function'?handler:null}
-  function setGeoOverlay(id,data){const st=ensure(id);if(!st)return;st.geoOverlay=data||null;const rect=st.el.getBoundingClientRect();drawEditorOverlay(st,Math.max(250,Math.round(rect.width||600)),Math.max(220,Math.round(rect.height||360)))}
+  function setGeoOverlay(id,data){const st=ensure(id);if(!st)return;st.geoOverlay=data||null;const {w,h}=overlaySize(st);drawEditorOverlay(st,w,h)}
   function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
   function unmount(id){
     const st=states.get(id);if(!st)return false;
