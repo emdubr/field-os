@@ -290,6 +290,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
  assert.ok(mapEngineJs.includes("next.toFixed(1)"));
  assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
+ assert.ok(routePlannerJs.includes("plannerKickFrame=requestAnimationFrame"));
+ assert.ok(routePlannerJs.includes("if(initialized&&plannerMap)"));
+ assert.ok(routePlannerJs.includes("if(routeVisible()&&!initialized)activate()"));
+
 
  assert.ok(swJs.includes("field-os-v3-69"));
  assert.ok(swJs.includes("return (await c.match(url.pathname))||Response.error()"));
