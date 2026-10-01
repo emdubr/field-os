@@ -1140,7 +1140,7 @@ function ensureFieldMap(id,fallbackId,labelId){
   if(fieldMaps.has(id))return fieldMaps.get(id);
   const el=document.getElementById(id),fallback=document.getElementById(fallbackId),label=document.getElementById(labelId);
   if(!el||typeof L==='undefined')return null;
-  const map=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true,minZoom:2,maxZoom:19,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,zoomSnap:.125,zoomDelta:.25,wheelDebounceTime:12,wheelPxPerZoomLevel:180});
+  const map=L.map(el,{zoomControl:false,attributionControl:true,preferCanvas:true,minZoom:2,maxZoom:19,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,zoomSnap:0,zoomDelta:.25,wheelDebounceTime:12,wheelPxPerZoomLevel:180});
   map.attributionControl.setPrefix(false);
   const overlay=L.layerGroup().addTo(map);
   const state={id,el,fallback,label,map,overlay,base:null,trails:null,baseKind:'',attr:'',centered:false,tileErrors:0};
