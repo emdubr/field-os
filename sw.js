@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-78';
-const ASSETS=['./','./index.html','./styles.css?v=3.78','./app.js?v=3.78','./workstation.css?v=3.78','./terminal.css?v=3.78','./workstation.js?v=3.78','./survival-data.js','./route-state.js?v=3.78','./map-engine.js?v=3.78','./route-planner.js?v=3.78','./field-intel.js?v=3.78','./field-ops.js?v=3.78','./field-tools.js?v=3.78','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-79';
+const ASSETS=['./','./index.html','./styles.css?v=3.79','./app.js?v=3.79','./workstation.css?v=3.79','./workstation.js?v=3.79','./survival-data.js','./route-state.js?v=3.79','./map-engine.js?v=3.79','./route-planner.js?v=3.79','./field-intel.js?v=3.79','./field-ops.js?v=3.79','./field-tools.js?v=3.79','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
