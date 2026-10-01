@@ -3877,3 +3877,80 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  .tabbar .tab-btn span{font-size:15px!important}.tabbar .tab-btn small{font-size:7px!important;letter-spacing:.06em!important}
 }
 @media(prefers-reduced-motion:reduce){body{text-shadow:none}body::after{display:none}}
+
+/* v3.75 MOBILE CRT LAYOUT — structural handheld workstation, not stacked desktop cards. */
+@media(max-width:767px){
+ /* Selected command key stays legible: luminous outline/text, never black-on-green. */
+ body .tabbar .tab-btn,
+ body .tabbar .tab-btn:visited{background:#020b06!important;color:#79e99c!important;border:1px solid rgba(121,233,156,.34)!important;border-bottom:0!important}
+ body .tabbar .tab-btn.active,
+ body .tabbar .tab-btn[aria-current="page"]{background:#092016!important;color:#b7ffca!important;border:1px solid #86ffad!important;border-top:3px solid #b7ffca!important;text-shadow:0 0 6px rgba(134,255,173,.55)!important;box-shadow:inset 0 0 15px rgba(85,255,135,.12)!important}
+ body .tabbar .tab-btn.active span,body .tabbar .tab-btn.active small{color:#b7ffca!important}
+ body .tabbar .tab-btn:active{background:#0d2a19!important;color:#caffd8!important}
+
+ /* Home becomes a compact bank of terminal windows. */
+ #home .detail-console{display:flex!important;flex-direction:column!important;gap:5px!important}
+ #home .console-main-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important;align-items:start!important}
+ #home .console-main-grid>.terminal-panel{display:block!important;min-width:0!important;margin:0!important}
+ #home .detailed-nav{grid-column:1/-1!important;display:grid!important;grid-template-columns:minmax(145px,.8fr) minmax(0,1.2fr)!important;grid-template-rows:auto 1fr!important;min-height:0!important;padding:7px!important}
+ #home .detailed-nav .terminal-title{grid-column:1/-1!important}
+ #home .home-compass-cluster{grid-column:1!important;grid-row:2!important;gap:3px!important;align-self:start!important}
+ #home .home-field-compass{width:142px!important;height:142px!important;margin:0 auto!important}
+ #home .home-compass-readout strong{font-size:19px!important}
+ #home .home-compass-enable{min-height:34px!important;font-size:7px!important;padding:4px!important}
+ #home #homeCompassPermissionState{font-size:6px!important;margin:2px 0 0!important}
+ #home .detailed-nav .nav-stats{grid-column:2!important;grid-row:2!important;align-self:stretch!important;display:flex!important;flex-direction:column!important;justify-content:center!important;gap:0!important;padding:2px 5px!important}
+ #home .detailed-nav .nav-stats span{display:flex!important;justify-content:space-between!important;gap:8px!important;padding:6px 0!important;border-bottom:1px dotted rgba(126,255,166,.22)!important;font-size:8px!important}
+ #home .detailed-nav .nav-stats b{font-size:10px!important}
+
+ #home .detailed-sensors{grid-column:1/-1!important;display:grid!important;grid-template-columns:1fr 1.35fr!important;grid-template-rows:auto auto auto!important;gap:5px 10px!important;padding:7px!important}
+ #home .detailed-sensors .terminal-title{grid-column:1/-1!important}
+ #home .sensor-lines{grid-column:1!important;grid-row:2/4!important;display:flex!important;flex-direction:column!important;justify-content:center!important}
+ #home .sensor-lines span{padding:3px 0!important;font-size:7px!important}
+ #home .mini-chart-title{grid-column:2!important;grid-row:2!important;margin:0!important;font-size:8px!important}
+ #home .mini-chart{grid-column:2!important;grid-row:3!important;width:100%!important;height:94px!important;min-height:0!important}
+ #home .chart-axis{grid-column:2!important;font-size:6px!important}
+
+ /* The map is an instrument window, not a giant feed card. */
+ #home .map-console{grid-column:1/-1!important;order:-1!important;padding:5px!important}
+ #home .map-workarea{min-height:0!important}
+ #home .home-real-map{height:48dvh!important;min-height:330px!important;max-height:500px!important}
+ #home .map-console .terminal-title{display:flex!important}
+ #home .map-console .terminal-title::after{content:"  [ LIVE PLOT ]";margin-left:auto;color:var(--crt-green-dim);font-size:7px}
+
+ /* Hide verbose desktop windows; expose them through module tabs/More. */
+ #home .detailed-route-info,#home .console-mid-grid,#home .console-bottom-grid{display:none!important}
+ #home .console-command-strip{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:3px!important;margin:0!important;padding:4px!important;border:1px solid var(--crt-rule)!important;background:#020b06!important}
+ #home .console-command-strip button{min-height:31px!important;padding:3px!important;font-size:6.5px!important;border:1px solid rgba(126,255,166,.45)!important;background:#06160c!important;color:var(--crt-green)!important}
+ #home .console-command-strip button:nth-child(n+5){display:none!important}
+
+ /* Remove the huge blank-space behavior from the old handheld instrument rules. */
+ #home .terminal-panel{min-height:0!important;height:auto!important}
+ #home .home-compass-cluster,#home .detailed-nav,#home .detailed-sensors{margin:0!important}
+ #home .sensor-lines,#home .nav-stats{min-height:0!important}
+
+ /* Reference-like window furniture. */
+ #home .terminal-title,.view .panel-title{position:relative!important;padding-left:19px!important}
+ #home .terminal-title::before,.view .panel-title::before{content:"□"!important;position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:8px!important}
+ #home .terminal-title::after{font-family:"Courier New",monospace}
+ .module-grid>.panel,.module-grid>.module-slot>.panel{outline:1px solid rgba(0,0,0,.8);outline-offset:-3px}
+
+ /* NAV core itself gets the same compact workstation geometry. */
+ #nav .grid.two-col{display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important}
+ #nav .nav-primary-compass{grid-column:1/-1!important;display:grid!important;grid-template-columns:160px 1fr!important;grid-template-rows:auto 1fr!important;padding:7px!important}
+ #nav .nav-primary-compass .panel-title{grid-column:1/-1!important}
+ #nav .field-compass{width:150px!important;height:150px!important;margin:0!important}
+ #nav .compass-readout{align-self:center!important;padding:5px!important}
+ #nav .nav-primary-base,#nav .nav-primary-trail{padding:7px!important}
+ #nav .large-readouts{grid-template-columns:1fr!important}
+ #nav .large-readouts>div{padding:4px!important}
+ #nav .nav-live-strip{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:1px!important}
+ #nav .nav-live-strip span{padding:4px!important;font-size:6px!important}
+}
+@media(max-width:390px){
+ #home .detailed-nav{grid-template-columns:132px 1fr!important}
+ #home .home-field-compass{width:128px!important;height:128px!important}
+ #home .detailed-sensors{grid-template-columns:.9fr 1.1fr!important}
+ #nav .nav-primary-compass{grid-template-columns:138px 1fr!important}
+ #nav .field-compass{width:132px!important;height:132px!important}
+}
