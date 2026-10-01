@@ -320,7 +320,20 @@
       </section>
 
       <section class="view" id="comms" data-view="comms">
-        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>CHANNELS</h2><span></span></div>
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>COMMS / MESH</h2><span></span></div>
+        <article class="panel comms-launch-panel">
+          <div class="panel-title"><span>RADIO WORKSPACES</span><span class="tiny">MESHTASTIC / LORA</span></div>
+          <div class="comms-launch-grid">
+            <button class="comms-launch-card" type="button" data-open="lorachat"><b>LoRa CHAT</b><span>Messages · inbox · store + forward</span><small>Uses the shared FIELD/OS communications queue and Meshtastic bridge when connected.</small></button>
+            <button class="comms-launch-card" type="button" data-open="loramap"><b>LoRa MAP</b><span>Nodes · signal · group recovery</span><small>Uses the same mesh roster, position packets, RSSI/SNR history, and cached node data.</small></button>
+          </div>
+          <dl class="readouts"><div><dt>RADIO SOURCE</dt><dd>TAP V2 / MESHTASTIC BRIDGE</dd></div><div><dt>OFFLINE MODE</dt><dd>LOCAL CACHE + STORE/FORWARD</dd></div></dl>
+          <p class="muted">The map and chat are separate workspaces but share one transport/state layer, so a connected TAP V2 does not need two independent radio sessions.</p>
+        </article>
+      </section>
+
+      <section class="view" id="lorachat" data-view="lorachat">
+        <div class="view-head"><button class="back" data-open="comms">← COMMS</button><h2>LORA CHAT</h2><button class="ghost" data-open="loramap">MAP</button></div>
         <article class="panel">
           <div class="panel-title"><span>ENCRYPTED MESH TRAFFIC</span><span class="tiny">LIVE DEMO</span></div>
           <div class="message"><b>NODE-02</b><span>00:14</span><p>Reached the junction. Holding here.</p></div>
@@ -338,6 +351,22 @@
           </div>
           <div id="unifiedInboxTimeline" class="unified-inbox-timeline"><p class="muted">No communications events yet.</p></div>
         </article>
+        <article class="panel store-forward-panel">
+          <div class="panel-title"><span>STORE + FORWARD QUEUE</span><span class="tiny" id="storeForwardState">0 QUEUED</span></div>
+          <div class="store-forward-summary"><span id="storeForwardTransport">TRANSPORT // NONE</span><span id="storeForwardLastFlush">LAST FLUSH // —</span></div>
+          <div id="storeForwardQueue" class="store-forward-queue"><p class="muted">No queued messages.</p></div>
+          <div class="button-row"><button id="storeForwardRetry" class="action" type="button">RETRY QUEUE</button><button id="storeForwardClearSent" class="danger-lite" type="button">CLEAR SENT HISTORY</button></div>
+        </article>
+        <article class="panel compose">
+          <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
+          <label for="messageInput">MESSAGE</label>
+          <textarea id="messageInput" placeholder="Type demo message..."></textarea>
+          <div class="button-row"><button class="action" id="sendDemo">QUEUE / TRANSMIT</button><button class="action">CHANNEL</button></div>
+        </article>
+      </section>
+
+      <section class="view" id="loramap" data-view="loramap">
+        <div class="view-head"><button class="back" data-open="comms">← COMMS</button><h2>LORA MAP</h2><button class="ghost" data-open="lorachat">CHAT</button></div>
         <article class="panel mesh-network-panel">
           <div class="panel-title"><span>MESH NETWORK MAP</span><span class="tiny" id="meshNetworkState">NO NODE DATA</span></div>
           <div class="mesh-network-layout">
@@ -389,18 +418,6 @@
           <p class="muted">Scores route high points and saved waypoints using elevation, access distance, and weak-coverage proximity. This is a planning estimate, not a radio-propagation guarantee.</p>
           <div class="button-row"><button id="relayRecommendRefresh" class="action" type="button">REFRESH RECOMMENDATIONS</button></div>
           <div id="relayRecommendList" class="relay-recommend-list"><div class="terrain-risk-empty">NO RELAY CANDIDATES YET</div></div>
-        </article>
-        <article class="panel store-forward-panel">
-          <div class="panel-title"><span>STORE + FORWARD QUEUE</span><span class="tiny" id="storeForwardState">0 QUEUED</span></div>
-          <div class="store-forward-summary"><span id="storeForwardTransport">TRANSPORT // NONE</span><span id="storeForwardLastFlush">LAST FLUSH // —</span></div>
-          <div id="storeForwardQueue" class="store-forward-queue"><p class="muted">No queued messages.</p></div>
-          <div class="button-row"><button id="storeForwardRetry" class="action" type="button">RETRY QUEUE</button><button id="storeForwardClearSent" class="danger-lite" type="button">CLEAR SENT HISTORY</button></div>
-        </article>
-        <article class="panel compose">
-          <div class="panel-title"><span>OUTGOING TRAFFIC</span><span class="tiny">TEXT PACKET</span></div>
-          <label for="messageInput">MESSAGE</label>
-          <textarea id="messageInput" placeholder="Type demo message..."></textarea>
-          <div class="button-row"><button class="action" id="sendDemo">QUEUE / TRANSMIT</button><button class="action">CHANNEL</button></div>
         </article>
       </section>
 
@@ -913,6 +930,8 @@
         <button class="sheet-tab" data-open="trip"><span>▣</span><b>TRIP</b><small>Plan / check-in</small></button>
         <button class="sheet-tab" data-open="mission"><span>◎</span><b>MISSION</b><small>Pre-trip pack</small></button>
         <button class="sheet-tab" data-open="survival"><span>✚</span><b>GUIDE</b><small>Offline manual</small></button>
+        <button class="sheet-tab" data-open="lorachat"><span>✉</span><b>LORA CHAT</b><small>Mesh messages</small></button>
+        <button class="sheet-tab" data-open="loramap"><span>⌖</span><b>LORA MAP</b><small>Nodes / coverage</small></button>
         <button class="sheet-tab" data-open="sensors"><span>◫</span><b>SENSORS</b><small>TAP / environment</small></button>
         <button class="sheet-tab" data-open="log"><span>≡</span><b>FIELD LOG</b><small>Notes / marks</small></button>
         <button class="sheet-tab" data-open="power"><span>ϟ</span><b>POWER</b><small>Battery modes</small></button>
