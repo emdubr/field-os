@@ -408,9 +408,11 @@
     const failed=()=>{if(token!==st.token)return;st.errors++;updateDiag()};
     const make=(src,cls,frag,left,top)=>{
       if(!src)return;
-      const isBase=frag===bf;if(isBase)basePending++;
+      const isBase=frag===bf;
+      const gatesFrame=isBase&&((mode==='osm'&&cls==='native-osm-base')||(mode==='topo'&&cls==='native-topo-tile')||(mode==='satellite'&&cls==='native-satellite-tile'));
+      if(gatesFrame)basePending++;
       const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
-      const settle=ok=>{ok?loaded():failed();if(isBase){baseSettled++;if(baseSettled>=basePending)commit()}};
+      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(baseSettled>=basePending)commit()}};
       img.style.left=left+'px';img.style.top=top+'px';img.onload=()=>settle(true);img.onerror=()=>settle(false);img.src=src;frag.appendChild(img);
     };
 
