@@ -278,7 +278,7 @@
   document.addEventListener('fieldos:telemetry',scheduleRefresh);
   document.addEventListener('click',e=>{if(e.target.closest('button,[data-open],[data-module],[data-result-index]'))scheduleRefresh()});
   document.addEventListener('change',scheduleRefresh);
-  document.addEventListener('input',e=>{if(e.target.matches('input[type="range"],input[type="number"],select'))scheduleRefresh()});
+  document.addEventListener('input',e=>{if(e.target instanceof Element&&e.target.matches('input[type="range"],input[type="number"],select'))scheduleRefresh()});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){cancelAnimationFrame(refreshFrame);refreshFrame=0;}
     else scheduleRefresh();
