@@ -16,6 +16,16 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
+      - name: Syntax check browser scripts
+        run: |
+          node --check app.js
+          node --check workstation.js
+          node --check map-engine.js
+          node --check route-state.js
+          node --check route-planner.js
+          node --check field-intel.js
+          node --check field-ops.js
+          node --check field-tools.js
       - run: npm test
   desktop:
     runs-on: ubuntu-latest
@@ -27,4 +37,14 @@ jobs:
           node-version: 20
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:desktop
+      - name: Run desktop UI suite
+        run: |
+          mkdir -p test-artifacts
+          FIELD_SCREENSHOT=test-artifacts/desktop-failure.png npm run test:desktop
+      - name: Upload desktop failure artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-ui-failure
+          path: test-artifacts/
+          if-no-files-found: ignore
