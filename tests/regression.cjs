@@ -56,6 +56,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  d.querySelector('#missionReadiness [data-readiness-id="route"]').click();await tick();assert.equal(d.querySelector('.view.active').id,'route');
  console.log('PASS feature 01 Mission Mode freezes pack data while actionable readiness cards update from live requirements');
   assert.ok(fieldIntelJs.includes("'fieldos:tripchange'"));
+  assert.ok(fieldIntelJs.includes("MISSION-122 //"));
   assert.ok(fieldIntelJs.includes("tripReturn')?.addEventListener('input',refreshReadiness"));
   console.log('PASS trip edits refresh readiness immediately without rebuilding the frozen mission snapshot');
  console.log('PASS feature 01 Mission Mode builds, freezes, starts, and ends a complete local trip pack');
@@ -456,6 +457,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
  assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
  assert.ok(workstationCss.includes('v3.82 UI EFFICIENCY'));
+ assert.ok(workstationCss.includes('v3.83 FIELD UI EFFICIENCY'));
+ assert.ok(workstationCss.includes('v3.83 ROUTE EDITOR MOBILE RELIABILITY'));
+ assert.ok(routePlannerJs.includes('const fastMeters='));
+ assert.ok(routePlannerJs.includes('routeMetricCache=new Map()'));
+ assert.ok(mapEngineJs.includes('deferredPinch:null'));
  console.log('PASS route planner hot-path optimizations and actionable mission readiness contracts are wired');
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
 
