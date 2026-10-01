@@ -415,6 +415,28 @@
         </article>
       </section>
 
+      <section class="view" id="loramap" data-view="loramap">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA MAP</h2><span id="loraMapState">NO RADIO DATA</span></div>
+        <article class="panel lora-map-panel">
+          <div class="panel-title"><span>MESHTASTIC NODE POSITIONS</span><span class="tiny" id="loraMapFreshness">WAITING</span></div>
+          <div id="loraRealMap" class="field-real-map lora-real-map" aria-label="Meshtastic LoRa node map"></div>
+          <div id="loraMapEmpty" class="field-map-fallback"><b>NO POSITIONED LORA NODES</b><span>Connect Meshtastic telemetry with node positions. FIELD/OS will not invent radio locations.</span></div>
+          <div id="loraNodeList" class="mesh-node-roster"><p class="muted">Waiting for real Meshtastic node telemetry.</p></div>
+        </article>
+      </section>
+
+      <section class="view" id="lorachat" data-view="lorachat">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA CHAT</h2><span id="loraChatState">TRANSPORT CHECK</span></div>
+        <article class="panel lora-chat-panel">
+          <div class="panel-title"><span>MESHTASTIC TRAFFIC</span><span class="tiny">STORE + FORWARD</span></div>
+          <div id="loraChatTimeline" class="unified-inbox-timeline"><p class="muted">No real LoRa messages received yet.</p></div>
+          <label for="loraChatChannel">CHANNEL</label><input id="loraChatChannel" class="terminal-input" value="PRIMARY" maxlength="24">
+          <label for="loraChatInput">MESSAGE</label><textarea id="loraChatInput" maxlength="240" placeholder="Message over available Meshtastic transport…"></textarea>
+          <div class="button-row"><button id="loraChatSend" class="action" type="button">QUEUE / TRANSMIT</button><button id="loraChatRetry" class="action" type="button">RETRY QUEUE</button></div>
+          <p class="muted">Messages use FIELD/OS transport adapters. If no Meshtastic transport is connected, packets remain queued instead of being shown as sent.</p>
+        </article>
+      </section>
+
       <section class="view" id="nav" data-view="nav">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>NAV CORE</h2><span></span></div>
         <div class="grid two-col">
