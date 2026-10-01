@@ -79,22 +79,25 @@
     if(el?.focus)el.focus({preventScroll:true});
     if(run&&target.run)document.getElementById(target.run)?.click();
   }
-  let readinessPollTimer=0;
+  let readinessPollTimer=0,readinessPollChecks=0;
   function completeReadiness(id){
     const item=readinessItem(id),target=readinessTarget[id];if(!target)return;
     const run=!item?.ok&&!!target.run;
     if(target.view&&target.view!=='mission')window.FIELD_OPEN_VIEW?.(target.view);
     setTimeout(()=>focusReadinessTarget(target,run),target.view&&target.view!=='mission'?80:0);
     setStatus(item?.ok?`MISSION-121 // REVIEW ${item.label}`:`MISSION-120 // COMPLETE ${item?.label||String(id).toUpperCase()}`,'ready');
-    clearInterval(readinessPollTimer);let checks=0;
-    readinessPollTimer=setInterval(()=>{
-      checks++;const next=readinessItem(id);
-      if(next?.ok||checks>=40){
-        clearInterval(readinessPollTimer);readinessPollTimer=0;
+    clearTimeout(readinessPollTimer);readinessPollChecks=0;
+    const watch=()=>{
+      readinessPollChecks++;const next=readinessItem(id);
+      if(next?.ok||readinessPollChecks>=40){
+        readinessPollTimer=0;
         if(document.getElementById('mission')?.classList.contains('active'))render(read('mission-pack',null));
         if(next?.ok)setStatus(`MISSION-122 // ${next.label} READY`,'ready');
+        return;
       }
-    },500);
+      readinessPollTimer=setTimeout(watch,500);
+    };
+    readinessPollTimer=setTimeout(watch,500);
   }
   function render(pack=read('mission-pack',null)){
     // Mission pack summaries remain frozen snapshots. Readiness is intentionally
