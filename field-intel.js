@@ -32,11 +32,11 @@
     const rawWaypoints=read('waypoints',[]);
     const waypoints=(Array.isArray(rawWaypoints)?rawWaypoints:[]).filter(validPoint).slice(0,500).map(w=>({id:String(w.id||''),name:String(w.name||'WAYPOINT'),type:String(w.type||'NOTE'),lat:Number(w.lat),lon:Number(w.lon),alt:w.alt??null,notes:String(w.notes||'')}));
     const essentials=read('essentials',{}),checked=Object.values(essentials||{}).filter(Boolean).length,checkin=read('checkin',{});
-    const interval=Number(trip.checkinInterval??document.getElementById('checkinInterval')?.value??0)||0;
-    const returnAt=String(trip.tripReturn||document.getElementById('tripReturn')?.value||'');
+    const interval=Number(document.getElementById('checkinInterval')?.value??trip.checkinInterval??0)||0;
+    const returnAt=String(document.getElementById('tripReturn')?.value||trip.tripReturn||'');
     const position=getPosition(),battery=parseBattery(),packId=localStorage.getItem(key('map-pack'))||'',mapSource=localStorage.getItem(key('map-source'))||text('offlineMapSource')||'UNKNOWN',offlineLabel=text('offlineMapMode');
     const hasOffline=!!packId||(/OFFLINE|SAVED|PMTILES/i.test(offlineLabel)&&!/ONLINE/i.test(offlineLabel));
-    const weatherText=weather?.value.trim()||String(config.weather||'').trim(),contactText=contact?.value.trim()||String(config.contact||'').trim(),emergency=String(trip.tripEmergency||document.getElementById('tripEmergency')?.value||'').trim();
+    const weatherText=weather?.value.trim()||String(config.weather||'').trim(),contactText=contact?.value.trim()||String(config.contact||'').trim(),emergency=String(document.getElementById('tripEmergency')?.value||trip.tripEmergency||'').trim();
     const weatherCache=read('weather-cache',null),environmentCache=read('environment-intel-cache',null),corridorStatus=text('routeOfflineCoverage');
     const distanceM=routeMeters(points),now=Date.now(),due=interval&&checkin.last?Number(checkin.last)+interval*60000:null;
     const readiness=[
@@ -109,8 +109,11 @@
   document.getElementById('missionBuild')?.addEventListener('click',build);document.getElementById('missionStart')?.addEventListener('click',start);document.getElementById('missionEnd')?.addEventListener('click',end);document.getElementById('missionCopy')?.addEventListener('click',copySummary);document.getElementById('missionExport')?.addEventListener('click',exportPack);
   document.getElementById('missionReadiness')?.addEventListener('click',e=>{const button=e.target.closest?.('[data-readiness-id]');if(button)completeReadiness(button.dataset.readinessId)});
   const refreshReadiness=()=>{if(document.getElementById('mission')?.classList.contains('active'))render(read('mission-pack',null))};
-  for(const eventName of ['fieldos:routechange','fieldos:waypointschange','fieldos:weatherchange','fieldos:environmentchange'])document.addEventListener(eventName,refreshReadiness);
+  for(const eventName of ['fieldos:routechange','fieldos:waypointschange','fieldos:weatherchange','fieldos:environmentchange','fieldos:tripchange'])document.addEventListener(eventName,refreshReadiness);
   weather?.addEventListener('input',refreshReadiness);contact?.addEventListener('input',refreshReadiness);
+  document.getElementById('tripReturn')?.addEventListener('input',refreshReadiness);
+  document.getElementById('checkinInterval')?.addEventListener('change',refreshReadiness);
+  document.getElementById('tripEmergency')?.addEventListener('input',refreshReadiness);
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='mission')render(read('mission-pack',null))});
   window.FIELD_MISSION_READINESS={items:liveReadiness,complete:completeReadiness,refresh:refreshReadiness};
   if(read('mission-active',null))document.body.classList.add('mission-active');render(read('mission-pack',null));
