@@ -150,6 +150,9 @@
       st.gestureFrame=requestAnimationFrame(()=>{st.gestureFrame=0;const p=st.pendingGesture;st.pendingGesture=null;if(p)paintGesture(p)});
     };
     const settleFractionalZoom=(visualZoom,clientX,clientY,anchor)=>{
+      // Prevent a queued preview, calculated against the old zoom, from
+      // repainting after the fractional zoom has been committed.
+      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
       const next=Math.max(2,Math.min(maxZoom(),visualZoom));
       preserveAnchor(anchor,clientX,clientY,next);st.zoom=next;
       clearTimeout(st.settleTimer);
@@ -197,6 +200,7 @@
     st.onPointerUp=e=>{
       const old=[...st.pointers.values()];
       st.pointers.delete(e.pointerId);
+      try{st.el.releasePointerCapture?.(e.pointerId)}catch{}
       const origin=st.pointerDownOrigin;
       const wasTap=!!(origin&&old.length===1&&!st.pinchStart&&Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<7);
       if(st.pinchStart&&old.length>=2){
@@ -219,6 +223,17 @@
         st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},120);
       }
     };
+    st.onPointerCancel=e=>{
+      // A cancelled OS/browser gesture must never become a map tap.
+      st.pointers.clear();
+      try{st.el.releasePointerCapture?.(e.pointerId)}catch{}
+      st.dragStart=null;st.pinchStart=null;st.pointerDownOrigin=null;
+      st.el.classList.remove('native-map-dragging');
+      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
+      clearTimeout(st.settleTimer);
+      applyRestingCamera();
+      requestAnimationFrame(()=>render(st));
+    };
     st.onWheel=e=>{
       if(e.ctrlKey)return;
       e.preventDefault();
@@ -229,7 +244,8 @@
         st.renderFrame=0;
         const delta=st.wheelDelta;st.wheelDelta=0;
         st.wheelZoom=Math.max(-.9,Math.min(.9,st.wheelZoom-delta/420));
-        previewZoom(Math.pow(2,st.wheelZoom),anchorX,anchorY);
+        const previewAnchor=st.wheelAnchor;
+        previewZoom(Math.pow(2,st.wheelZoom),previewAnchor?.x??anchorX,previewAnchor?.y??anchorY);
       });
       clearTimeout(st.wheelTimer);
       st.wheelTimer=setTimeout(()=>{
@@ -247,7 +263,7 @@
     el.addEventListener('pointerdown',st.onPointerDown);
     el.addEventListener('pointermove',st.onPointerMove);
     el.addEventListener('pointerup',st.onPointerUp);
-    el.addEventListener('pointercancel',st.onPointerUp);
+    el.addEventListener('pointercancel',st.onPointerCancel);
     el.addEventListener('wheel',st.onWheel,{passive:false});
     el.addEventListener('dblclick',st.onDbl);
     if('ResizeObserver' in window){
@@ -574,7 +590,7 @@
     st.el.removeEventListener('pointerdown',st.onPointerDown);
     st.el.removeEventListener('pointermove',st.onPointerMove);
     st.el.removeEventListener('pointerup',st.onPointerUp);
-    st.el.removeEventListener('pointercancel',st.onPointerUp);
+    st.el.removeEventListener('pointercancel',st.onPointerCancel);
     st.el.removeEventListener('wheel',st.onWheel);
     st.el.removeEventListener('dblclick',st.onDbl);
     st.el.innerHTML='';states.delete(id);return true;
