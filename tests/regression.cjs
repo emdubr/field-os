@@ -325,8 +325,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8');
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.67');
+ const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8'));
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.67');assert.equal(packageJson.version,release+'.0');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
@@ -336,7 +336,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
  assert.ok(workstationJs.includes(`FIELD / OS <b>${release}</b>`)&&workstationJs.includes(`<em>v${release}</em>`)&&workstationJs.includes(`FIELD/OS ${release}`));
  assert.ok(routePlannerJs.includes(`'BUILD: v${release}'`));
- console.log('PASS runtime workstation and route diagnostics match the shipped release');
+ assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
+ assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
+ console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
  assert.ok(appJs.includes("zoomSnap:.125")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:.125")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
