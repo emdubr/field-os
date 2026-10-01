@@ -23,6 +23,7 @@ jobs:
           node --check workstation.js
           node --check map-engine.js
           node --check route-state.js
+          node --check runtime.js
           node --check route-planner.js
           node --check field-intel.js
           node --check field-ops.js
