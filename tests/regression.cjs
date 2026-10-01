@@ -290,6 +290,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const qaCss=fs.readFileSync(dir+'/styles.css','utf8');assert.ok(qaCss.includes('v3.50 QA/UI stabilization'));assert.ok(qaCss.includes('#system .field-tools-panel .button-row'));assert.ok(qaCss.includes('@media(max-width:390px)'));
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
  assert.ok(mapEngineJs.includes("if(st.el.offsetParent!==null){st.rendered=true;render(st)}"));
+ assert.ok(mapEngineJs.includes("if(st.el.offsetParent===null)"));
+ assert.ok(mapEngineJs.includes("drawOverlay(st,Math.max(250"));
  assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
  assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
  assert.ok(mapEngineJs.includes("next.toFixed(1)"));
