@@ -25,6 +25,8 @@
   launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-controls','workspaceSwitcher');launcher.setAttribute('aria-expanded','false');
   launcher.innerHTML='<span>FIND A MODULE</span><kbd>Ctrl / ⌘ K</kbd>';
   nav.querySelector('.ws-brand').after(launcher);
+  const mobileLauncher=document.createElement('button');mobileLauncher.type='button';mobileLauncher.id='mobileWorkspaceSearch';mobileLauncher.className='mobile-workspace-search';mobileLauncher.textContent='FIND MODULE';
+  const sheetHead=document.querySelector('.tab-sheet-head');if(sheetHead)sheetHead.insertBefore(mobileLauncher,sheetHead.querySelector('.switcher-close,#closeTabSheet')||null);
   const switcher=document.createElement('dialog');switcher.id='workspaceSwitcher';switcher.className='workspace-switcher';
   switcher.setAttribute('aria-labelledby','workspaceSwitcherTitle');
   switcher.innerHTML='<div class="switcher-heading"><h2 id="workspaceSwitcherTitle">Go to workspace</h2><button type="button" class="switcher-close" aria-label="Close workspace search">ESC</button></div><label for="workspaceQuery">Find a module or task</label><input id="workspaceQuery" type="search" autocomplete="off" placeholder="Try route, weather, GPS, notes…" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="workspaceResults"><p id="workspaceResultStatus" role="status"></p><div id="workspaceResults" role="listbox" aria-label="Matching workspaces"></div><p class="switcher-hint">↑ ↓ to select · Enter to open · Esc to close</p>';
@@ -70,6 +72,7 @@
     returnFocus=document.getElementById('screen');closeSwitcher();openView(item[0]);
   }
   launcher.addEventListener('click',showSwitcher);
+  mobileLauncher.addEventListener('click',()=>{closeTabSheet();showSwitcher();});
   switcher.querySelector('.switcher-close').addEventListener('click',closeSwitcher);
   switcher.addEventListener('close',()=>{launcher.setAttribute('aria-expanded','false');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
   switcher.addEventListener('click',e=>{
