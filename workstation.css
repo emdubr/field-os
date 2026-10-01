@@ -3560,3 +3560,13 @@ input,select,textarea{
   body #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   body #map .terrain-controls-below{grid-template-columns:1fr!important}
 }
+
+
+/* v3.67 terrain + LoRa operational surfaces */
+#loramap .lora-real-map{min-height:440px;position:relative;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
+.lora-map-no-data{display:grid;place-items:center;min-height:440px;color:var(--dim);font:700 12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+.lora-node-svg{display:block;width:100%;height:440px}
+.lora-node-svg circle{fill:currentColor}.lora-node-svg text{fill:currentColor;font-size:2.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.lora-chat-log{min-height:280px;max-height:52dvh;overflow:auto}.lora-chat-line{padding:8px 0;border-bottom:1px solid var(--line)}.lora-chat-line>span{float:right;color:var(--dim);font-size:10px}.lora-chat-line p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(min-width:1024px){body #loramap .module-grid,body #lorachat .module-grid{display:flex!important;flex-direction:column!important;columns:auto!important;gap:10px!important}body #loramap .module-grid>*,body #lorachat .module-grid>*{display:block!important;width:100%!important;margin:0!important}}
+@media(max-width:767px){#loramap .lora-real-map,.lora-map-no-data{min-height:52dvh}.lora-node-svg{height:52dvh}.lora-chat-line>span{float:none;display:block;margin-top:2px}}
