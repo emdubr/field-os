@@ -117,44 +117,46 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      residualScale:1,residualOrigin:'50% 50%',settleTimer:0,gestureFrame:0,pendingTransform:null
+      settleTimer:0,gestureFrame:0,pendingGesture:null
     };
 
-    const transformLayers=(transform,origin='50% 50%',transition='')=>{
-      for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){
-        layer.style.transition=transition;layer.style.transformOrigin=origin;layer.style.transform=transform;
+    const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
+    const tileZoomFor=z=>Math.max(2,Math.min(maxZoom(),Math.round(z)));
+    const rasterScaleFor=z=>Math.pow(2,z-tileZoomFor(z));
+    const applyRestingCamera=()=>{
+      const scale=rasterScaleFor(st.zoom);
+      for(const layer of rasterLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=Math.abs(scale-1)<.001?'':`scale(${scale})`}
+      for(const layer of vectorLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=''}
+    };
+    const paintGesture=gesture=>{
+      const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
+      const ax=gesture.originX==null?w/2:Math.max(0,Math.min(w,gesture.originX-rect.left));
+      const ay=gesture.originY==null?h/2:Math.max(0,Math.min(h,gesture.originY-rect.top));
+      const baseScale=rasterScaleFor(st.zoom),g=Math.max(.5,Math.min(2,gesture.scale||1));
+      const compensateX=g*(1-baseScale)*(w/2-ax),compensateY=g*(1-baseScale)*(h/2-ay);
+      for(const layer of rasterLayers){
+        layer.style.transformOrigin=`${ax}px ${ay}px`;
+        layer.style.transform=`translate(${gesture.dx+compensateX}px,${gesture.dy+compensateY}px) scale(${baseScale*g})`;
+      }
+      for(const layer of vectorLayers){
+        layer.style.transformOrigin=`${ax}px ${ay}px`;
+        layer.style.transform=`translate(${gesture.dx}px,${gesture.dy}px) scale(${g})`;
       }
     };
-    const queueTransform=(transform,origin='50% 50%')=>{
-      st.pendingTransform={transform,origin};
+    const queueGesture=(dx=0,dy=0,scale=1,originX=null,originY=null)=>{
+      st.pendingGesture={dx,dy,scale,originX,originY};
       if(st.gestureFrame)return;
-      st.gestureFrame=requestAnimationFrame(()=>{st.gestureFrame=0;const p=st.pendingTransform;st.pendingTransform=null;if(p)transformLayers(p.transform,p.origin)});
-    };
-    const resetTransform=(transition='')=>{st.residualScale=1;st.residualOrigin='50% 50%';transformLayers('','50% 50%',transition)};
-    const applyResidual=()=>{
-      if(Math.abs(st.residualScale-1)<.001)transformLayers('','50% 50%');
-      else transformLayers(`scale(${st.residualScale})`,st.residualOrigin);
+      st.gestureFrame=requestAnimationFrame(()=>{st.gestureFrame=0;const p=st.pendingGesture;st.pendingGesture=null;if(p)paintGesture(p)});
     };
     const settleFractionalZoom=(visualZoom,clientX,clientY,anchor)=>{
-      const committed=Math.max(2,Math.min(maxZoom(),Math.round(visualZoom)));
-      preserveAnchor(anchor,clientX,clientY,committed);st.zoom=committed;
-      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
-      st.residualScale=Math.pow(2,visualZoom-committed);st.residualOrigin=`${x}px ${y}px`;
-      applyResidual();
+      const next=Math.max(2,Math.min(maxZoom(),visualZoom));
+      preserveAnchor(anchor,clientX,clientY,next);st.zoom=next;
       clearTimeout(st.settleTimer);
-      st.settleTimer=setTimeout(()=>{
-        if(st.pointers.size!==0)return;
-        requestAnimationFrame(()=>{render(st);applyResidual()});
-      },220);
+      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},160);
     };
-    const previewZoom=(scale,clientX,clientY)=>{
-      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
-      queueTransform(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
-    };
-    const previewPinch=(scale,clientX,clientY,startX,startY)=>{
-      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,startX-rect.left)),y=Math.max(0,Math.min(rect.height,startY-rect.top));
-      const dx=clientX-startX,dy=clientY-startY;
-      queueTransform(`translate(${dx}px,${dy}px) scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
+    const previewZoom=(scale,clientX,clientY)=>queueGesture(0,0,scale,clientX,clientY);
+    const previewPinch=(scale,clientX,clientY,startX,startY,baseDx=0,baseDy=0)=>{
+      queueGesture(baseDx+clientX-startX,baseDy+clientY-startY,scale,startX,startY);
     };
     const preserveAnchor=(anchor,clientX,clientY,newZoom)=>{
       if(!anchor)return;
@@ -168,27 +170,27 @@
       st.el.setPointerCapture?.(e.pointerId);
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1){
-        st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center},scale:st.residualScale,origin:st.residualOrigin};
+        st.dragStart={x:e.clientX,y:e.clientY,center:{...st.center}};
         st.pointerDownOrigin={x:e.clientX,y:e.clientY};
         st.el.classList.add('native-map-dragging');
       }else if(st.pointers.size===2){
         const p=[...st.pointers.values()];
         const midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
-        const displayZoom=st.zoom+Math.log2(st.residualScale||1);
-        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:displayZoom,baseScale:st.residualScale||1,anchor:screenToLatLon(st,midX,midY),midX,midY};
+        const baseDx=st.dragStart?p[0].x-st.dragStart.x:0,baseDy=st.dragStart?p[0].y-st.dragStart.y:0;
+        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:st.zoom,anchor:screenToLatLon(st,midX-baseDx,midY-baseDy),midX,midY,baseDx,baseDy};
       }
     };
     st.onPointerMove=e=>{
       if(!st.pointers.has(e.pointerId))return;
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1&&st.dragStart){
-        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,t=`translate(${dx}px,${dy}px) scale(${st.dragStart.scale||1})`;
-        queueTransform(t,st.dragStart.origin||'50% 50%');
+        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
+        queueGesture(dx,dy,1);
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
-        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch((st.pinchStart.baseScale||1)*Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
+        st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch(Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY,st.pinchStart.baseDx,st.pinchStart.baseDy);
       }
     };
     st.onPointerUp=e=>{
@@ -204,11 +206,11 @@
         settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);return;
       }
       if(st.dragStart&&!wasTap){
-        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,scale=Math.max(.001,st.dragStart.scale||1);
+        const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
         const c=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
-        st.center=unworld(c.x-dx/scale,c.y-dy/scale,st.zoom);
+        st.center=unworld(c.x-dx,c.y-dy,st.zoom);
       }
-      st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');applyResidual();
+      st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');
       if(wasTap&&typeof st.tapHandler==='function'){
         try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
       }else{
@@ -231,7 +233,7 @@
       clearTimeout(st.wheelTimer);
       st.wheelTimer=setTimeout(()=>{
         const fractional=st.wheelZoom,anchor=st.wheelAnchor;st.wheelZoom=0;st.wheelAnchor=null;
-        if(Math.abs(fractional)<.04){applyResidual();return}
+        if(Math.abs(fractional)<.04){applyRestingCamera();return}
         settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional)),anchor?.x??0,anchor?.y??0,anchor?.point);
       },90);
     };
@@ -366,10 +368,12 @@
     st.el.classList.remove('standalone-map-error');
     const token=++st.token,rect=st.el.getBoundingClientRect();
     const w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
-    st.zoom=Math.max(2,Math.min(maxZoom(),Math.round(st.zoom)));
-    const c=world(st.center.lat,st.center.lon,st.zoom);
-    const minX=Math.floor((c.x-w/2)/TILE)-1,maxX=Math.floor((c.x+w/2)/TILE)+1,minY=Math.floor((c.y-h/2)/TILE)-1,maxY=Math.floor((c.y+h/2)/TILE)+1;
+    st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom));
+    const tileZoom=tileZoomFor(st.zoom),renderScale=Math.pow(2,st.zoom-tileZoom),c=world(st.center.lat,st.center.lon,tileZoom);
+    const coverW=w/Math.max(.5,renderScale),coverH=h/Math.max(.5,renderScale);
+    const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
     const bf=document.createDocumentFragment(),hf=document.createDocumentFragment(),tf=document.createDocumentFragment();
+    const hadTiles=st.base.childElementCount>0;let basePending=0,baseSettled=0,committed=false;
     st.loaded=0;st.errors=0;
     const diag=st.el.querySelector('.native-map-diag');
     const updateDiag=()=>{if(token===st.token&&diag)diag.textContent=`TILES ${st.loaded} / ERR ${st.errors}`};
@@ -377,32 +381,31 @@
     const failed=()=>{if(token!==st.token)return;st.errors++;updateDiag()};
     const make=(src,cls,frag,left,top)=>{
       if(!src)return;
+      const isBase=frag===bf;if(isBase)basePending++;
       const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
-      img.style.left=left+'px';img.style.top=top+'px';img.onload=loaded;img.onerror=failed;img.src=src;frag.appendChild(img);
+      const settle=ok=>{ok?loaded():failed();if(isBase){baseSettled++;if(baseSettled>=basePending)commit()}};
+      img.style.left=left+'px';img.style.top=top+'px';img.onload=()=>settle(true);img.onerror=()=>settle(false);img.src=src;frag.appendChild(img);
     };
 
     for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
       const left=x*TILE-c.x+w/2,top=y*TILE-c.y+h/2;
       if(mode==='satellite'){
-        make(osmUrl(st.zoom,x,y),'native-osm-base',bf,left,top);
-        make(satelliteUrl(st.zoom,x,y),'native-satellite-tile',bf,left,top);
+        make(osmUrl(tileZoom,x,y),'native-osm-base',bf,left,top);
+        make(satelliteUrl(tileZoom,x,y),'native-satellite-tile',bf,left,top);
       }else{
-        make(osmUrl(st.zoom,x,y),'native-osm-base',bf,left,top);
-        if(mode==='topo')make(topoUrl(st.zoom,x,y),'native-topo-tile',bf,left,top);
+        make(osmUrl(tileZoom,x,y),'native-osm-base',bf,left,top);
+        if(mode==='topo')make(topoUrl(tileZoom,x,y),'native-topo-tile',bf,left,top);
       }
-      if(terrain)make(hillshadeUrl(st.zoom,x,y),'native-terrain-tile',hf,left,top);
-      if(trails&&st.zoom<=18)make(trailUrl(st.zoom,x,y),'native-trail-tile',tf,left,top);
+      if(terrain)make(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',hf,left,top);
+      if(trails&&tileZoom<=18)make(trailUrl(tileZoom,x,y),'native-trail-tile',tf,left,top);
     }
 
-    st.base.replaceChildren(bf);
-    st.terrain.replaceChildren(hf);
-    st.trail.replaceChildren(tf);
-    st.grid.classList.toggle('active',grid);
-    drawOverlay(st,w,h);
-    drawEditorOverlay(st,w,h);
-    if(st.residualScale&&Math.abs(st.residualScale-1)>.001){
-      for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){layer.style.transformOrigin=st.residualOrigin;layer.style.transform=`scale(${st.residualScale})`;}
+    function commit(){
+      if(committed||token!==st.token)return;committed=true;
+      st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
+      st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);applyRestingCamera();
     }
+    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,420);
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
@@ -413,7 +416,7 @@
       attrib.textContent=parts.join(' · ');
     }
     const corner=st.el.querySelector('.native-map-corner');
-    if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
+    if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom.toFixed(1)}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
     updateDiag();
     clearTimeout(st.failureTimer);
     st.failureTimer=setTimeout(()=>{
@@ -531,30 +534,18 @@
 
   function screenToLatLon(st,clientX,clientY){
     const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
-    // Invert the compositor's residual fractional-zoom transform before
-    // converting screen pixels to map coordinates. Without this, the next
-    // pinch begins from a different geographic anchor and visibly jumps.
-    const scale=Math.max(.001,Number(st.residualScale)||1);
-    const raw=String(st.residualOrigin||'50% 50%').split(/\s+/);
-    const parseOrigin=(value,size)=>{
-      if(String(value).endsWith('%'))return size*(parseFloat(value)||50)/100;
-      const n=parseFloat(value);return Number.isFinite(n)?n:size/2;
-    };
-    const ox=parseOrigin(raw[0],w),oy=parseOrigin(raw[1]||raw[0],h);
-    const sx=clientX-rect.left,sy=clientY-rect.top;
-    const x=ox+(sx-ox)/scale,y=oy+(sy-oy)/scale;
-    return unworld(c.x+x-w/2,c.y+y-h/2,st.zoom);
+    return unworld(c.x+(clientX-rect.left-w/2),c.y+(clientY-rect.top-h/2),st.zoom);
   }
   function mount(id,opts={}){
     const st=ensure(id);if(!st)return null;
     if(opts.center&&Number.isFinite(+opts.center.lat)&&Number.isFinite(+opts.center.lon))st.center={lat:+opts.center.lat,lon:+opts.center.lon};
-    if(Number.isFinite(+opts.zoom))st.zoom=Math.max(2,Math.min(maxZoom(),Math.round(+opts.zoom)));
+    if(Number.isFinite(+opts.zoom))st.zoom=Math.max(2,Math.min(maxZoom(),+opts.zoom));
     st.rendered=true;requestAnimationFrame(()=>render(st));return st;
   }
   function setView(id,centerPos,zoomLevel){
     const st=ensure(id);if(!st||!centerPos)return;
     if(Number.isFinite(+centerPos.lat)&&Number.isFinite(+centerPos.lon))st.center={lat:+centerPos.lat,lon:+centerPos.lon};
-    if(Number.isFinite(+zoomLevel))st.zoom=Math.max(2,Math.min(maxZoom(),Math.round(+zoomLevel)));
+    if(Number.isFinite(+zoomLevel))st.zoom=Math.max(2,Math.min(maxZoom(),+zoomLevel));
     st.rendered=true;render(st);
   }
   function fitBounds(id,points,opts={}){
