@@ -933,9 +933,11 @@
   document.getElementById('bailoutRefresh')?.addEventListener('click',()=>renderBailouts());document.getElementById('bailoutSearchOnline')?.addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await searchBailoutsOnline()}catch(err){const s=document.getElementById('bailoutStatus');if(s)s.textContent='SEARCH FAILED';console.warn('FIELD/OS bailout search failed',err)}finally{e.currentTarget.disabled=false}});
   document.getElementById('bailoutClearCache')?.addEventListener('click',clearBailoutCache);
   document.addEventListener('click',e=>{const b=e.target.closest('[data-bailout-save]');if(!b)return;const item=window.FIELD_BAILOUT?._rendered?.[Number(b.dataset.bailoutSave)];if(item){saveBailoutCandidate(item);b.textContent='SAVED';b.disabled=true}});
-  document.addEventListener('fieldos:positionchange',()=>renderBailouts());document.addEventListener('fieldos:routechange',()=>renderBailouts());document.addEventListener('fieldos:waypointschange',()=>renderBailouts());document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='trailreturn')renderBailouts()});
+  const bailoutVisible=()=>!!document.querySelector('#trailreturn.active');
+  const refreshVisibleBailouts=()=>{if(bailoutVisible())renderBailouts()};
+  document.addEventListener('fieldos:positionchange',refreshVisibleBailouts);document.addEventListener('fieldos:routechange',refreshVisibleBailouts);document.addEventListener('fieldos:waypointschange',refreshVisibleBailouts);document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='trailreturn')renderBailouts()});
   window.FIELD_BAILOUT={rank:rankBailouts,local:localBailoutCandidates,render:renderBailouts,searchOnline:searchBailoutsOnline,clearCache:clearBailoutCache,saveCandidate:saveBailoutCandidate,_rendered:[]};
-  setTimeout(()=>renderBailouts(),120);
+  window.FIELD_RUNTIME.idle(refreshVisibleBailouts,500);
 
   // Feature 03 — Terrain-Risk Analyzer. It only reports risks supported by route DEM/OSM/local waypoint data.
   const riskSeverityRank={info:0,watch:1,warn:2,high:3};
