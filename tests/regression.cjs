@@ -615,3 +615,10 @@ assert.ok(workstationCss.includes('columns:auto!important'));
 assert.ok(!workstationCss.includes('v3.36 terrain rollback + stable control layout'));
 assert.ok(!workstationCss.includes('v3.33 terrain + telemetry layout consolidation'));
 console.log('PASS v3.67 terrain map is a single vertical workspace with obsolete layout layers removed');
+
+assert.ok(workstationCss.includes('v3.67 TERRAIN WORKSPACE'));
+assert.ok(workstationCss.includes("body #map .module-grid{\n    display:flex!important"));
+assert.ok(appJs.includes("const activeView=document.querySelector('.view.active')?.id||''"));
+assert.ok(appJs.includes("if(activeView==='map'||recenter)states.push(ensureFieldMap('realMap'"));
+assert.ok(appJs.includes('for(const state of liveStates)'));
+console.log('PASS terrain workspace remains single-flow and routine map updates only render active surfaces');
