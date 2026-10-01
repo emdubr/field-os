@@ -396,7 +396,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- assert.ok(swJs.includes("field-os-v3-82"));
+ assert.ok(swJs.includes("field-os-v3-83"));
  assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
