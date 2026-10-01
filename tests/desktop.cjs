@@ -138,6 +138,24 @@ const server=http.createServer((req,res)=>{
     console.log('PASS mobile coordinate/compass separation, chart label order, wrapped radio text and reachable commands');
 
 
+    await page.setViewportSize({width:390,height:844});
+    await page.evaluate(()=>openView('map'));await page.waitForTimeout(40);
+    const pinchResult=await page.evaluate(async()=>{
+      const el=document.getElementById('realMap'),box=el.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
+      const before=FIELD_MAP_ENGINE.getView('realMap').zoom;
+      const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:id===1,clientX:x,clientY:y,buttons:type==='pointerup'?0:1}));
+      fire('pointerdown',1,cx-45,cy);fire('pointerdown',2,cx+45,cy);
+      fire('pointermove',1,cx-72,cy);fire('pointermove',2,cx+72,cy);
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      fire('pointerup',2,cx+72,cy);fire('pointerup',1,cx-72,cy);
+      await new Promise(r=>setTimeout(r,35));
+      const after=FIELD_MAP_ENGINE.getView('realMap').zoom;
+      return {before,after};
+    });
+    assert.ok(pinchResult.after>pinchResult.before+.25,'Pinch should continuously increase zoom');
+    assert.ok(Math.abs(pinchResult.after-Math.round(pinchResult.after))>.03,'Touch release must retain a fractional zoom instead of snapping');
+    console.log('PASS mobile native map preserves fractional zoom after touch release');
+
     await page.setViewportSize({width:1280,height:900});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
     const satelliteState=await page.evaluate(async()=>{
