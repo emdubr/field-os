@@ -914,10 +914,16 @@ const FIELD_MAP_MAX_BYTES=250*1024*1024;
 const FIELD_OSM_ATTR='© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>';
 const FIELD_TOPO_ATTR='Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © <a href="https://opentopomap.org/" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)';
 const FIELD_TRAIL_ATTR='© <a href="https://hiking.waymarkedtrails.org/" target="_blank" rel="noopener">Waymarked Trails</a>, OpenStreetMap contributors';
-let fieldMapMode=storageGet(STORE_PREFIX+'map-source')||'topo';
+let fieldMapMode=['osm','topo','satellite','offline'].includes(storageGet(STORE_PREFIX+'map-source'))?storageGet(STORE_PREFIX+'map-source'):'topo';
 let fieldActivePackId=storageGet(STORE_PREFIX+'map-pack')||'';
 let fieldActivePackRecord=null;
 let fieldTrailLayerEnabled=storageGet(STORE_PREFIX+'hiking-routes')!=='off';
+document.addEventListener('fieldos:mapstatechange',e=>{
+  const detail=e.detail||{};
+  if(fieldMapMode!=='offline'&&['osm','topo','satellite'].includes(detail.mode))fieldMapMode=detail.mode;
+  if(typeof detail.trails==='boolean')fieldTrailLayerEnabled=detail.trails;
+  paintMapSourceButtons();
+});
 let fieldMapLibPromise=null;
 const fieldMaps=new Map();
 
@@ -957,6 +963,9 @@ async function ensureOfflineMapLibraries(){
 }
 function hasTrustedMapPosition(){
   return validLatLon(currentNavPosition)&&!String(currentNavPosition.source||'').toUpperCase().includes('DEMO');
+}
+function fieldOnlineMapLabel(mode=fieldMapMode){
+  return mode==='satellite'?'SATELLITE':mode==='osm'?'STREET OSM':'HIKING TOPO';
 }
 function fmtBytes(n){
   n=Number(n)||0;
@@ -1036,12 +1045,12 @@ async function refreshFieldMapPackUI(){
   if(fieldActivePackId&&!packs.some(p=>p.id===fieldActivePackId)){fieldActivePackId='';fieldActivePackRecord=null;storageRemove(STORE_PREFIX+'map-pack');}
   const src=document.getElementById('offlineMapSource'),sz=document.getElementById('offlineMapSize'),mode=document.getElementById('offlineMapMode');
   const active=packs.find(p=>p.id===fieldActivePackId);
-  if(src)src.textContent=(fieldMapMode==='offline'&&active)?active.name:'ONLINE OSM';
+  if(src)src.textContent=(fieldMapMode==='offline'&&active)?active.name:fieldOnlineMapLabel();
   if(sz)sz.textContent=active?fmtBytes(active.size):'—';
   const age=document.getElementById('offlineMapAge'),origin=document.getElementById('offlineMapOrigin');
   if(age)age.textContent=active?fmtMapPackAge(active.created):'—';
   if(origin)origin.textContent=active?String(active.source||'import').toUpperCase():'—';
-  if(mode)mode.textContent=(fieldMapMode==='offline'&&active)?'OFFLINE PMTILES':'ONLINE OSM';
+  if(mode)mode.textContent=(fieldMapMode==='offline'&&active)?'OFFLINE PMTILES':fieldOnlineMapLabel();
   if(navigator.storage?.estimate){
     try{const e=await navigator.storage.estimate(),st=document.getElementById('offlineMapStorage');if(st)st.textContent=`${fmtBytes(e.usage||0)} / ${fmtBytes(e.quota||0)}`;}catch{}
   }
@@ -1185,7 +1194,7 @@ async function updateFieldMaps(recenter=false){
   const useOffline=(fieldMapMode==='offline'||navigator.onLine===false)&&!!pack;
   if(window.FIELD_MAP_ENGINE_EXTERNAL&&!useOffline&&navigator.onLine!==false&&fieldMapMode!=='offline'){
     fieldLegacyDestroyAll();
-    const desiredMode=fieldMapMode==='osm'?'osm':'topo';
+    const desiredMode=['osm','topo','satellite'].includes(fieldMapMode)?fieldMapMode:'topo';
     window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled});
     window.FIELD_MAP_ENGINE?.refresh?.(recenter);
     const src=document.getElementById('offlineMapSource');if(src)src.textContent=desiredMode==='osm'?'STREET OSM':'OPEN TOPO HIKING';
@@ -1238,7 +1247,7 @@ async function updateFieldMaps(recenter=false){
       setOfflineMapStatus('MAP SOURCE ERROR');
     }
   }
-  const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):(fieldMapMode==='osm'?'STREET OSM':'OPEN TOPO HIKING');
+  const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):fieldOnlineMapLabel();
 }
 window.FIELD_OFFLINE_MAPS={
   async active(){return await resolveActiveFieldPack()},
@@ -1267,9 +1276,10 @@ async function useTopoFieldMap(){
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('HIKING TOPO ACTIVE',100);paintMapSourceButtons();
 }
 function paintMapSourceButtons(){
-  const topo=fieldMapMode!=='osm'&&fieldMapMode!=='offline';
+  const topo=fieldMapMode==='topo';
   document.getElementById('mapTopoMode')?.classList.toggle('active',topo);
   document.getElementById('mapOsmMode')?.classList.toggle('active',fieldMapMode==='osm');
+  document.getElementById('mapSatelliteMode')?.classList.toggle('active',fieldMapMode==='satellite');
   document.getElementById('mapTrailLayer')?.classList.toggle('active',fieldTrailLayerEnabled);
   const homeTrail=document.getElementById('homeTrailLayer');if(homeTrail)homeTrail.classList.toggle('active',fieldTrailLayerEnabled);
   const homeTopo=document.getElementById('homeTopoMode');if(homeTopo)homeTopo.classList.toggle('active',topo);
@@ -1750,7 +1760,7 @@ updateFieldMaps=async function(recenter=false){
   }
   if(window.FIELD_MAP_ENGINE_EXTERNAL){
     fieldLegacyDestroyAll();
-    const desiredMode=fieldMapMode==='osm'?'osm':'topo';
+    const desiredMode=['osm','topo','satellite'].includes(fieldMapMode)?fieldMapMode:'topo';
     window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled});
     return window.FIELD_MAP_ENGINE?.refresh?.(recenter);
   }
