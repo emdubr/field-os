@@ -482,11 +482,6 @@
     e.stopPropagation();handleLayerInput(input);
   },true);
 
-  window.addEventListener('resize',()=>{
-    clearTimeout(window.__fieldMapResizeTimer);
-    window.__fieldMapResizeTimer=setTimeout(()=>refresh(false),100);
-  },{passive:true});
-
   setInterval(updateLocationLabels,1000);
 
   window.FIELD_MAP_ENGINE={
