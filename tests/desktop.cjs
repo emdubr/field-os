@@ -51,10 +51,11 @@ const server=http.createServer((req,res)=>{
     if(process.env.FIELD_SCREENSHOT)await page.screenshot({path:process.env.FIELD_SCREENSHOT});
     await page.keyboard.press('Escape');await page.waitForTimeout(30);
     assert.equal(await page.evaluate(()=>document.activeElement.id),'moreTabs');
-    assert.ok(await page.locator('.mobile-module-details').first().isVisible(),'Mobile modules expose one details control');
-    assert.ok(!(await page.locator('.module-secondary-grid').first().isVisible()),'Generated diagnostics start collapsed on mobile');
-    await page.locator('.mobile-module-details').first().click();
-    assert.ok(await page.locator('.module-secondary-grid').first().isVisible(),'Details control reveals generated diagnostics');
+    await page.evaluate(()=>openView('nav'));await page.waitForTimeout(30);
+    assert.ok(await page.locator('#nav .mobile-module-details').isVisible(),'Mobile modules expose one details control');
+    assert.ok(!(await page.locator('#nav .module-secondary-grid').isVisible()),'Generated diagnostics start collapsed on mobile');
+    await page.locator('#nav .mobile-module-details').click();
+    assert.ok(await page.locator('#nav .module-secondary-grid').isVisible(),'Details control reveals generated diagnostics');
     console.log('PASS quick switcher aliases, task-first mobile details, keyboard selection, pointer selection, focus restoration, and narrow layout');
     const modules=await page.locator('.workstation-nav [data-open]').evaluateAll(els=>els.map(e=>e.dataset.open));
     for(const width of [390,768,1024,1280,1440,1920]){
