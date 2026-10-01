@@ -1754,10 +1754,6 @@ updateFieldMaps=async function(recenter=false){
     window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled});
     return window.FIELD_MAP_ENGINE?.refresh?.(recenter);
   }
-  if(useOffline){
-    fieldNativeDestroyAll();
-    return fieldLegacyUpdateFieldMaps(recenter);
-  }
   if(navigator.onLine===false&&!pack){
     fieldLegacyDestroyAll();
     const specs=[['homeRealMap','homeMapFallback','homeMapModeLabel'],['realMap','mapFallback','mapModeLabel']];
@@ -1787,7 +1783,18 @@ toggleHikingRoutes=async function(){
   await updateFieldMaps(false);
 };
 runMapControl=async function(action,target='realMap'){
-  if(window.FIELD_MAP_ENGINE_EXTERNAL)return;
+  if(window.FIELD_MAP_ENGINE_EXTERNAL){
+    const engine=window.FIELD_MAP_ENGINE;
+    if(action==='topo')return useTopoFieldMap();
+    if(action==='osm')return useOnlineFieldMap();
+    if(action==='trails')return toggleHikingRoutes();
+    if(action==='location')return engine?.toggleLiveLocation?.();
+    if(action==='zoom-in')return engine?.zoom?.(target,1);
+    if(action==='zoom-out')return engine?.zoom?.(target,-1);
+    if(action==='center')return engine?.center?.(target);
+    if(action==='fit-route')return engine?.fitBounds?.(target,routePoints,{padding:48,maxZoom:16});
+    return;
+  }
   const diag=document.getElementById('mapSourceDiag');
   try{
     if(action==='topo')return useTopoFieldMap();
