@@ -236,6 +236,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  w.refreshFixAge(Date.now()+601000);
  assert.match(d.getElementById('fixAge').textContent,/00:10:0[01]/);assert.notEqual(d.getElementById('fixAge').textContent,beforeFix);
  console.log('PASS fix freshness uses wall-clock elapsed time rather than visible-tab timer ticks');
+ const moon=w.moonEventsForDate(new Date('2026-09-30T12:00:00Z'),44.4759,-73.2121);
+ assert.ok(moon.rise&&Number.isFinite(moon.rise.getTime()));
+ assert.ok(appJs.includes("stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':'SUN HAS SET'"));
+ assert.ok(appJs.includes("MOONRISE ${moonrise?fmtClock(moonrise):'NONE'} · SUNRISE ${sunrise?fmtClock(sunrise):'NONE'}"));
+ console.log('PASS nighttime solar card says sun has set and reports moonrise and next sunrise');
  d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
  const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await waitFor(()=>!d.getElementById('routeGainOut').textContent.includes('LOADING'));
