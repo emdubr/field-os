@@ -631,7 +631,7 @@
     e.stopPropagation();handleLayerInput(input);
   },true);
 
-  setInterval(()=>{if(!document.hidden)updateLocationLabels()},1000);
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateLocationLabels()},1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateLocationLabels();refresh(false)}});
 
   document.addEventListener('fieldos:viewchange',e=>{
