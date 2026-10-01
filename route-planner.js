@@ -1249,24 +1249,29 @@
   }
 
   function buildGraph(elements){
-    const nodes=new Map(),adj=new Map(),segments=[];
+    const nodes=new Map(),adj=new Map(),segments=[],spatial=new Map();
     const addNode=(id,p)=>{if(!nodes.has(id))nodes.set(id,{id,lat:+p.lat,lon:+p.lon})};
     const addEdge=(a,b,w,tags)=>{
       if(!adj.has(a))adj.set(a,[]);adj.get(a).push({to:b,w,tags});
     };
     for(const way of elements){
-      if(way.type!=='way'||!Array.isArray(way.geometry)||way.geometry.length<2)continue;
-      const ids=Array.isArray(way.nodes)&&way.nodes.length===way.geometry.length?way.nodes:way.geometry.map((_,i)=>`${way.id}:${i}`);
-      for(let i=0;i<way.geometry.length;i++)addNode(String(ids[i]),way.geometry[i]);
-      const factor=wayFactor(way.tags||{});
-      for(let i=1;i<way.geometry.length;i++){
-        const a=String(ids[i-1]),b=String(ids[i]),pa=nodes.get(a),pb=nodes.get(b),d=meters(pa,pb);
-        if(!Number.isFinite(d)||d<=0)continue;
-        const w=d*factor;addEdge(a,b,w,way.tags||{});addEdge(b,a,w,way.tags||{});
-        segments.push({a,b,pa,pb,tags:way.tags||{}});
+      const geometry=way.geometry;
+      if(way.type!=='way'||!Array.isArray(geometry)||geometry.length<2)continue;
+      const sourceIds=Array.isArray(way.nodes)&&way.nodes.length===geometry.length?way.nodes:null;
+      const prefix=`${way.id}:`,tags=way.tags||{},factor=wayFactor(tags);
+      let a=String(sourceIds?sourceIds[0]:prefix+'0');
+      addNode(a,geometry[0]);
+      for(let i=1;i<geometry.length;i++){
+        const b=String(sourceIds?sourceIds[i]:prefix+i);addNode(b,geometry[i]);
+        const pa=nodes.get(a),pb=nodes.get(b),d=meters(pa,pb);
+        if(Number.isFinite(d)&&d>0){
+          const w=d*factor;addEdge(a,b,w,tags);addEdge(b,a,w,tags);
+          const seg={a,b,pa,pb,tags};segments.push(seg);addSpatialSegment(spatial,seg);
+        }
+        a=b;
       }
     }
-    return {nodes,adj,segments,spatial:buildSpatialIndex(segments)};
+    return {nodes,adj,segments,spatial};
   }
 
   function nearestNode(graph,p,maxMeters=500){
