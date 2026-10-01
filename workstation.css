@@ -4148,3 +4148,23 @@ select option{background:#010a05;color:var(--crt-green-hot)}
   #route select{width:100%!important;min-width:0!important}
   #routePlannerMap{isolation:isolate}
 }
+
+
+/* v3.81 SAFE AREA GEOMETRY — keep installed iPhone/PWA chrome below the status area. */
+@media(max-width:767px){
+  :root{
+    --mobile-top-safe:env(safe-area-inset-top,0px);
+    --mobile-topbar-h:calc(52px + var(--mobile-top-safe));
+  }
+  .topbar{
+    min-height:var(--mobile-topbar-h)!important;
+    padding-top:calc(7px + var(--mobile-top-safe))!important;
+    padding-left:max(10px,env(safe-area-inset-left,0px))!important;
+    padding-right:max(10px,env(safe-area-inset-right,0px))!important;
+  }
+  body .view.active:not(#home)>.view-head{top:var(--mobile-topbar-h)!important}
+  body #app .screen{
+    padding-left:max(7px,env(safe-area-inset-left,0px))!important;
+    padding-right:max(7px,env(safe-area-inset-right,0px))!important;
+  }
+}
