@@ -3648,17 +3648,6 @@ input,select,textarea{
   }
 }
 
-/* v3.69 DETERMINISTIC DESKTOP FLOW */
-@media(min-width:1024px){
- body .module-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-flow:row!important;grid-auto-rows:max-content!important;align-items:start!important;columns:auto!important;column-gap:10px!important;row-gap:10px!important}
- body .module-grid>*{display:block!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;break-inside:auto!important;page-break-inside:auto!important;align-self:start!important}
- body .module-grid>.module-slot{display:block!important;width:100%!important}
- body .module-grid>.module-slot>.panel,body .module-grid>article.panel{height:auto!important;min-height:0!important}
- body .module-grid>.module-hero,body #route .route-planner-panel,body #route .route-performance-panel,body #route .route-elevation-panel,body #map .terrain-map-card,body #map .terrain-controls-below,body #map .offline-map-manager,body #map .route-offline-readiness,body #track .track-map-panel,body #trailreturn .return-map-panel{grid-column:1/-1!important}
- body #map .module-grid{display:flex!important;flex-direction:column!important}
-}
-
-
 /* v3.69 MODULE FINDER */
 .ws-launcher{
   width:calc(100% - 16px);margin:8px;padding:9px 10px;border:1px solid currentColor;
