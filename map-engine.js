@@ -434,6 +434,13 @@
     st.lastRenderKey=renderKey;
     const coverW=w/Math.max(.5,renderScale),coverH=h/Math.max(.5,renderScale);
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
+    const tileBoundsKey=[mode,trails?1:0,terrain?1:0,tileZoom,minX,maxX,minY,maxY].join('|');
+    // Panning inside the already buffered tile envelope needs only a transform/
+    // overlay update. Do not fetch and replace the exact same tile set.
+    if(!force&&st.lastTileBounds===tileBoundsKey&&st.base.childElementCount){
+      drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();return;
+    }
+    st.lastTileBounds=tileBoundsKey;
     const bf=document.createDocumentFragment(),hf=document.createDocumentFragment(),tf=document.createDocumentFragment();
     const hadTiles=st.base.childElementCount>0;let basePending=0,baseSettled=0,baseLoaded=0,committed=false;
     st.loaded=0;st.errors=0;
@@ -545,7 +552,7 @@
     if(changed||recenter)refresh(recenter);else updateLabels();
     return changed;
   }
-  function invalidateFrames(){states.forEach(st=>{st.lastRenderKey=''})}
+  function invalidateFrames(){states.forEach(st=>{st.lastRenderKey='';st.lastTileBounds=''})}
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
