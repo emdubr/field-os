@@ -568,6 +568,7 @@ assert.ok(workstationCss.includes('align-self:start!important'));
 console.log('PASS Adaptive ETA panel sizes to content instead of stretching with route map');
 
 assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
+ assert.ok(workstationCss.includes('v3.72 MAP GESTURE'));
  assert.ok(appJs.includes("function sensorSummary()"));
  assert.ok(appJs.includes("devicePixelRatio"));
  assert.ok(html.includes('class="sensor-live-summary"'));
