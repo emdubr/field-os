@@ -231,6 +231,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.match(app,/pointercancel',cancelSos/);
  assert.match(app,/max-height: 600px\) and \(min-width: 1001px\)/);
  console.log('PASS interrupted mobile SOS hold cancels and phone landscape avoids desktop scaling');
+ const beforeFix=d.getElementById('fixAge').textContent;
+ w.applyFieldGeolocation({coords:{latitude:44.48,longitude:-73.21,altitude:1000,accuracy:5,speed:null,heading:null}},'PHONE GNSS');
+ w.refreshFixAge(Date.now()+601000);
+ assert.match(d.getElementById('fixAge').textContent,/00:10:0[01]/);assert.notEqual(d.getElementById('fixAge').textContent,beforeFix);
+ console.log('PASS fix freshness uses wall-clock elapsed time rather than visible-tab timer ticks');
  d.querySelector('.workstation-nav [data-open="route"]').click();await tick();
  d.getElementById('routeSnapMode').value='direct';d.getElementById('routeSnapMode').dispatchEvent(new w.Event('change'));
  const r=w.TEST_ROUTER;r.addAnchor({lat:44.475,lon:-73.215});r.addAnchor({lat:44.48,lon:-73.21});await waitFor(()=>!d.getElementById('routeGainOut').textContent.includes('LOADING'));
@@ -284,6 +289,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("['osm','topo','satellite','offline']"));
  assert.ok(appJs.includes("fieldMapMode!=='offline'&&['osm','topo','satellite'].includes(detail.mode)"));
  assert.ok(mapEngineJs.includes("function unmount(id)"));
+ assert.ok(appJs.includes("window.FIELD_MAP_DATA="));
+ assert.ok(mapEngineJs.includes("bridgeWaypoints()"));
+ assert.ok(mapEngineJs.includes("bridgeTrack()"));
+ assert.ok(mapEngineJs.includes("native-waypoint-marker"));
+ assert.ok(mapEngineJs.includes("native-track-line"));
+ assert.ok(mapEngineJs.includes("fieldos:trackchange"));
  assert.ok(mapEngineJs.includes("preserveAnchor(anchor,e.clientX,e.clientY,nextZoom)"));
  console.log('PASS unified map storage, offline PMTiles ownership, external-engine unmount, and anchored double-click zoom');
  assert.ok(appJs.includes('function routeCorridorBounds('));assert.ok(appJs.includes('function packCoversBounds('));assert.ok(appJs.includes('activateBestRoutePack'));
