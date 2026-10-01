@@ -119,7 +119,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null
+      settleTimer:0,gestureFrame:0,pendingGesture:null,lastRenderKey:''
     };
 
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
@@ -390,13 +390,16 @@
     st.el.classList.add('standalone-map-error');
   }
 
-  function render(st){
+  function render(st,force=false){
     if(!st)return;
     st.el.classList.remove('standalone-map-error');
     const token=++st.token,rect=st.el.getBoundingClientRect();
     const w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
     st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom));
     const tileZoom=tileZoomFor(st.zoom),renderScale=Math.pow(2,st.zoom-tileZoom),c=world(st.center.lat,st.center.lon,tileZoom);
+    const renderKey=[mode,trails?1:0,terrain?1:0,tileZoom,Math.round(c.x/32),Math.round(c.y/32),Math.round(w/16),Math.round(h/16)].join('|');
+    if(!force&&st.lastRenderKey===renderKey){drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();return}
+    st.lastRenderKey=renderKey;
     const coverW=w/Math.max(.5,renderScale),coverH=h/Math.max(.5,renderScale);
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
     const bf=document.createDocumentFragment(),hf=document.createDocumentFragment(),tf=document.createDocumentFragment();
@@ -505,18 +508,20 @@
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     for(const [key,value] of [['hiking-routes',trails],['terrain-shade',terrain],['map-grid',grid]])localStorage.setItem(STORE_PREFIX+key,value?'on':'off');
     const changed=before!==`${mode}|${trails}|${terrain}|${grid}`;
+    if(changed)invalidateFrames();
     emitState();
     if(changed||recenter)refresh(recenter);else updateLabels();
     return changed;
   }
+  function invalidateFrames(){states.forEach(st=>{st.lastRenderKey=''})}
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
-    states.forEach(st=>{st.zoom=Math.min(st.zoom,maxZoom())});
+    states.forEach(st=>{st.zoom=Math.min(st.zoom,maxZoom())});invalidateFrames();
     emitState();refresh(false);
   }
-  function setTrails(on){trails=!!on;localStorage.setItem(STORE_PREFIX+'hiking-routes',trails?'on':'off');emitState();refresh(false)}
-  function setTerrain(on){terrain=!!on;localStorage.setItem(STORE_PREFIX+'terrain-shade',terrain?'on':'off');emitState();refresh(false)}
+  function setTrails(on){trails=!!on;localStorage.setItem(STORE_PREFIX+'hiking-routes',trails?'on':'off');invalidateFrames();emitState();refresh(false)}
+  function setTerrain(on){terrain=!!on;localStorage.setItem(STORE_PREFIX+'terrain-shade',terrain?'on':'off');invalidateFrames();emitState();refresh(false)}
   function setGrid(on){grid=!!on;localStorage.setItem(STORE_PREFIX+'map-grid',grid?'on':'off');emitState();refresh(false)}
   function zoom(target,delta){const st=ensure(target)||ensure('realMap');if(!st)return;st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+delta));render(st)}
   function center(target){const st=ensure(target)||ensure('realMap');if(!st)return;st.center={...centerCandidate()};render(st)}
