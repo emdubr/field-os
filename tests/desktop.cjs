@@ -50,7 +50,8 @@ const server=http.createServer((req,res)=>{
     assert.equal(await page.locator('#workspaceSwitcher').evaluate(e=>e.open||e.hasAttribute('data-open')),true);
     if(process.env.FIELD_SCREENSHOT)await page.screenshot({path:process.env.FIELD_SCREENSHOT});
     await page.keyboard.press('Escape');
-    console.log('PASS quick switcher aliases, keyboard selection, pointer selection, empty results, Escape focus restoration, and narrow layout');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'moreTabs');
+    console.log('PASS quick switcher aliases, keyboard selection, pointer selection, mobile focus restoration, empty results, Escape focus restoration, and narrow layout');
     const modules=await page.locator('.workstation-nav [data-open]').evaluateAll(els=>els.map(e=>e.dataset.open));
     for(const width of [390,768,1024,1280,1440,1920]){
       await page.setViewportSize({width,height:900});
