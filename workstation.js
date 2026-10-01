@@ -272,8 +272,13 @@
   }
   document.addEventListener('fieldos:routechange',()=>{plotHtml=null;scheduleRefresh();});
   document.addEventListener('fieldos:routemetadatachange',scheduleRefresh);
-  document.addEventListener('click',scheduleRefresh);
-  document.addEventListener('input',scheduleRefresh);
+  document.addEventListener('fieldos:positionchange',scheduleRefresh);
+  document.addEventListener('fieldos:trackchange',scheduleRefresh);
+  document.addEventListener('fieldos:meshroster',scheduleRefresh);
+  document.addEventListener('fieldos:telemetry',scheduleRefresh);
+  document.addEventListener('click',e=>{if(e.target.closest('button,[data-open],[data-module],[data-result-index]'))scheduleRefresh()});
+  document.addEventListener('change',scheduleRefresh);
+  document.addEventListener('input',e=>{if(e.target.matches('input[type="range"],input[type="number"],select'))scheduleRefresh()});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){cancelAnimationFrame(refreshFrame);refreshFrame=0;}
     else scheduleRefresh();
