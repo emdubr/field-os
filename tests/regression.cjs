@@ -414,7 +414,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.82');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.83');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.ok(runtimeJs.includes('(id*37)%Math.max(17,interval)'));console.log('PASS runtime scheduler staggers recurring work instead of aligning timer bursts');
  assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
