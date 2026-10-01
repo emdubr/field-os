@@ -706,7 +706,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.82</b>')&&workstationJs.includes('<em>v3.82</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.83</b>')&&workstationJs.includes('<em>v3.83</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
