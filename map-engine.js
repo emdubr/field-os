@@ -106,16 +106,18 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,resizeObserver:null
+      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,resizeObserver:null
     };
 
-    const resetTransform=()=>{
-      st.base.style.transform='';
-      st.terrain.style.transform='';
-      st.trail.style.transform='';
-      st.grid.style.transform='';
-      st.overlay.style.transform='';
-      st.editor.style.transform='';
+    const transformLayers=(transform,origin='50% 50%')=>{
+      for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){
+        layer.style.transformOrigin=origin;layer.style.transform=transform;
+      }
+    };
+    const resetTransform=()=>transformLayers('','50% 50%');
+    const previewZoom=(scale,clientX,clientY)=>{
+      const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
+      transformLayers(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
     };
 
     st.onPointerDown=e=>{
@@ -140,9 +142,10 @@
         st.base.style.transform=t;st.terrain.style.transform=t;st.trail.style.transform=t;st.grid.style.transform=t;st.overlay.style.transform=t;st.editor.style.transform=t;
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
-        const ratio=dist/Math.max(1,st.pinchStart.dist);
-        const next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
-        const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next}`;
+        const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
+        const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
+        previewZoom(Math.pow(2,next-st.pinchStart.zoom),midX,midY);
+        const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next.toFixed(1)}`;
       }
     };
     st.onPointerUp=e=>{
@@ -166,16 +169,24 @@
       }else render(st);
     };
     st.onWheel=e=>{
+      if(e.ctrlKey)return;
       e.preventDefault();
-      st.wheelDelta+=e.deltaY;
-      if(st.renderFrame)return;
-      st.renderFrame=requestAnimationFrame(()=>{
+      st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
+      const rect=st.el.getBoundingClientRect(),anchorX=e.clientX,anchorY=e.clientY;
+      if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{
         st.renderFrame=0;
         const delta=st.wheelDelta;st.wheelDelta=0;
-        if(Math.abs(delta)<1)return;
-        st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+(delta<0?1:-1)));
-        render(st);
+        st.wheelZoom=Math.max(-.9,Math.min(.9,st.wheelZoom-delta/420));
+        previewZoom(Math.pow(2,st.wheelZoom),anchorX,anchorY);
       });
+      clearTimeout(st.wheelTimer);
+      st.wheelTimer=setTimeout(()=>{
+        const step=Math.abs(st.wheelZoom)<.12?0:Math.sign(st.wheelZoom);
+        st.wheelZoom=0;resetTransform();
+        if(!step)return;
+        st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+step));
+        render(st);
+      },90);
     };
     st.onDbl=e=>{e.preventDefault();st.zoom=Math.min(maxZoom(),st.zoom+1);render(st)};
 
