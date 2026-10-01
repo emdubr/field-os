@@ -94,6 +94,7 @@ const server=http.createServer((req,res)=>{
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       return {paused,resumed:before!==document.querySelector('#route .ws-route-plot')};
     });assert.deepEqual(lifecycle,{paused:true,resumed:true});
+    await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>openView('home'));await page.waitForTimeout(30);
     const homeVisibility=await page.evaluate(()=>({
       status:getComputedStyle(document.querySelector('#home .handheld-status')).display,
