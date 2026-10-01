@@ -1,4 +1,4 @@
-const CACHE='field-os-v3-67';
+const CACHE='field-os-v3-69';
 const ASSETS=['./','./index.html','./styles.css?v=3.61','./app.js?v=3.61','./workstation.css?v=3.61','./workstation.js?v=3.61','./survival-data.js','./route-state.js?v=3.61','./map-engine.js?v=3.61','./route-planner.js?v=3.61','./field-intel.js?v=3.61','./field-ops.js?v=3.61','./field-tools.js?v=3.61','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
@@ -37,7 +37,16 @@ self.addEventListener('fetch',e=>{
   }
   const shellAsset=ASSETS.some(path=>new URL(path,self.location.href).href===url.href)&&url.pathname!==new URL('./',self.location.href).pathname&&!url.pathname.endsWith('/index.html');
   if(shellAsset){
-    e.respondWith(caches.open(CACHE).then(async c=>{const hit=await c.match(e.request);if(hit)return hit;const r=await fetch(e.request);if(r.ok){const copy=r.clone();e.waitUntil(c.put(e.request,copy));}return r;}));
+    e.respondWith(caches.open(CACHE).then(async c=>{
+      const hit=await c.match(e.request);if(hit)return hit;
+      try{
+        const r=await fetch(e.request);
+        if(r.ok){const copy=r.clone();e.waitUntil(c.put(e.request,copy))}
+        return r;
+      }catch{
+        return (await c.match(url.pathname))||Response.error();
+      }
+    }));
     return;
   }
   e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,copy)));}return r;}).catch(()=>caches.match(e.request)));
