@@ -4237,3 +4237,33 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  #route .route-planner-real-map{contain:layout paint style!important}
  #route .route-planner-panel{overflow:visible!important}
 }
+
+/* v3.83 FIELD UI EFFICIENCY — fewer layers, clearer actions, same information. */
+@media(max-width:767px){
+ .screen{gap:5px!important}
+ .view.active{gap:5px!important}
+ .panel,.terminal-panel{margin-block:0!important}
+ .panel-title,.terminal-title{min-height:24px!important}
+ .button-row{gap:4px!important}
+ .button-row>button,.button-row>.action,.button-row>.ghost{min-height:42px!important}
+ #mission .mission-readiness-grid{gap:5px!important}
+ #mission .mission-readiness-item{
+   grid-template-columns:18px minmax(0,1fr) auto!important;
+   min-height:54px!important;padding:7px 8px!important;
+   box-shadow:none!important;contain:layout paint style;
+ }
+ #mission .mission-readiness-item.ok{opacity:.82}
+ #mission .mission-readiness-item.bad .mission-readiness-action,
+ #mission .mission-readiness-item.warn .mission-readiness-action{font-weight:800;color:var(--fg2)}
+ #mission .mission-readiness-item:active{transform:none!important;background:var(--panel3)!important}
+ #route .route-planner-toolbar{gap:4px!important}
+ #route .route-planner-actions{gap:4px!important}
+ #route .route-planner-toolbar .action,#route .route-planner-actions>*{min-height:42px!important}
+ #route .route-planner-real-map{height:clamp(360px,52dvh,520px)!important;min-height:360px!important}
+ #route .route-planner-helpbar{font-size:8px!important;line-height:1.35!important}
+ #route .route-elevation-panel canvas{max-height:240px!important}
+}
+@media(max-width:390px){
+ #mission .mission-readiness-grid{grid-template-columns:1fr!important}
+ #route .route-planner-toolbar{grid-template-columns:1fr 1fr!important}
+}
