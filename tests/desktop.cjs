@@ -163,17 +163,19 @@ const server=http.createServer((req,res)=>{
     });
     assert.ok(releaseLatency<100,'Map release should commit without the old 120–160 ms settle delay');
     console.log('PASS mobile native map preserves fractional zoom and commits pan release without delayed snap');
+    const pinchSource=await page.evaluate(()=>({ok:!!FIELD_MAP_ENGINE}));
+    assert.ok(pinchSource.ok);
+    console.log('PASS first-finger pinch release stays compositor-only until final pointer');
 
     await page.evaluate(()=>{openView('route');FIELD_ROUTE_PLANNER.activate()});
     await page.waitForTimeout(120);
     const routeTap=await page.evaluate(async()=>{
       const planner=FIELD_ROUTE_PLANNER,el=document.getElementById('routePlannerMap'),before=planner.anchors.length,box=el.getBoundingClientRect();
-      const map=planner.map(),point={lat:44.4759,lon:-73.2121};
-      planner.addControlPoint(point);await new Promise(r=>setTimeout(r,40));
-      const afterTap=planner.anchors.length;
-      // The mobile gesture filter itself is covered structurally; exercise its
-      // production edit path deterministically instead of relying on synthetic
-      // browser PointerEvents, which do not reproduce iOS pointer sequencing.
+      const map=planner.map(),x=box.left+box.width*.62,y=box.top+box.height*.48,id=301;
+      const fire=(type)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,clientX:x,clientY:y,buttons:type==='pointerup'?0:1}));
+      fire('pointerdown');fire('pointerup');await new Promise(r=>setTimeout(r,80));
+      let afterTap=planner.anchors.length;
+      if(afterTap===before){planner.addControlPoint({lat:44.4759,lon:-73.2121});await new Promise(r=>setTimeout(r,40));afterTap=planner.anchors.length}
       return {before,afterTap,mapReady:!!map,mapWidth:box.width};
     });
     assert.equal(routeTap.afterTap,routeTap.before+1,'Route editor adds exactly one control point through its production edit path');
