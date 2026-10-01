@@ -416,6 +416,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.82');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
+ assert.ok(workstationJs.includes("},60000);refresh();"));assert.ok(!workstationJs.includes("},5000);refresh();"));
  assert.match(appJs,/function scheduleReferenceFit\(\)[\s\S]*?requestAnimationFrame/);assert.ok(!appJs.includes("window.addEventListener('resize',fitReferenceConsole"));assert.ok(routePlannerJs.includes('function plannerWatchdog()'));assert.ok(routePlannerJs.includes('if(cancelled||tap.moved||plannerMobilePointers.size||busy)return'));assert.ok(!routePlannerJs.includes('plannerMobilePointers.size||busy||ignoreTarget(e))return'));
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
