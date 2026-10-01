@@ -44,6 +44,8 @@
   let latestFollowPosition=null;
   let gaiaRouteEnabled=true;
   let suppressPlannerClickUntil=0;
+  let plannerMobileTap=null;
+  const plannerMobilePointers=new Set();
   let anchorEditTimer=0;
   let lastOverlayGeometryKey='';
   let lastDirectionGeometryKey='';
@@ -371,6 +373,43 @@
     map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
   }
 
+  function bindMobilePlannerTap(map,el){
+    if(!map||!el||el.dataset.mobileRouteTapBound==='1')return;
+    el.dataset.mobileRouteTapBound='1';
+    const ignoreTarget=e=>!!e.target?.closest?.('.leaflet-control,.planner-anchor-touch-wrap,.planner-anchor-touch,a,button,input,select,label');
+    const down=e=>{
+      if(e.pointerType==='mouse'||busy||ignoreTarget(e))return;
+      plannerMobilePointers.add(e.pointerId);
+      if(plannerMobilePointers.size!==1){plannerMobileTap=null;return;}
+      plannerMobileTap={id:e.pointerId,x:e.clientX,y:e.clientY,time:Date.now(),moved:false};
+    };
+    const move=e=>{
+      const tap=plannerMobileTap;
+      if(!tap||tap.id!==e.pointerId)return;
+      if(Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>12)tap.moved=true;
+    };
+    const finish=(e,cancelled=false)=>{
+      const tap=plannerMobileTap;
+      plannerMobilePointers.delete(e.pointerId);
+      if(!tap||tap.id!==e.pointerId){
+        if(!plannerMobilePointers.size)plannerMobileTap=null;
+        return;
+      }
+      plannerMobileTap=null;
+      if(cancelled||tap.moved||plannerMobilePointers.size||busy||ignoreTarget(e))return;
+      if(Date.now()-tap.time>700||Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>12)return;
+      const rect=el.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+      if(x<0||y<0||x>rect.width||y>rect.height)return;
+      const ll=map.containerPointToLatLng(L.point(x,y));
+      suppressPlannerClickUntil=Date.now()+600;
+      addAnchor({lat:ll.lat,lon:ll.lng});
+    };
+    el.addEventListener('pointerdown',down,{passive:true});
+    el.addEventListener('pointermove',move,{passive:true});
+    el.addEventListener('pointerup',finish,{passive:true});
+    el.addEventListener('pointercancel',e=>finish(e,true),{passive:true});
+  }
+
   function plannerColors(){
     const st=getComputedStyle(document.body);
     return {
@@ -401,7 +440,7 @@
       zoomAnimation:true,
       fadeAnimation:true,
       markerZoomAnimation:true,
-      zoomSnap:.125,
+      zoomSnap:0,
       zoomDelta:.25,
       wheelDebounceTime:12,
       wheelPxPerZoomLevel:180
@@ -477,6 +516,7 @@
     plannerUserLayer=L.layerGroup().addTo(plannerMap);
 
     plannerMap.on('click',e=>{if(!busy&&Date.now()>=suppressPlannerClickUntil)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
+    bindMobilePlannerTap(plannerMap,el);
     plannerMap.on('mousemove',e=>{
       if(busy||!anchors.length)return;
       hoverPoint={lat:e.latlng.lat,lon:e.latlng.lng};
