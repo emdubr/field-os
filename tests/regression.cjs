@@ -342,6 +342,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("st.settleTimer=setTimeout"));
  assert.ok(mapEngineJs.includes("applyResidual();"));
  assert.ok(mapEngineJs.includes("queueTransform("));
+ assert.ok(!mapEngineJs.includes("corner.textContent=\`PINCH Z"));
+ assert.ok(mapEngineJs.includes("st.settleTimer=setTimeout"));
+ console.log('PASS native map coalesces gesture paints, defers tile rebuild, and performs no touchmove diagnostic DOM writes');
  assert.ok(!mapEngineJs.includes("transform 140ms cubic-bezier"));
  assert.ok(!mapEngineJs.includes("setTimeout(()=>resetTransform(),170)"));
  console.log('PASS mobile map retains fractional visual zoom with no post-release scale reset');
