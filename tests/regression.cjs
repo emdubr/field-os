@@ -426,6 +426,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  assert.ok(appJs.includes("document.hidden||!document.querySelector('#home.active,#sensors.active,#nav.active,#map.active,#breadcrumb.active')"));
  console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
+ assert.ok(appJs.includes('function sensorChartColors()'));assert.ok(appJs.includes('sensorChartThemeCache?.theme===theme'));console.log('PASS sensor charts reuse cached theme styles across all canvases');
  assert.ok(workstationJs.includes("e.target instanceof Element&&e.target.matches"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
@@ -809,6 +810,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("lastOverlayGeometryKey"));
  assert.ok(routePlannerJs.includes("lastDirectionGeometryKey"));
  console.log('PASS route overlay projection is geometry-keyed so preview edits do not rebuild route directions');
+ assert.ok(routePlannerJs.includes('plannerColorCache&&plannerColorTheme===theme'));assert.ok(routePlannerJs.includes("fieldos:themechange"));console.log('PASS route planner redraws reuse cached theme styles until the theme changes');
  assert.ok(routePlannerJs.includes("plannerHoverFrame=requestAnimationFrame"));
  assert.ok(routePlannerJs.includes("(pointer:fine)"));
  console.log('PASS route planner coalesces fine-pointer route hover and skips hover work on touch-only devices');
