@@ -11,6 +11,9 @@
   const pendingGraphs=new Map();
   const CACHE_MS=20*60*1000;
   const legCache=new Map();
+  const elevationCache=new Map();
+  const elevationSampleCache=new WeakMap();
+  const ELEVATION_CACHE_MAX=24;
   let lastSuccessfulAnchors=[];
   const legKey=(a,b)=>[a.lat,a.lon,b.lat,b.lon].map(n=>Number(n).toFixed(6)).join(',');
   let anchors=[];
@@ -232,8 +235,16 @@
     plannerDomRouteSvg=svg;
     return svg;
   }
+  function validElevationSamples(input){
+    const source=Array.isArray(input)?input:[];
+    if(!source.length)return source;
+    const cached=elevationSampleCache.get(source);if(cached)return cached;
+    const clean=source.filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    elevationSampleCache.set(source,clean);elevationSampleCache.set(clean,clean);
+    return clean;
+  }
   function gradeAtDistance(profile,distanceM){
-    const s=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    const s=validElevationSamples(profile?.samples);
     if(s.length<2)return 0;
     const totalM=Math.max(0,Number(s.at(-1).distanceM)||0);
     const d=clamp(Number(distanceM)||0,0,totalM);
@@ -271,18 +282,23 @@
     const hasSlope=!!(gaiaRouteEnabled&&activeElevationProfile?.samples?.length&&pts.length>=2);
     svg?.classList.toggle('has-slope-overlay',hasSlope);
     if(!hasSlope)return;
-    const ns='http://www.w3.org/2000/svg';
+    // Batch every slope class into one SVG path. Long routes used to create
+    // hundreds/thousands of <line> nodes and rebuild them on every map move.
+    const ns='http://www.w3.org/2000/svg',paths={easy:[],medium:[],hard:[]};
     let cumulative=0;
     for(let i=1;i<pts.length;i++){
       const a=pts[i-1],b=pts[i],segM=meters(a,b),mid=cumulative+segM/2;
       const cls=slopeClass(gradeAtDistance(activeElevationProfile,mid));
       cumulative+=segM;
       const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
-      const line=document.createElementNS(ns,'line');
-      line.setAttribute('x1',qa.x.toFixed(1));line.setAttribute('y1',qa.y.toFixed(1));
-      line.setAttribute('x2',qb.x.toFixed(1));line.setAttribute('y2',qb.y.toFixed(1));
-      line.setAttribute('class',`route-dom-slope route-dom-slope-${cls.key}`);
-      g.appendChild(line);
+      paths[cls.key].push(`M${qa.x.toFixed(1)},${qa.y.toFixed(1)}L${qb.x.toFixed(1)},${qb.y.toFixed(1)}`);
+    }
+    for(const key of ['easy','medium','hard']){
+      if(!paths[key].length)continue;
+      const path=document.createElementNS(ns,'path');
+      path.setAttribute('d',paths[key].join(''));
+      path.setAttribute('class',`route-dom-slope route-dom-slope-${key}`);
+      g.appendChild(path);
     }
   }
   function drawDomRouteLayer(points=[]){
@@ -1095,15 +1111,19 @@
   }
 
   function nearestNode(graph,p,maxMeters=500){
-    let best=null;
-    const cos=Math.max(.01,Math.cos(p.lat*Math.PI/180));
+    let best=null,bestApprox=Infinity;
+    const cos=Math.max(.01,Math.cos(p.lat*Math.PI/180)),metersLat=111320,metersLon=111320*cos;
     for(const seg of nearbySegments(graph,p,maxMeters)){
       const dx=(seg.pb.lon-seg.pa.lon)*cos,dy=seg.pb.lat-seg.pa.lat;
       const t=clamp(((p.lon-seg.pa.lon)*cos*dx+(p.lat-seg.pa.lat)*dy)/(dx*dx+dy*dy||1),0,1);
       const node={lat:seg.pa.lat+t*(seg.pb.lat-seg.pa.lat),lon:seg.pa.lon+t*(seg.pb.lon-seg.pa.lon)};
-      const d=meters(p,node);if(d<=maxMeters&&(!best||d<best.d))best={seg,node,d,t};
+      // Compare candidates in the local tangent plane; pay for haversine only
+      // once for the winner instead of once for every nearby trail segment.
+      const approx=Math.hypot((node.lat-p.lat)*metersLat,(node.lon-p.lon)*metersLon);
+      if(approx<=maxMeters*1.01&&approx<bestApprox){bestApprox=approx;best={seg,node,d:approx,t}}
     }
     if(!best)return null;
+    best.d=meters(p,best.node);if(best.d>maxMeters)return null;
     if(best.t<1e-8)return {id:best.seg.a,node:best.seg.pa,d:best.d};
     if(best.t>1-1e-8)return {id:best.seg.b,node:best.seg.pb,d:best.d};
     const {seg,node}=best,id=`snap:${graph.nodes.size}`;node.id=id;graph.nodes.set(id,node);graph.adj.set(id,[]);
@@ -1351,6 +1371,18 @@
     return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  function cloneRoutingGraph(source){
+    // Nodes/edges are immutable during a search except at the two snapped
+    // endpoints. Share the untouched edge arrays and copy only the map/set
+    // containers; nearestNode replaces endpoint arrays before mutation.
+    return {
+      nodes:new Map(source.nodes),
+      adj:new Map(source.adj),
+      segments:source.segments.slice(),
+      spatial:new Map([...source.spatial].map(([key,bucket])=>[key,new Set(bucket)]))
+    };
+  }
+
   async function routeLeg(a,b,signal,retry=false){
     const cached=legCache.get(legKey(a,b));if(cached)return {...cached,cached:true};
     const back=legCache.get(legKey(b,a));
@@ -1367,8 +1399,7 @@
       throw e;
     }
 
-    const segments=source.segments.map(seg=>({...seg}));
-    const graph={nodes:new Map(source.nodes),adj:new Map([...source.adj].map(([id,edges])=>[id,edges.slice()])),segments,spatial:buildSpatialIndex(segments)};
+    const graph=cloneRoutingGraph(source);
     const snapRadius=retry?1200:550;
 
     const sa=nearestNode(graph,a,snapRadius);
@@ -1427,19 +1458,29 @@
     return out;
   }
 
+  function elevationCacheKey(samples){
+    let h=2166136261;
+    for(const p of samples){
+      const a=Math.round(p.lat*1e5),b=Math.round(p.lon*1e5);
+      h=Math.imul(h^a,16777619);h=Math.imul(h^b,16777619);
+    }
+    return samples.length+':'+(h>>>0).toString(36);
+  }
   async function fetchElevationProfile(points,signal){
     const samples=samplePolyline(points,140);
     if(samples.length<2)return null;
+    const cacheKey=elevationCacheKey(samples),cached=elevationCache.get(cacheKey);
+    if(cached){if(signal?.aborted)throw new DOMException('Cancelled','AbortError');return cached}
     const controller=new AbortController();
     const relay=()=>controller.abort();signal?.addEventListener('abort',relay,{once:true});
     let timedOut=false;
     const timer=setTimeout(()=>{timedOut=true;controller.abort()},18000);
     try{
-      const raw=[];
       const chunks=[];
       for(let i=0;i<samples.length;i+=100)chunks.push(samples.slice(i,i+100));
-      for(let ci=0;ci<chunks.length;ci++){
-        const chunk=chunks[ci];
+      // At the current 140-sample cap this is at most two requests. Running
+      // them together removes a full network round trip on long routes.
+      const parts=await Promise.all(chunks.map(async(chunk,ci)=>{
         const lat=chunk.map(p=>p.lat.toFixed(6)).join(',');
         const lon=chunk.map(p=>p.lon.toFixed(6)).join(',');
         const url=`https://api.open-meteo.com/v1/elevation?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`;
@@ -1451,8 +1492,9 @@
         if(elevations.length!==chunk.length||elevations.some(v=>!Number.isFinite(v))){
           throw rpError('RP-402','Elevation response did not contain valid samples.',{expected:chunk.length,received:elevations.length,chunk:ci+1,chunks:chunks.length});
         }
-        raw.push(...elevations);
-      }
+        return elevations;
+      }));
+      const raw=parts.flat();
       if(raw.length!==samples.length)throw rpError('RP-402','Elevation sample merge was incomplete.',{expected:samples.length,received:raw.length,chunks:chunks.length});
       const ft=raw.map(v=>v*3.28084);
       const smooth=ft.map((v,i,arr)=>{
@@ -1476,6 +1518,8 @@
       let robustMaxGrade=0;
       for(const p of smoothedSamples)robustMaxGrade=Math.max(robustMaxGrade,Math.abs(gradeAtDistance(profile,p.distanceM)));
       profile.maxGrade=robustMaxGrade;
+      elevationCache.set(cacheKey,profile);
+      if(elevationCache.size>ELEVATION_CACHE_MAX)elevationCache.delete(elevationCache.keys().next().value);
       return profile;
     }catch(err){
       if(err?.name==='AbortError'&&timedOut&&!signal?.aborted)throw rpError('RP-403','Elevation request timed out.');
@@ -1486,12 +1530,13 @@
   }
 
   function profileElevationAt(samples,distanceM){
-    const s=(Array.isArray(samples)?samples:[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    const s=validElevationSamples(samples);
     if(!s.length)return NaN;
     if(distanceM<=s[0].distanceM)return s[0].elevationFt;
     if(distanceM>=s.at(-1).distanceM)return s.at(-1).elevationFt;
-    let i=1;while(i<s.length&&s[i].distanceM<distanceM)i++;
-    const a=s[i-1],b=s[i],span=Math.max(1,b.distanceM-a.distanceM),t=(distanceM-a.distanceM)/span;
+    let lo=1,hi=s.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1;if(s[mid].distanceM<distanceM)lo=mid+1;else hi=mid}
+    const a=s[lo-1],b=s[lo],span=Math.max(1,b.distanceM-a.distanceM),t=(distanceM-a.distanceM)/span;
     return a.elevationFt+(b.elevationFt-a.elevationFt)*t;
   }
 
@@ -1507,7 +1552,7 @@
   }
 
   function elevationDetail(profile,distMi){
-    const samples=(profile?.samples||[]).filter(x=>Number.isFinite(x?.distanceM)&&Number.isFinite(x?.elevationFt));
+    const samples=validElevationSamples(profile?.samples);
     if(samples.length<2)return null;
     const totalM=samples.at(-1).distanceM||distMi*1609.344;
     const startFt=samples[0].elevationFt,endFt=samples.at(-1).elevationFt;
