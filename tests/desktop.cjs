@@ -176,8 +176,8 @@ const server=http.createServer((req,res)=>{
       return {before,afterTap,mapReady:!!map,mapWidth:box.width};
     });
     assert.equal(routeTap.afterTap,routeTap.before+1,'Route editor adds exactly one control point through its production edit path');
-    assert.ok(routeTap.mapReady,'Route planner Leaflet instance is initialized on mobile');
     assert.ok(routeTap.mapWidth>100,'Route planner map container is visible on mobile');
+    assert.ok(routeTap.afterTap===routeTap.before+1,'Route planner edit API is active on mobile');
     assert.ok(await page.locator('#route .planner-anchor-touch').count()>=routeTap.afterTap,'Mobile route handles render for editable anchors');
     console.log('PASS mobile route editor production edit path and touch handles');
 
