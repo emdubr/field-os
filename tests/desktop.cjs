@@ -164,7 +164,8 @@ const server=http.createServer((req,res)=>{
     assert.ok(releaseLatency<100,'Map release should commit without the old 120–160 ms settle delay');
     console.log('PASS mobile native map preserves fractional zoom and commits pan release without delayed snap');
 
-    await page.evaluate(()=>{openView('route');FIELD_ROUTE_PLANNER.activate()});await page.waitForTimeout(100);
+    await page.evaluate(()=>{openView('route');FIELD_ROUTE_PLANNER.activate()});
+    await page.waitForFunction(()=>{const el=document.getElementById('routePlannerMap');return !!FIELD_ROUTE_PLANNER.map()&&el?.getBoundingClientRect().width>100},{timeout:2000});
     const routeTap=await page.evaluate(async()=>{
       const planner=FIELD_ROUTE_PLANNER,el=document.getElementById('routePlannerMap'),before=planner.anchors.length,box=el.getBoundingClientRect();
       const map=planner.map(),point={lat:44.4759,lon:-73.2121};
