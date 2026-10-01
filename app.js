@@ -258,10 +258,13 @@ window.FIELD_RUNTIME.every(()=>{
   pushSensorHistory('meshRssi',-84+Math.random()*12-6);pushSensorHistory('meshSnr',8+Math.random()*6-3);pushSensorHistory('meshNodes',demo.mesh);
   pushSensorHistory('temp',demo.temp);pushSensorHistory('humidity',demo.hum);pushSensorHistory('pitch',2+Math.random()*4-2);pushSensorHistory('roll',-1+Math.random()*4-2);pushSensorHistory('battery',64-Math.random()*.25);
   if(document.querySelector('#sensors.active'))window.FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts);
-  document.getElementById('altitude').textContent = `${demo.alt} ft`;
-  document.getElementById('pressure').textContent = `${demo.press.toFixed(1)} hPa`;
-  updateLiveNavigationUI?.();
-  drawPressureChart();
+  if(document.querySelector('#home.active,#sensors.active')){
+    const altitudeEl=document.getElementById('altitude'),pressureEl=document.getElementById('pressure');
+    if(altitudeEl)altitudeEl.textContent = `${demo.alt} ft`;
+    if(pressureEl)pressureEl.textContent = `${demo.press.toFixed(1)} hPa`;
+  }
+  if(document.querySelector('#home.active,#nav.active,#map.active,#breadcrumb.active'))window.FIELD_RUNTIME.frame('live-navigation',()=>updateLiveNavigationUI?.());
+  if(document.querySelector('#home.active,#sensors.active'))window.FIELD_RUNTIME.frame('pressure-chart',drawPressureChart);
 }, 4000);
 
 function toDMS(value, lat){
