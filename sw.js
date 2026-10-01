@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-80';
-const ASSETS=['./','./index.html','./styles.css?v=3.80','./app.js?v=3.80','./workstation.css?v=3.80','./workstation.js?v=3.80','./survival-data.js','./route-state.js?v=3.80','./map-engine.js?v=3.80','./route-planner.js?v=3.80','./field-intel.js?v=3.80','./field-ops.js?v=3.80','./field-tools.js?v=3.80','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-81';
+const ASSETS=['./','./index.html','./styles.css?v=3.81','./app.js?v=3.81','./workstation.css?v=3.81','./workstation.js?v=3.81','./survival-data.js','./route-state.js?v=3.81','./map-engine.js?v=3.81','./route-planner.js?v=3.81','./field-intel.js?v=3.81','./field-ops.js?v=3.81','./field-tools.js?v=3.81','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -41,14 +41,15 @@ self.addEventListener('fetch',e=>{
   }
   const shellAsset=ASSETS.some(path=>new URL(path,self.location.href).href===url.href)&&url.pathname!==new URL('./',self.location.href).pathname&&!url.pathname.endsWith('/index.html');
   if(shellAsset){
+    // Refresh application code/UI from the network while online. Cached shell
+    // files remain the fallback for offline field use.
     e.respondWith(caches.open(CACHE).then(async c=>{
-      const hit=await c.match(e.request);if(hit)return hit;
       try{
         const r=await fetch(e.request);
         if(r.ok){const copy=r.clone();e.waitUntil(c.put(e.request,copy))}
         return r;
       }catch{
-        return (await c.match(e.request,{ignoreSearch:true}))||Response.error();
+        return (await c.match(e.request))||(await c.match(e.request,{ignoreSearch:true}))||Response.error();
       }
     }));
     return;
