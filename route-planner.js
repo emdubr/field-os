@@ -46,6 +46,7 @@
   let gaiaRouteEnabled=true;
   let suppressPlannerClickUntil=0;
   let plannerMobileTap=null;
+  let mobileEditMode=false,mobileEditIndex=-1;
   const plannerMobilePointers=new Set();
   let anchorEditTimer=0;
   let lastOverlayGeometryKey='';
@@ -161,6 +162,28 @@
     for(const leg of plan.legs||[])if(valid(leg.a)&&valid(leg.b)&&Array.isArray(leg.result?.points))legCache.set(legKey(leg.a,leg.b),leg.result);
   }
 
+  function updateMobileEditUi(){
+    const btn=$('routeEditPoints');if(!btn)return;
+    btn.classList.toggle('active',mobileEditMode);btn.setAttribute('aria-pressed',mobileEditMode?'true':'false');
+    btn.textContent=mobileEditMode?(mobileEditIndex>=0?`MOVE POINT ${mobileEditIndex===0?'S':mobileEditIndex===anchors.length-1?'E':mobileEditIndex} // TAP MAP`:'EDIT MODE // TAP POINT'):'EDIT POINTS';
+    $('routePlannerMap')?.classList.toggle('route-edit-mode',mobileEditMode);
+  }
+  function selectEditPoint(index){
+    if(!mobileEditMode||index<0||index>=anchors.length)return;
+    mobileEditIndex=index;updateMobileEditUi();
+    const label=index===0?'S':index===anchors.length-1?'E':String(index);
+    status(`POINT ${label} SELECTED // TAP MAP TO MOVE IT`,'ready');
+  }
+  function moveEditPoint(p){
+    if(!mobileEditMode||mobileEditIndex<0||mobileEditIndex>=anchors.length||!valid(p))return false;
+    const index=mobileEditIndex,label=index===0?'S':index===anchors.length-1?'E':String(index);
+    aborter?.abort();setBusy(false);
+    anchors=anchors.map((a,i)=>i===index?{lat:+p.lat,lon:+p.lon}:a);snapped=[];routingResolvedAnchors=0;
+    state()?.setMeta?.({anchors:anchors.map(a=>({...a})),routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'EDITING'});
+    overlay(state()?.getPoints?.()||[]);mobileEditIndex=-1;updateMobileEditUi();
+    clearTimeout(anchorEditTimer);anchorEditTimer=setTimeout(()=>recalculate(),70);
+    status(`POINT ${label} MOVED // RECALCULATING`,'loading');return true;
+  }
   function updateControls(){
     const count=anchors.length;
     const a=$('routeAnchorCount');if(a)a.textContent=String(count);
@@ -169,6 +192,9 @@
     $('undoRoutePoint')?.toggleAttribute('disabled',count===0||busy);
     $('reverseRoute')?.toggleAttribute('disabled',count<2||busy);
     $('clearRoute')?.toggleAttribute('disabled',count===0);
+    $('routeEditPoints')?.toggleAttribute('disabled',count===0||busy);
+    if(!count){mobileEditMode=false;mobileEditIndex=-1}
+    updateMobileEditUi();
   }
 
   function geometryFromLegs(legs){
@@ -420,6 +446,7 @@
       if(x<0||y<0||x>rect.width||y>rect.height)return;
       const ll=map.containerPointToLatLng(L.point(x,y));
       suppressPlannerClickUntil=Date.now()+600;
+      if(moveEditPoint({lat:ll.lat,lon:ll.lng}))return;
       addAnchor({lat:ll.lat,lon:ll.lng});
     };
     el.addEventListener('pointerdown',down,{passive:true});
@@ -625,6 +652,7 @@
         const icon=L.divIcon({className:'planner-anchor-touch-wrap',html:`<span class="planner-anchor-touch" title="Drag control point ${label}">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]});
         const marker=L.marker([p.lat,p.lon],{pane:'fieldRouteAnchorPane',icon,draggable:!busy,autoPan:true,keyboard:false,riseOnHover:true}).addTo(plannerAnchorLayer);
         if(!busy){
+          marker.on('click',e=>{if(mobileEditMode){L.DomEvent.stopPropagation(e);selectEditPoint(i)}});
           marker.on('dragstart',()=>{suppressPlannerClickUntil=Date.now()+500;hoverPoint=null;status(`EDITING CONTROL POINT ${label} // DRAG TO NEW POSITION`,'loading')});
           marker.on('dragend',e=>{
             suppressPlannerClickUntil=Date.now()+500;
@@ -792,6 +820,10 @@
     $('saveRouteVisible')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('routeSaveTop')?.addEventListener('click',e=>{e.preventDefault();saveCurrentRoute()});
     $('copyRouteDiag')?.addEventListener('click',copyRouteDiagnostic);
+    $('routeEditPoints')?.addEventListener('click',()=>{
+      mobileEditMode=!mobileEditMode;mobileEditIndex=-1;updateMobileEditUi();
+      status(mobileEditMode?'EDIT MODE // TAP S, E OR A NUMBERED POINT, THEN TAP ITS NEW LOCATION':'EDIT MODE OFF','ready');
+    });
     bindElevationProfileHover();
     renderSavedRoutes();
   }
@@ -1075,10 +1107,15 @@
   }
   async function fetchTrailGraph(a,b,signal,force=false){
     if(signal?.aborted)throw new DOMException('Cancelled','AbortError');
+    let bestCached=null,bestArea=Infinity;
     for(const [key,entry] of graphCache){
-      if(Date.now()-entry.created>CACHE_MS){graphCache.delete(key);continue;}
-      if(!force&&covers(entry.box,a,b))return entry.graph;
+      if(Date.now()-entry.created>CACHE_MS){graphCache.delete(key);continue}
+      if(!force&&covers(entry.box,a,b)){
+        const area=Math.max(0,entry.box.n-entry.box.s)*Math.max(0,entry.box.e-entry.box.w);
+        if(area<bestArea){bestArea=area;bestCached=entry}
+      }
     }
+    if(bestCached)return bestCached.graph;
     for(const entry of pendingGraphs.values())if(covers(entry.box,a,b))return waitForGraph(entry.promise,signal);
     const box=bboxFor(a,b);
     if(force){box.s-=.035;box.n+=.035;box.w-=.05;box.e+=.05;}
@@ -1120,6 +1157,7 @@
 
     const promise=Promise.any(requests).then(graph=>{
       graphCache.set(key,{box,graph,created:Date.now()});
+      while(graphCache.size>8)graphCache.delete(graphCache.keys().next().value);
       const rawElements=graph.rawElements;
       try{const raw=JSON.stringify({box,elements:rawElements,created:Date.now()});if(raw.length<2500000)sessionStorage.setItem('fieldos-trail-network',raw)}catch{}
       persistTrailNetwork(key,box,rawElements);
