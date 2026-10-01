@@ -883,10 +883,16 @@ function updateHandheldStatus(){
   const mtd=document.getElementById('mobileTrailDist'),mtb=document.getElementById('mobileTrailBrg'),mbd=document.getElementById('mobileBaseDist'),mbb=document.getElementById('mobileBaseBrg');
   if(mtd)mtd.textContent=td;if(mtb)mtb.textContent=tb;if(mbd)mbd.textContent=bd;if(mbb)mbb.textContent=bb;
   const now=new Date(),solar=solarEventsForDate(now,currentNavPosition.lat,currentNavPosition.lon),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
-  if(day)day.textContent=fmtDurationMs(solar.daylightMs);
+  const pos=solarPosition(now,currentNavPosition.lat,currentNavPosition.lon),isDay=pos.el>-.833,isCivil=pos.el>-6;
+  if(day)day.textContent=isDay?fmtDurationMs(Math.max(0,(solar.sunset?.getTime()||now.getTime())-now.getTime())):isCivil?'TWILIGHT':'SUN HAS SET';
   if(sun){
-    if(solar.sunrise&&solar.sunset)sun.textContent=`↑${fmtClock(solar.sunrise)} ↓${fmtClock(solar.sunset)}`;
-    else sun.textContent=solar.state==='POLAR DAY'?'SUN ALL DAY':'NO SUNRISE';
+    if(!isDay&&!isCivil){
+      const moonrise=nextMoonrise(now,currentNavPosition.lat,currentNavPosition.lon),sunrise=nextSunrise(now,currentNavPosition.lat,currentNavPosition.lon);
+      sun.textContent=`MOONRISE ${moonrise?fmtClock(moonrise):'NONE'} · SUNRISE ${sunrise?fmtClock(sunrise):'NONE'}`;
+    }else if(isCivil){
+      sun.textContent=`SUN SET · CIVIL DUSK ${solar.civilDusk?fmtClock(solar.civilDusk):'--'}`;
+    }else if(solar.sunset) sun.textContent=`SUNSET ${fmtClock(solar.sunset)}`;
+    else sun.textContent=solar.state==='POLAR DAY'?'SUN ALL DAY':'NO SUNSET';
   }
   const hc=document.getElementById('mobileCheckin');
   if(hc){
