@@ -813,6 +813,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  console.log('PASS route overlay projection is geometry-keyed so preview edits do not rebuild route directions');
  assert.ok(routePlannerJs.includes('let plannerUserAccuracyLayer=null'));assert.ok(routePlannerJs.includes('plannerUserMarker.setLatLng(p)'));assert.ok(!routePlannerJs.includes('plannerUserLayer.clearLayers();\n    const c=plannerColors()'));console.log('PASS route live GPS marker layers are reused across position fixes');
  assert.ok(routePlannerJs.includes('function drawPlannerPreview('));assert.ok(!routePlannerJs.includes('hoverPoint=pendingHoverPoint;pendingHoverPoint=null;overlay('));console.log('PASS route hover preview no longer rebuilds anchor markers on every pointer frame');
+ assert.ok(routePlannerJs.includes('plannerDomRouteGeometry.length?plannerDomRouteGeometry:authoritativeGeometry'));console.log('PASS route hover preview reuses cached route geometry instead of rescanning full routes');
  assert.ok(routePlannerJs.includes('plannerColorCache&&plannerColorTheme===theme'));assert.ok(routePlannerJs.includes("fieldos:themechange"));console.log('PASS route planner redraws reuse cached theme styles until the theme changes');
  assert.ok(routePlannerJs.includes("plannerHoverFrame=requestAnimationFrame"));
  assert.ok(routePlannerJs.includes("(pointer:fine)"));
