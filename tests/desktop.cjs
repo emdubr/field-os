@@ -173,6 +173,19 @@ const server=http.createServer((req,res)=>{
     assert.ok(await page.locator('#route .planner-anchor-touch').count()>=routeTap.afterTap,'Mobile route handles render for editable anchors');
     console.log('PASS mobile route editor distinguishes tap-to-add from drag and exposes touch handles');
 
+    await page.setViewportSize({width:390,height:844});
+    for(const id of ['lorachat','loramap']){
+      await page.evaluate(viewId=>openView(viewId),id);await page.waitForTimeout(60);
+      const state=await page.evaluate(viewId=>{
+        const view=document.getElementById(viewId);
+        const maps=[...view.querySelectorAll('.mesh-network-map,.mesh-coverage-map')].map(el=>el.getBoundingClientRect().height);
+        return {overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1,maps};
+      },id);
+      assert.equal(state.overflow,false,`${id} should not create horizontal overflow at 390px`);
+      assert.ok(state.maps.every(h=>h<=320),`${id} map surfaces should remain compact on mobile`);
+    }
+    console.log('PASS LoRa mobile workspaces avoid oversized fixed surfaces and horizontal overflow');
+
     await page.setViewportSize({width:1280,height:900});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
     const satelliteState=await page.evaluate(async()=>{
