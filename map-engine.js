@@ -142,7 +142,10 @@
       st.residualScale=Math.pow(2,visualZoom-committed);st.residualOrigin=`${x}px ${y}px`;
       applyResidual();
       clearTimeout(st.settleTimer);
-      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0){render(st);applyResidual()}},180);
+      st.settleTimer=setTimeout(()=>{
+        if(st.pointers.size!==0)return;
+        requestAnimationFrame(()=>{render(st);applyResidual()});
+      },220);
     };
     const previewZoom=(scale,clientX,clientY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
@@ -186,7 +189,6 @@
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const fractional=Math.log2(Math.max(.5,Math.min(2,ratio))),next=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+fractional));
         st.pinchStart.lastMidX=midX;st.pinchStart.lastMidY=midY;st.pinchStart.visualZoom=next;previewPinch((st.pinchStart.baseScale||1)*Math.pow(2,next-st.pinchStart.zoom),midX,midY,st.pinchStart.midX,st.pinchStart.midY);
-        const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent=`PINCH Z${next.toFixed(1)}`;
       }
     };
     st.onPointerUp=e=>{
