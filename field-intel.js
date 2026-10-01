@@ -287,7 +287,7 @@
   document.getElementById('recoveryFreezeTarget')?.addEventListener('click',()=>{const id=document.getElementById('recoveryTargetSelect')?.value,node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(id));if(node)activateRecovery(node)});
   document.getElementById('recoveryClear')?.addEventListener('click',clearRecovery);document.getElementById('recoverySaveWaypoint')?.addEventListener('click',()=>{if(!recoveryState.active||!recoveryState.target)return;document.dispatchEvent(new CustomEvent('fieldos:addwaypoint',{detail:{name:`RECOVERY — ${recoveryState.target.name}`,type:'JUNCTION',lat:recoveryState.target.lat,lon:recoveryState.target.lon,notes:`Frozen separated-person last-known position at ${new Date(recoveryState.frozenAt).toISOString()}`}}))});
   document.addEventListener('click',e=>{const b=e.target.closest('[data-recovery-member]');if(!b)return;const node=(window.FIELD_MESH?.state?.nodes||[]).find(n=>String(n.id)===String(b.dataset.recoveryMember));if(node)activateRecovery(node)});
-  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderRecovery()});setInterval(()=>{if(!document.hidden&&recoveryState.active&&document.querySelector('#comms.active,#loramap.active'))renderRecovery()},5000);setTimeout(renderRecovery,420);
+  document.addEventListener('fieldos:positionchange',()=>{if(recoveryState.active){addRecoveryBreadcrumb();renderRecovery()}});document.addEventListener('fieldos:meshroster',()=>{populateRecoveryTargets();if(recoveryState.active)renderRecovery()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderRecovery()});window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&recoveryState.active&&document.querySelector('#comms.active,#loramap.active'))renderRecovery()},5000);window.FIELD_RUNTIME.idle(renderRecovery,700);
   window.FIELD_RECOVERY={state:recoveryState,activate:activateRecovery,clear:clearRecovery,addBreadcrumb:addRecoveryBreadcrumb,guidance:recoveryGuidance,render:renderRecovery,mapSvg:recoveryMapSvg};
 
   // Feature 15 — Group Expedition Mode.
@@ -358,7 +358,7 @@
   }
   document.getElementById('groupExpeditionEnabled')?.addEventListener('change',e=>setGroupConfig({enabled:e.currentTarget.checked}));document.getElementById('groupAllNodes')?.addEventListener('change',e=>{if(!e.currentTarget.checked&&!(groupConfig.members||[]).length)groupConfig.members=(window.FIELD_MESH?.state?.nodes||[]).map(n=>String(n.id));setGroupConfig({allNodes:e.currentTarget.checked,members:groupConfig.members})});document.getElementById('groupSeparationLimit')?.addEventListener('change',e=>setGroupConfig({separationMi:e.currentTarget.value}));
   document.addEventListener('click',e=>{const b=e.target.closest('[data-group-member]');if(!b||groupConfig.allNodes)return;const id=String(b.dataset.groupMember),set=new Set((groupConfig.members||[]).map(String));set.has(id)?set.delete(id):set.add(id);setGroupConfig({members:[...set]})});
-  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderGroup()});setInterval(()=>{if(!document.hidden&&groupConfig.enabled&&document.querySelector('#comms.active,#loramap.active'))renderGroup()},15000);setTimeout(()=>renderGroup(),380);
+  document.addEventListener('fieldos:meshroster',()=>renderGroup());document.addEventListener('fieldos:positionchange',()=>{if(groupConfig.enabled)renderGroup()});document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderGroup()});window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&groupConfig.enabled&&document.querySelector('#comms.active,#loramap.active'))renderGroup()},15000);window.FIELD_RUNTIME.idle(renderGroup,700);
   window.FIELD_GROUP={config:groupConfig,state:groupState,record:recordGroupHistory,movement:groupMovement,evaluate:evaluateGroup,render:renderGroup,setConfig:setGroupConfig};
 
   // Feature 14 — Automatic Check-ins.
@@ -429,7 +429,7 @@
   document.addEventListener('fieldos:messagesent',e=>{if(e.detail?.id&&e.detail.id===autoCheckinState.pendingMessageId){autoCheckinState.lastDelivered=Date.now();autoCheckinState.pendingMessageId=null;persistAutoCheckin();renderAutoCheckin()}});
   document.addEventListener('fieldos:checkin',e=>{const d=e.detail||{};if(d.auto)return;const interval=checkinIntervalMinutes();autoCheckinState.lastGenerated=Number(d.createdAt)||Date.now();autoCheckinState.nextDue=interval?autoCheckinState.lastGenerated+interval*60000:0;if(!d.transportQueued&&window.FIELD_TRANSPORT?.queue){const item=window.FIELD_TRANSPORT.queue(d.text||'FIELD/OS CHECK-IN',{channel:'CHECK-IN',meta:{kind:'manual-checkin'}});autoCheckinState.pendingMessageId=item?.id||null}persistAutoCheckin();renderAutoCheckin()});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())});document.getElementById('checkinInterval')?.addEventListener('change',()=>{if(autoCheckinConfig.enabled)armAutoCheckin()});
-  setInterval(()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())},15000);setTimeout(()=>renderAutoCheckin(),320);
+  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible')autoCheckinTick(Date.now())},15000);window.FIELD_RUNTIME.idle(renderAutoCheckin,650);
   window.FIELD_AUTO_CHECKIN={config:autoCheckinConfig,state:autoCheckinState,setConfig:setAutoCheckinConfig,arm:armAutoCheckin,tick:autoCheckinTick,generate:generateAutoCheckin,format:formatAutoCheckin,render:renderAutoCheckin};
 
   // Feature 13 — Unified Communications Inbox.
@@ -687,7 +687,7 @@
   function ingestMeshNodes(list=[]){mergeMeshNodes(list);renderMeshNetwork();document.dispatchEvent(new CustomEvent('fieldos:meshroster',{detail:{count:meshState.nodes.length}}));return meshState.nodes}
   const savedMesh=read('mesh-roster',null);if(Array.isArray(savedMesh?.nodes))meshState.nodes=savedMesh.nodes.map(normalizeMeshNode).filter(Boolean);
   document.addEventListener('fieldos:telemetry',e=>{const d=e.detail||{},nodes=Array.isArray(d.mesh?.nodeList)?d.mesh.nodeList:Array.isArray(d.mesh?.nodes)?d.mesh.nodes:Array.isArray(d.nodes)?d.nodes:null;if(nodes)ingestMeshNodes(nodes)});
-  document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
+  document.addEventListener('fieldos:viewchange',e=>{if(['comms','loramap'].includes(e.detail?.view))renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()});window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()},10000);window.FIELD_RUNTIME.idle(renderMeshNetwork,600);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
 
   // Feature 08 — Position Confidence.
@@ -726,7 +726,7 @@
     const ring=document.getElementById('posConfidenceRing');if(ring)ring.setAttribute('aria-label',`Position confidence ${result.score} percent, ${result.label}`);
     return result;
   }
-  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:telemetry',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))renderPositionConfidence()},5000);setTimeout(renderPositionConfidence,180);
+  document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:telemetry',()=>{if(document.querySelector('#nav.active'))renderPositionConfidence()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderPositionConfidence()});window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&document.querySelector('#nav.active'))renderPositionConfidence()},5000);window.FIELD_RUNTIME.idle(renderPositionConfidence,550);
   window.FIELD_POSITION_CONFIDENCE={compute:computePositionConfidence,render:renderPositionConfidence};
 
   // Feature 07 — dead-reckoning backup. Estimate remains separate from GNSS.
@@ -776,7 +776,7 @@
   document.getElementById('drArm')?.addEventListener('click',armDr);document.getElementById('drReset')?.addEventListener('click',resetDr);
   document.addEventListener('fieldos:positionchange',e=>{const p=e.detail;if(validPoint(p)){dr.anchor={lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null,source:p.source||'GNSS'};dr.anchorTime=Date.now();dr.lastFixTime=Date.now();dr.estimated={...dr.anchor};dr.uncertaintyM=Number(p.accuracy)||15;dr.active=false;if(dr.armed)renderDr()}});
   document.addEventListener('fieldos:telemetry',e=>{const h=Number(e.detail?.heading),s=Number(e.detail?.speedMps);if(Number.isFinite(h))dr.heading=h;if(Number.isFinite(s))dr.speedMps=Math.max(0,s)});
-  setInterval(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);setTimeout(renderDr,160);
+  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);window.FIELD_RUNTIME.idle(renderDr,500);
   window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,state:dr};
 
   // Feature 06 — stripped-down breadcrumb navigation.
@@ -813,7 +813,7 @@
   function breadcrumbReverse(){breadcrumbReversed=!breadcrumbReversed;breadcrumbIndex=null;return renderBreadcrumb()}
   document.getElementById('breadcrumbPrev')?.addEventListener('click',()=>breadcrumbStep(-1));document.getElementById('breadcrumbNext')?.addEventListener('click',()=>breadcrumbStep(1));document.getElementById('breadcrumbNearest')?.addEventListener('click',breadcrumbNearest);document.getElementById('breadcrumbReverse')?.addEventListener('click',breadcrumbReverse);
   document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#breadcrumb.active'))renderBreadcrumb()});document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='breadcrumb')renderBreadcrumb()});
-  setInterval(()=>{if(!document.hidden&&document.querySelector('#breadcrumb.active'))renderBreadcrumb()},3000);
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&document.querySelector('#breadcrumb.active'))renderBreadcrumb()},3000);
   window.FIELD_BREADCRUMB={compute:computeBreadcrumb,render:renderBreadcrumb,step:breadcrumbStep,nearest:breadcrumbNearest,reverse:breadcrumbReverse,get reversed(){return breadcrumbReversed}};
 
   // Feature 05 — Off-course rerouting.
@@ -855,7 +855,7 @@
   document.addEventListener('click',e=>{const b=e.target.closest('[data-reroute]');if(!b)return;b.disabled=true;applyReroute(b.dataset.reroute).catch(()=>{}).finally(()=>b.disabled=false)});
   document.getElementById('restoreOriginalRoute')?.addEventListener('click',restoreOriginalRoute);
   document.addEventListener('fieldos:positionchange',refreshReroute);document.addEventListener('fieldos:routechange',()=>setTimeout(refreshReroute,0));document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')refreshReroute()});
-  setInterval(()=>{if(!document.hidden&&document.querySelector('#nav.active'))refreshReroute()},5000);setTimeout(refreshReroute,150);
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&document.querySelector('#nav.active'))refreshReroute()},5000);window.FIELD_RUNTIME.idle(refreshReroute,500);
   window.FIELD_REROUTE={compute:computeReroute,apply:applyReroute,restore:restoreOriginalRoute,refresh:refreshReroute,saveOriginal:saveOriginalForReroute};
 
   // Feature 04 — Escape / Bailout Planner.
@@ -1027,7 +1027,7 @@
   document.getElementById('priorityAction')?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
   document.addEventListener('fieldos:positionchange',refreshContext);document.addEventListener('fieldos:routechange',refreshContext);document.addEventListener('fieldos:missionstart',refreshContext);document.addEventListener('fieldos:missionend',refreshContext);
   document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshContext()});
-  setInterval(()=>{if(document.visibilityState==='visible')refreshContext()},5000);setTimeout(refreshContext,60);
+  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible')refreshContext()},5000);window.FIELD_RUNTIME.idle(refreshContext,450);
   window.FIELD_CONTEXT={refresh:refreshContext,candidates:contextCandidates,pushPressure:(v,t=Date.now())=>{v=Number(v);if(Number.isFinite(v)){contextState.pressure.push({t:Number(t)||Date.now(),v});contextState.pressure=contextState.pressure.slice(-120)}return refreshContext()},state:contextState};
 
   window.FIELD_MISSION={build,start,end,render,getPack:()=>read('mission-pack',null),getActive:()=>read('mission-active',null),summary,preview:missionData};
