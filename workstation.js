@@ -163,7 +163,7 @@
     // omit the workstation header and must keep their stripped layout intact.
     if(!head)continue;
     const grid=document.createElement('div');grid.className='module-grid';
-    [...view.children].filter(c=>c!==head).forEach(child=>{
+    [...view.children].filter(c=>c!==head&&!c.classList.contains('module-console-header')&&!c.classList.contains('module-band')&&!c.classList.contains('module-grid')).forEach(child=>{
       if(child.matches('.grid.two-col')&&!child.id){[...child.children].forEach(c=>grid.append(c));child.remove();}
       else grid.append(child);
     });view.append(grid);
