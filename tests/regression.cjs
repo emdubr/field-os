@@ -16,7 +16,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  await tick();
  {
    const launcher=d.getElementById('workspaceSearch'),switcher=d.getElementById('workspaceSwitcher');
-   const nativeShow=switcher.showModal;try{switcher.showModal=undefined;launcher.click();assert.ok(switcher.hasAttribute('data-open'));assert.equal(launcher.getAttribute('aria-expanded'),'true');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'true');switcher.querySelector('.switcher-close').click();assert.equal(launcher.getAttribute('aria-expanded'),'false');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'false');}finally{if(nativeShow)switcher.showModal=nativeShow}
+   const nativeShow=switcher.showModal;try{switcher.showModal=undefined;launcher.click();assert.ok(switcher.hasAttribute('data-open'));assert.equal(launcher.getAttribute('aria-expanded'),'true');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'true');switcher.querySelector('.switcher-close').click();assert.equal(launcher.getAttribute('aria-expanded'),'false');assert.equal(d.getElementById('mobileWorkspaceSearch').getAttribute('aria-expanded'),'false');assert.ok(workstationJs.includes('const target=returnFocus;returnFocus=null'));}finally{if(nativeShow)switcher.showModal=nativeShow}
    console.log('PASS module finder fallback opens, exposes state, and closes without native dialog support');
  }
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
