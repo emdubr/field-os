@@ -106,7 +106,7 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,resizeObserver:null
+      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,resizeObserver:null
     };
 
     const transformLayers=(transform,origin='50% 50%')=>{
@@ -118,6 +118,11 @@
     const previewZoom=(scale,clientX,clientY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
       transformLayers(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
+    };
+    const preserveAnchor=(anchor,clientX,clientY,newZoom)=>{
+      if(!anchor)return;
+      const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),a=world(anchor.lat,anchor.lon,newZoom);
+      st.center=unworld(a.x-(clientX-rect.left-w/2),a.y-(clientY-rect.top-h/2),newZoom);
     };
 
     st.onPointerDown=e=>{
@@ -131,7 +136,8 @@
         st.el.classList.add('native-map-dragging');
       }else if(st.pointers.size===2){
         const p=[...st.pointers.values()];
-        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:st.zoom};
+        const midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
+        st.pinchStart={dist:Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y),zoom:st.zoom,anchor:screenToLatLon(st,midX,midY),midX,midY};
       }
     };
     st.onPointerMove=e=>{
@@ -155,7 +161,8 @@
       const wasTap=!!(origin&&old.length===1&&!st.pinchStart&&Math.hypot(e.clientX-origin.x,e.clientY-origin.y)<7);
       if(st.pinchStart&&old.length>=2){
         const dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,st.pinchStart.dist);
-        st.zoom=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
+        const nextZoom=Math.max(2,Math.min(maxZoom(),st.pinchStart.zoom+Math.round(Math.log2(ratio))));
+        preserveAnchor(st.pinchStart.anchor,st.pinchStart.midX,st.pinchStart.midY,nextZoom);st.zoom=nextZoom;
         st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;resetTransform();render(st);return;
       }
       if(st.dragStart&&!wasTap){
@@ -173,6 +180,7 @@
       e.preventDefault();
       st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
       const rect=st.el.getBoundingClientRect(),anchorX=e.clientX,anchorY=e.clientY;
+      st.wheelAnchor={point:screenToLatLon(st,anchorX,anchorY),x:anchorX,y:anchorY};
       if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{
         st.renderFrame=0;
         const delta=st.wheelDelta;st.wheelDelta=0;
@@ -183,8 +191,9 @@
       st.wheelTimer=setTimeout(()=>{
         const step=Math.abs(st.wheelZoom)<.12?0:Math.sign(st.wheelZoom);
         st.wheelZoom=0;resetTransform();
-        if(!step)return;
-        st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+step));
+        if(!step){st.wheelAnchor=null;return}
+        const nextZoom=Math.max(2,Math.min(maxZoom(),st.zoom+step)),anchor=st.wheelAnchor;st.wheelAnchor=null;
+        preserveAnchor(anchor?.point,anchor?.x??0,anchor?.y??0,nextZoom);st.zoom=nextZoom;
         render(st);
       },90);
     };
