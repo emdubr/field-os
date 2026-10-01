@@ -20,6 +20,9 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  const swText=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8'),html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
  vm.runInNewContext(swText,ctx);
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
+ assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
+ assert.ok(swText.includes('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'));
+ assert.ok(swText.includes('https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'));
  for(const asset of ['styles.css','workstation.css','route-state.js','app.js','workstation.js','map-engine.js','route-planner.js','field-intel.js','field-ops.js','field-tools.js'])assert.ok(swText.includes(`${asset}?v=${version}`),`service worker version drift: ${asset}`);
  const request=async(path,mode='same-origin')=>{let promise;handlers.fetch({request:{method:'GET',mode,url:new URL(path,location.href).href},respondWith:p=>promise=p,waitUntil(){}});return await promise};
 
