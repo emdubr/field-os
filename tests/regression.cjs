@@ -573,7 +573,7 @@ assert.ok(workstationCss.includes('map interaction performance'));
 console.log('PASS v3.61 smooth zoom, faster trail-server failover, and hidden-work throttling');
 
 assert.ok(appJs.includes('function enableContinuousWheelZoom(map)'));
-assert.ok(appJs.includes('st.zoom-dy/520'));
+assert.ok(mapEngineJs.includes('st.wheelZoom-delta/420')||mapEngineJs.includes('st.wheelZoom-delta/420'));
 assert.ok(appJs.includes('window.FIELD_OFFLINE_MAPS='));
 assert.ok(routePlannerJs.includes('window.FIELD_OFFLINE_MAPS.leafletLayer()'));
 assert.ok(routePlannerJs.includes("if(navigator.onLine!==false)osm.addTo(plannerMap)"));
@@ -582,7 +582,7 @@ assert.ok(!fieldToolsJs.includes('fieldos-v12-active-map-pack'));
 assert.ok(swJs.includes("e.request.mode==='navigate'"));
 assert.ok(swJs.includes("cache.match('./index.html')"));
 assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
-console.log('PASS v3.61 continuous native zoom and offline shell/map/route contracts');
+console.log('PASS dedicated map engine continuous zoom and offline shell/map/route contracts');
 
 assert.ok(workstationCss.includes('#route .route-planner-panel'));
 assert.ok(workstationCss.includes('#route .route-performance-panel'));
