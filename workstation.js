@@ -1,6 +1,6 @@
 /* FIELD/OS v3.67: home-style workspaces with density parity across modules. */
 (() => {
-  const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['mission','MISSION MODE'],['survival','FIELD MANUAL'],['weather','WEATHER INTELLIGENCE'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
+  const modules=[['home','OVERVIEW'],['map','TERRAIN MAP'],['loramap','LORA MAP'],['lorachat','LORA CHAT'],['nav','NAVIGATION'],['route','ROUTE PLANNER'],['trailreturn','RETURN TO TRAIL'],['waypoints','WAYPOINTS'],['track','TRACK RECORDER'],['trip','TRIP PLAN'],['mission','MISSION MODE'],['survival','FIELD MANUAL'],['weather','WEATHER INTELLIGENCE'],['comms','COMMS / MESH'],['sensors','SENSORS'],['log','FIELD LOG'],['power','POWER'],['system','SYSTEM'],['lost','LOST MODE'],['sos','EMERGENCY / SOS']];
   const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const val=id=>document.getElementById(id)?.textContent?.trim()||'—';
   const input=id=>document.getElementById(id)?.value||'NOT SET';
