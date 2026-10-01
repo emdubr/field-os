@@ -235,6 +235,7 @@ function sensorSummary(){
   set('sensorPowerNow',`${Math.round(last('battery')||0)}%`);
 }
 function drawAllSensorCharts(){
+  if(document.hidden||!document.querySelector('#sensors.active'))return;
   drawSensorSeries('gnssSignalChart',[{label:'SAT',data:sensorHistory.gnssSats,decimals:0},{label:'ACC',data:sensorHistory.gnssAcc,unit:'m'}],'GNSS SIGNAL / FIX');
   drawSensorSeries('meshSignalChart',[{label:'RSSI',data:sensorHistory.meshRssi,unit:'dBm',decimals:0},{label:'SNR',data:sensorHistory.meshSnr,unit:'dB'},{label:'NODES',data:sensorHistory.meshNodes,decimals:0}],'MESH LINK QUALITY');
   drawSensorSeries('environmentChart',[{label:'TEMP',data:sensorHistory.temp,unit:'°F'},{label:'RH',data:sensorHistory.humidity,unit:'%'}],'ENVIRONMENT');
