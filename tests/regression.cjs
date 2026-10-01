@@ -423,8 +423,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
  assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
- assert.ok(appJs.includes("zoomSnap:.125")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
- assert.ok(routePlannerJs.includes("zoomSnap:.125")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
+ assert.ok(appJs.includes("zoomSnap:0")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
+ assert.ok(routePlannerJs.includes("zoomSnap:0")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes('const elevationCache=new Map()'));
  assert.ok(routePlannerJs.includes('Promise.all(chunks.map'));
  assert.ok(routePlannerJs.includes('function cloneRoutingGraph(source)'));
@@ -648,8 +648,8 @@ assert.ok(workstationCss.includes('.tab-sheet.open{'));
 assert.ok(workstationCss.includes('transform:translateY(0)!important'));
 console.log('PASS v3.61 mobile dock owns bottom safe area and More sheet geometry');
 
-assert.ok(appJs.includes('zoomSnap:.125')&&appJs.includes('zoomDelta:.25')&&appJs.includes('wheelPxPerZoomLevel:180'));
-assert.ok(routePlannerJs.includes('zoomSnap:.125')&&routePlannerJs.includes('zoomDelta:.25')&&routePlannerJs.includes('wheelPxPerZoomLevel:180'));
+assert.ok(appJs.includes('zoomSnap:0')&&appJs.includes('zoomDelta:.25')&&appJs.includes('wheelPxPerZoomLevel:180'));
+assert.ok(routePlannerJs.includes('zoomSnap:0')&&routePlannerJs.includes('zoomDelta:.25')&&routePlannerJs.includes('wheelPxPerZoomLevel:180'));
 assert.ok(routePlannerJs.includes('[0,450,1100][i]'));
 assert.ok(fieldIntelJs.includes("document.visibilityState==='visible'&&(dr.active||dr.armed)"));
 assert.ok(workstationCss.includes('map interaction performance'));
@@ -739,6 +739,10 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("function mutableAdjacency("));
  assert.ok(routePlannerJs.includes("planner-anchor-touch-wrap"));
  assert.ok(routePlannerJs.includes("draggable:!busy"));
+ assert.ok(routePlannerJs.includes("function bindMobilePlannerTap(map,el)"));
+ assert.ok(routePlannerJs.includes("plannerMobilePointers"));
+ assert.ok(routePlannerJs.includes("bindMobilePlannerTap(plannerMap,el)"));
+ assert.ok(routePlannerJs.includes("suppressPlannerClickUntil=Date.now()+600"));
  console.log('PASS route planner uses copy-on-write adjacency and draggable mobile control points');
  assert.ok(mapEngineJs.includes("const tileZoom=tileZoomFor(st.zoom)"));
  assert.ok(mapEngineJs.includes("st.center=unworld(c.x-dx,c.y-dy,st.zoom)"));
