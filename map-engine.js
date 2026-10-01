@@ -106,7 +106,7 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false
+      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,resizeObserver:null
     };
 
     const resetTransform=()=>{
@@ -165,7 +165,18 @@
         try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
       }else render(st);
     };
-    st.onWheel=e=>{e.preventDefault();st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+(e.deltaY<0?1:-1)));render(st)};
+    st.onWheel=e=>{
+      e.preventDefault();
+      st.wheelDelta+=e.deltaY;
+      if(st.renderFrame)return;
+      st.renderFrame=requestAnimationFrame(()=>{
+        st.renderFrame=0;
+        const delta=st.wheelDelta;st.wheelDelta=0;
+        if(Math.abs(delta)<1)return;
+        st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+(delta<0?1:-1)));
+        render(st);
+      });
+    };
     st.onDbl=e=>{e.preventDefault();st.zoom=Math.min(maxZoom(),st.zoom+1);render(st)};
 
     el.addEventListener('pointerdown',st.onPointerDown);
@@ -174,6 +185,18 @@
     el.addEventListener('pointercancel',st.onPointerUp);
     el.addEventListener('wheel',st.onWheel,{passive:false});
     el.addEventListener('dblclick',st.onDbl);
+    if('ResizeObserver' in window){
+      let resizeFrame=0,lastW=0,lastH=0;
+      st.resizeObserver=new ResizeObserver(entries=>{
+        const box=entries[0]?.contentRect;if(!box||box.width<1||box.height<1)return;
+        const w=Math.round(box.width),h=Math.round(box.height);
+        if(Math.abs(w-lastW)<2&&Math.abs(h-lastH)<2)return;
+        lastW=w;lastH=h;
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame=requestAnimationFrame(()=>{if(st.rendered&&st.el.offsetParent!==null)render(st)});
+      });
+      st.resizeObserver.observe(el);
+    }
     states.set(id,st);
     return st;
   }
@@ -316,6 +339,8 @@
     updateLabels();
     ['homeRealMap','realMap'].forEach(id=>ensure(id));
     for(const st of states.values()){
+      const visible=st.el.offsetParent!==null;
+      if(!visible&&!recenter)continue;
       if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered)){
         if(plannedRoute().length>1&&!liveEnabled)st.routeFitted=false;
         else st.center={...centerCandidate()};
