@@ -10,7 +10,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -43,7 +43,18 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(Array.isArray(missionPack.readiness)&&missionPack.readiness.length>=8);
  click('missionStart');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-mission-active')).active,true);
  click('missionEnd');await tick();assert.equal(w.localStorage.getItem('fieldos-v12-mission-active'),null);
- w.FIELD_ROUTE_STATE.setPoints([]);
+ w.FIELD_ROUTE_STATE.setPoints([]);await tick();
+ w.FIELD_OPEN_VIEW('mission');await tick();
+ const readinessButtons=[...d.querySelectorAll('#missionReadiness [data-readiness-id]')];
+ assert.ok(readinessButtons.length>=12);assert.ok(readinessButtons.every(x=>x.tagName==='BUTTON'));
+ assert.ok(d.querySelector('#missionReadiness [data-readiness-id="route"]').classList.contains('bad'));
+ assert.equal(missionPack.route.points.length,2,'frozen mission snapshot must not mutate with live readiness');
+ d.getElementById('missionContact').value='';d.getElementById('missionContact').dispatchEvent(new w.Event('input',{bubbles:true}));await tick();
+ assert.ok(d.querySelector('#missionReadiness [data-readiness-id="contact"]').classList.contains('bad'));
+ d.getElementById('missionContact').value='QA CONTACT / 555-0100';d.getElementById('missionContact').dispatchEvent(new w.Event('input',{bubbles:true}));await tick();
+ assert.ok(d.querySelector('#missionReadiness [data-readiness-id="contact"]').classList.contains('ok'));
+ d.querySelector('#missionReadiness [data-readiness-id="route"]').click();await tick();assert.equal(d.querySelector('.view.active').id,'route');
+ console.log('PASS feature 01 Mission Mode freezes pack data while actionable readiness cards update from live requirements');
  console.log('PASS feature 01 Mission Mode builds, freezes, starts, and ends a complete local trip pack');
  d.getElementById('mobileFixState').textContent='STALE';
  let priority=w.FIELD_CONTEXT.refresh();assert.equal(priority.id,'gnss');assert.match(d.getElementById('priorityTitle').textContent,/GNSS/);
@@ -260,8 +271,15 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const g=r.buildGraph([{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98},{lat:44.02,lon:-72.98}],tags:{highway:'path'}}]);
  const a=r.nearestNode(g,{lat:44.0001,lon:-72.995}),b=r.nearestNode(g,{lat:44.0001,lon:-72.99}),routeResult=r.shortestPath(g,a.id,b.id),path=routeResult.path;assert.ok(Array.isArray(path)&&path.length>=2);assert.equal(routeResult.limitHit,false);assert.ok(a.d<12&&b.d<12);const pathM=path.slice(1).reduce((sum,p,i)=>sum+r.meters(path[i],p),0);assert.ok(pathM>390&&pathM<410);
  assert.equal(r.nearestNode(g,{lat:0,lon:0}),null);assert.equal(r.samplePolyline([{lat:44,lon:-73},{lat:44.01,lon:-73}],80)[0].distanceM,0);
+ assert.equal(r.profileElevationAt([{distanceM:0,elevationFt:100},{distanceM:100,elevationFt:200},{distanceM:200,elevationFt:300}],50),150);
+ const clone=r.cloneRoutingGraph(g);assert.notEqual(clone.adj,g.adj);assert.equal(clone.adj.get('1'),g.adj.get('1'));assert.notEqual(clone.spatial,g.spatial);
+ console.log('PASS route graph clone shares immutable edge arrays and elevation lookup preserves interpolation');
  console.log('PASS trail-edge projection, same-segment route, distance, no-nearby-trail detection');
- w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}:{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
+ let elevationFetches=0;
+ w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?(elevationFetches++,{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}):{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
+ const cacheProbe=[{lat:40.12345,lon:-70.54321},{lat:40.22345,lon:-70.54321}];
+ await r.fetchElevationProfile(cacheProbe);const afterFirstElevation=elevationFetches;await r.fetchElevationProfile(cacheProbe);
+ assert.ok(afterFirstElevation>0);assert.equal(elevationFetches,afterFirstElevation,'identical elevation geometry should use memory cache');
  d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await waitFor(()=>/SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent));
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
  console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
@@ -403,6 +421,15 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
  assert.ok(appJs.includes("zoomSnap:.125")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:.125")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
+ assert.ok(routePlannerJs.includes('const elevationCache=new Map()'));
+ assert.ok(routePlannerJs.includes('Promise.all(chunks.map'));
+ assert.ok(routePlannerJs.includes('function cloneRoutingGraph(source)'));
+ assert.ok(routePlannerJs.includes("paths={easy:[],medium:[],hard:[]}"));
+ assert.ok(routePlannerJs.includes('while(lo<hi)'));
+ assert.ok(fieldIntelJs.includes('data-readiness-id='));
+ assert.ok(fieldIntelJs.includes('window.FIELD_MISSION_READINESS='));
+ assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
+ console.log('PASS route planner hot-path optimizations and actionable mission readiness contracts are wired');
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
 
 
