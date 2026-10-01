@@ -1615,21 +1615,29 @@ function updateLiveNavigationUI(){
   set('homeHeadingCardinal',card);
   set('homeCompassSource',source);
 }
+const fieldViewActive=(...ids)=>ids.some(id=>document.getElementById(id)?.classList.contains('active'));
+function refreshPositionDrivenView(view=document.querySelector('.view.active')?.id){
+  if(['home','nav','trailreturn'].includes(view))updateReturnGuidance();
+  if(view==='waypoints')updateWaypointNav();
+  if(view==='home'||view==='nav')updateLiveNavigationUI();
+  if(view==='home'||view==='map')updateFieldMaps(false);
+}
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
   window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null,timestamp:Date.now()};
   try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(window.FIELD_CURRENT_POSITION))}catch{}
-  document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:currentAccuracy;
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
   fieldLiveHeading=Number.isFinite(p.coords.heading)?p.coords.heading:null;
   lastFixAt=Date.now();fixAge=0;refreshFixAge(lastFixAt);
+  document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   updatePositionDisplays();
-  updateReturnGuidance();
-  updateWaypointNav();
-  updateLiveNavigationUI();
-  updateFieldMaps(true);
+  if(fieldViewActive('home','nav','trailreturn'))updateReturnGuidance();
+  if(fieldViewActive('waypoints'))updateWaypointNav();
+  if(fieldViewActive('home','nav'))updateLiveNavigationUI();
+  if(fieldViewActive('home','map'))updateFieldMaps(true);
 }
+document.addEventListener('fieldos:viewchange',e=>refreshPositionDrivenView(e.detail?.view));
 function requestFieldLiveLocation({quiet=false}={}){
   if(!navigator.geolocation){if(!quiet)alert('Phone geolocation is not available in this browser.');return;}
   navigator.geolocation.getCurrentPosition(
