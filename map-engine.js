@@ -19,7 +19,7 @@
 
   const clampLat=lat=>Math.max(-85.05112878,Math.min(85.05112878,Number(lat)||0));
   const maxZoom=()=>mode==='topo'?17:19;
-  const tileZoomFor=z=>Math.max(2,Math.min(maxZoom(),Math.round(z)));
+  const tileZoomFor=z=>Math.max(2,Math.min(maxZoom(),Math.floor(Number(z)+1e-6)));
   const rasterScaleFor=z=>Math.pow(2,z-tileZoomFor(z));
   const world=(lat,lon,z)=>{
     const size=TILE*Math.pow(2,z),s=Math.sin(clampLat(lat)*Math.PI/180);
@@ -463,7 +463,7 @@
       const gatesFrame=isBase&&((mode==='osm'&&cls==='native-osm-base')||(mode==='topo'&&cls==='native-topo-tile')||(mode==='satellite'&&cls==='native-satellite-tile'));
       if(gatesFrame)basePending++;
       const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
-      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(ok)baseLoaded++;if((baseLoaded>=Math.min(4,basePending)&&baseSettled>=Math.ceil(basePending*.35))||baseSettled>=basePending)commit()}};
+      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(ok)baseLoaded++;if((baseLoaded>=Math.max(1,Math.ceil(basePending*.55))&&baseSettled>=Math.ceil(basePending*.7))||baseSettled>=basePending)commit()}};
       img.style.left=left+'px';img.style.top=top+'px';img.onload=()=>settle(true);img.onerror=()=>settle(false);img.src=src;frag.appendChild(img);
     };
 
@@ -485,7 +485,7 @@
       st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
       st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();
     }
-    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,260);
+    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,420);
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
