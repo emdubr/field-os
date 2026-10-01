@@ -1,13 +1,13 @@
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const dir=require('path').resolve(__dirname,'..');const errors=[],alerts=[];const vc=new VirtualConsole();
-const appJs=fs.readFileSync(dir+'/app.js','utf8'),app=appJs,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldOpsJs=fs.readFileSync(dir+'/field-ops.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),mapEngineJs=fs.readFileSync(dir+'/map-engine.js','utf8'),workstationJs=fs.readFileSync(dir+'/workstation.js','utf8'),workstationCss=fs.readFileSync(dir+'/workstation.css','utf8'),swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8')),readme=fs.readFileSync(dir+'/README.md','utf8');vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
+const runtimeJs=fs.readFileSync(dir+'/runtime.js','utf8'),appJs=fs.readFileSync(dir+'/app.js','utf8'),app=appJs,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldOpsJs=fs.readFileSync(dir+'/field-ops.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),mapEngineJs=fs.readFileSync(dir+'/map-engine.js','utf8'),workstationJs=fs.readFileSync(dir+'/workstation.js','utf8'),workstationCss=fs.readFileSync(dir+'/workstation.css','utf8'),swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8')),readme=fs.readFileSync(dir+'/README.md','utf8');vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
 const dom=new JSDOM(fs.readFileSync(dir+'/index.html','utf8'),{url:'https://test.local/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc}),w=dom.window,d=w.document;
 w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:100}),createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});
 w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
 async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out waiting for async UI state')}
-for(const f of ['survival-data.js','route-state.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
+for(const f of ['survival-data.js','route-state.js','runtime.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
 let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
@@ -395,7 +395,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- assert.ok(swJs.includes("field-os-v3-81"));
+ assert.ok(swJs.includes("field-os-v3-82"));
  assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
@@ -413,7 +413,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.81');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.82');assert.equal(packageJson.version,release+'.0');
+ assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
+ assert.equal((appJs.match(/setInterval\\s*\\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\\s*\\(/g)||[]).length,0);assert.equal((workstationJs.match(/setInterval\\s*\\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\\s*\\(/g)||[]).length,0);
+ assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
+ console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
@@ -436,7 +440,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(fieldIntelJs.includes('data-readiness-id='));
  assert.ok(fieldIntelJs.includes('window.FIELD_MISSION_READINESS='));
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
- assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
+ assert.ok(workstationCss.includes('v3.82 MOBILE ROUTE EDITOR'));
  assert.ok(workstationCss.includes('v3.82 UI EFFICIENCY'));
  console.log('PASS route planner hot-path optimizations and actionable mission readiness contracts are wired');
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
@@ -682,7 +686,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.81</b>')&&workstationJs.includes('<em>v3.81</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.82</b>')&&workstationJs.includes('<em>v3.82</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
@@ -733,7 +737,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-81'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-82'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
@@ -767,12 +771,12 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("plannerHoverFrame=requestAnimationFrame"));
  assert.ok(routePlannerJs.includes("(pointer:fine)"));
  console.log('PASS route planner coalesces fine-pointer route hover and skips hover work on touch-only devices');
-assert.ok(workstationCss.includes('v3.81 UI STABILITY'));
-assert.ok(workstationCss.includes('v3.81 SAFE AREA GEOMETRY'));
+assert.ok(workstationCss.includes('v3.82 UI STABILITY'));
+assert.ok(workstationCss.includes('v3.82 SAFE AREA GEOMETRY'));
 assert.ok(workstationCss.includes('--mobile-top-safe:env(safe-area-inset-top,0px)'));
 assert.ok(workstationCss.includes('top:var(--mobile-topbar-h)!important'));
 assert.ok(workstationCss.includes('select option'));
 assert.ok(mapEngineJs.includes('st.onPointerCancel'));
 assert.ok(mapEngineJs.includes('cancelAnimationFrame(st.gestureFrame)'));
-console.log('PASS v3.81 gesture cleanup, select contrast and mobile sticky-chrome stability contracts');
+console.log('PASS v3.82 gesture cleanup, select contrast and mobile sticky-chrome stability contracts');
 console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
