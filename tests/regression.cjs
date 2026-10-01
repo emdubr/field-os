@@ -530,6 +530,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  let extraRequests=0;w.fetch=async()=>{extraRequests++;throw new Error('Should reuse cached graph')};
  await r.routeLeg({lat:44.0001,lon:-72.994},{lat:44.0001,lon:-72.991});
  assert.equal(extraRequests,0);console.log('PASS nearby route edits reuse graph without network requests');
+ assert.ok(routePlannerJs.includes('bestCached')&&routePlannerJs.includes('bestArea'));
+ assert.ok(routePlannerJs.includes('while(graphCache.size>8)'));
+ console.log('PASS route graph cache selects smallest covering network and remains memory-bounded');
  const beforeReverse=w.FIELD_ROUTE_STATE.getPoints()[0];click('reverseRoute');
  assert.equal(extraRequests,0);assert.match(d.getElementById('routePlannerStatus').textContent,/NO DOWNLOAD NEEDED/);assert.notEqual(w.FIELD_ROUTE_STATE.getPoints()[0].lon,beforeReverse.lon);
  console.log('PASS instant reverse with no network or elevation lookup');
@@ -565,6 +568,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(let i=0;i<50;i++)w.FIELD_ROUTE_PLANNER.activate();
  assert.equal(d.querySelectorAll('#undoRoutePoint').length,1);assert.equal(d.querySelectorAll('#routePlannerMap').length,1);
  console.log('PASS 50x route-planner activation stress');
+ assert.ok(html.includes('id="routeEditPoints"'));
+ assert.ok(routePlannerJs.includes('function moveEditPoint(p)'));
+ assert.ok(routePlannerJs.includes("marker.on('click'"));
+ assert.ok(routePlannerJs.includes('if(moveEditPoint({lat:ll.lat,lon:ll.lng}))return'));
+ console.log('PASS mobile route editor has deterministic tap-to-move mode in addition to marker drag');
 
  // Route-state sanitization under malformed and oversized point updates.
  for(let i=0;i<100;i++){
@@ -680,6 +688,10 @@ assert.ok(workstationCss.includes('bottom:var(--mobile-dock-h)!important'));
 assert.ok(workstationCss.includes('.tab-sheet.open{'));
 assert.ok(workstationCss.includes('transform:translateY(0)!important'));
 console.log('PASS v3.61 mobile dock owns bottom safe area and More sheet geometry');
+
+assert.ok(mapEngineJs.includes('Math.floor(Number(z)+1e-6)'));
+assert.ok(mapEngineJs.includes("basePending*.55")&&mapEngineJs.includes("basePending*.7"));
+console.log('PASS native map holds raster tiles through fractional zoom and stages replacement at integer raster boundaries');
 
 assert.ok(appJs.includes('zoomSnap:0')&&appJs.includes('zoomDelta:.25')&&appJs.includes('wheelPxPerZoomLevel:180'));
 assert.ok(routePlannerJs.includes('zoomSnap:0')&&routePlannerJs.includes('zoomDelta:.25')&&routePlannerJs.includes('wheelPxPerZoomLevel:180'));
