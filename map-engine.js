@@ -485,7 +485,7 @@
       st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
       st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();
     }
-    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,420);
+    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,260);
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
