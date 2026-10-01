@@ -577,12 +577,12 @@
         if(plannerHoverFrame)return;
         plannerHoverFrame=requestAnimationFrame(()=>{
           plannerHoverFrame=0;if(!pendingHoverPoint)return;
-          hoverPoint=pendingHoverPoint;pendingHoverPoint=null;overlay(state()?.getPoints?.()||[]);
+          hoverPoint=pendingHoverPoint;pendingHoverPoint=null;drawPlannerPreview(authoritativeGeometry(state()?.getPoints?.()||[]));
         });
       });
       plannerMap.on('mouseout',()=>{
         cancelAnimationFrame(plannerHoverFrame);plannerHoverFrame=0;pendingHoverPoint=null;
-        if(!hoverPoint)return;hoverPoint=null;overlay(state()?.getPoints?.()||[]);
+        if(!hoverPoint)return;hoverPoint=null;drawPlannerPreview(authoritativeGeometry(state()?.getPoints?.()||[]));
       });
     }
     plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
@@ -604,11 +604,34 @@
     map.fitBounds(pts.map(p=>[p.lat,p.lon]),{padding:[42,42],maxZoom});
   }
 
+  function drawPlannerPreview(pts=authoritativeGeometry(state()?.getPoints?.()||[]),c=plannerColors()){
+    if(!plannerPreviewLayer)return;
+    plannerPreviewLayer.clearLayers();
+    if(!anchors.length)return;
+    const resolved=busy?Math.max(1,routingResolvedAnchors):Math.max(1,lastSuccessfulAnchors.length);
+    let guide=[];
+    if(resolved<anchors.length){
+      const start=pts.length?pts.at(-1):anchors[Math.max(0,resolved-1)];
+      if(valid(start))guide.push(start);
+      guide.push(...anchors.slice(resolved).filter(valid));
+    }
+    if(!busy&&valid(hoverPoint)){
+      const start=anchors.at(-1);
+      if(valid(start))guide=guide.length?[...guide,hoverPoint]:[start,hoverPoint];
+    }
+    if(guide.length>1){
+      L.polyline(guide.map(p=>[p.lat,p.lon]),{
+        pane:'fieldRoutePreviewPane',renderer:plannerPreviewRenderer,className:'gaia-route-preview',
+        color:c.route,weight:4,opacity:.95,dashArray:'10 8',lineCap:'round',interactive:false
+      }).addTo(plannerPreviewLayer);
+    }
+  }
+
   function overlay(route=state()?.getPoints?.()||[]){
     const map=ensurePlannerMap();
     if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer&&plannerDirectionLayer){
       const c=plannerColors();
-      plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
+      plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
       const pts=authoritativeGeometry(route);
       $('routePlannerMap')?.classList.toggle('route-has-line',gaiaRouteEnabled&&pts.length>1);
       const geometryState=$('routeGeometryState');
@@ -630,26 +653,7 @@
       }
       if(geometryState&&pts.length>1)geometryState.textContent=`SNAPPED GEOMETRY // ${pts.length} PTS // ${arrowCount} ARROWS`;
 
-      // While planning, always show the unresolved leg(s) immediately as a dashed guide.
-      if(anchors.length){
-        const resolved=busy?Math.max(1,routingResolvedAnchors):Math.max(1,lastSuccessfulAnchors.length);
-        let guide=[];
-        if(resolved<anchors.length){
-          const start=pts.length?pts.at(-1):anchors[Math.max(0,resolved-1)];
-          if(valid(start))guide.push(start);
-          guide.push(...anchors.slice(resolved).filter(valid));
-        }
-        if(!busy&&valid(hoverPoint)){
-          const start=anchors.at(-1);
-          if(valid(start))guide=guide.length?[...guide,hoverPoint]:[start,hoverPoint];
-        }
-        if(guide.length>1){
-          L.polyline(guide.map(p=>[p.lat,p.lon]),{
-            pane:'fieldRoutePreviewPane',renderer:plannerPreviewRenderer,className:'gaia-route-preview',
-            color:c.route,weight:4,opacity:.95,dashArray:'10 8',lineCap:'round',interactive:false
-          }).addTo(plannerPreviewLayer);
-        }
-      }
+      drawPlannerPreview(pts,c);
 
       anchors.forEach((p,i)=>{
         if(!valid(p))return;
