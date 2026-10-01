@@ -2010,12 +2010,14 @@
     new MutationObserver(()=>{if(routeVisible())kickPlanner()}).observe(routeView,{attributes:true,attributeFilter:['class']});
   }
 
-  let watchdogCount=0;
-  const watchdog=setInterval(()=>{
+  let watchdogCount=0,watchdogTimer=0;
+  function plannerWatchdog(){
     watchdogCount++;
     if(routeVisible())kickPlanner();
-    if((initialized&&state())||watchdogCount>24)clearInterval(watchdog);
-  },500);
+    if((initialized&&state())||watchdogCount>24){watchdogTimer=0;return}
+    watchdogTimer=setTimeout(plannerWatchdog,500);
+  }
+  watchdogTimer=setTimeout(plannerWatchdog,500);
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
