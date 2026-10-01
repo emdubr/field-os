@@ -622,3 +622,13 @@ assert.ok(appJs.includes("const activeView=document.querySelector('.view.active'
 assert.ok(appJs.includes("if(activeView==='map'||recenter)states.push(ensureFieldMap('realMap'"));
 assert.ok(appJs.includes('for(const state of liveStates)'));
 console.log('PASS terrain workspace remains single-flow and routine map updates only render active surfaces');
+
+assert.ok(index.includes('id="loramap"'));
+assert.ok(index.includes('id="lorachat"'));
+assert.ok(workstationJs.includes("['loramap','LORA MAP']"));
+assert.ok(workstationJs.includes("['lorachat','LORA CHAT']"));
+assert.ok(fieldIntelJs.includes('window.FIELD_LORA='));
+assert.ok(fieldIntelJs.includes("document.addEventListener('fieldos:meshroster',renderLoraMap)"));
+assert.ok(fieldIntelJs.includes("document.addEventListener('fieldos:incomingmessage'"));
+assert.ok(workstationCss.includes('v3.67 terrain + LoRa operational surfaces'));
+console.log('PASS v3.67 terrain workspace plus dedicated real-data LoRa map/chat views');
