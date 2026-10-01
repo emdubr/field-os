@@ -4134,3 +4134,17 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  #route .planner-anchor-touch-wrap{margin-left:-3px!important;margin-top:-3px!important}
  #route .route-planner-helpbar{position:sticky;bottom:58px;z-index:16;background:rgba(1,8,4,.94);padding:6px!important}
 }
+
+
+/* v3.81 UI STABILITY — deterministic native controls and cheaper mobile sticky chrome. */
+html{color-scheme:dark}
+select,select option{color-scheme:dark}
+select option{background:#010a05;color:var(--crt-green-hot)}
+@media(max-width:767px){
+  .view-head{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  #route .route-planner-toolbar>*,
+  #route .route-planner-actions>*,
+  #route .route-saved-row>*{min-width:0!important}
+  #route select{width:100%!important;min-width:0!important}
+  #routePlannerMap{isolation:isolate}
+}
