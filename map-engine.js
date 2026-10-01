@@ -230,8 +230,19 @@
         const pinch=st.pinchStart,dist=Math.hypot(old[1].x-old[0].x,old[1].y-old[0].y),ratio=dist/Math.max(1,pinch.dist);
         const visualZoom=pinch.visualZoom??Math.max(2,Math.min(maxZoom(),pinch.zoom+Math.log2(Math.max(.5,Math.min(2,ratio)))));
         const midX=pinch.lastMidX??pinch.midX,midY=pinch.lastMidY??pinch.midY;
-        st.pinchStart=null;st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');
-        settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);return;
+        st.pinchStart=null;st.pointerDownOrigin=null;
+        // iOS releases the two pinch pointers one at a time. Continue from the
+        // remaining finger instead of ending the gesture and starting a second
+        // drag, which caused a visible jump at pinch release.
+        const remaining=[...st.pointers.values()][0];
+        settleFractionalZoom(visualZoom,midX,midY,pinch.anchor);
+        if(remaining){
+          st.dragStart={x:remaining.x,y:remaining.y,center:{...st.center}};
+          st.pointerDownOrigin={x:remaining.x,y:remaining.y};
+        }else{
+          st.dragStart=null;st.el.classList.remove('native-map-dragging');
+        }
+        return;
       }
       if(st.dragStart&&!wasTap){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
@@ -253,7 +264,8 @@
       st.el.classList.remove('native-map-dragging');
       if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
       clearTimeout(st.settleTimer);
-      applyRestingCamera();
+      // Preserve the last compositor frame on cancellation; rebuilding on an
+      // OS-level pointercancel caused the map to flash during interrupted pinch.
       requestAnimationFrame(()=>render(st));
     };
     st.onWheel=e=>{
