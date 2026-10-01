@@ -403,6 +403,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
+ assert.ok(fieldOpsJs.includes("if(document.querySelector('#route.active'))renderAdaptiveEta()"));assert.ok(fieldOpsJs.includes("if(document.querySelector('#nav.active'))renderTurnNav()"));assert.ok(fieldIntelJs.includes("const drVisible=()=>!!document.querySelector('#nav.active')"));assert.ok(fieldIntelJs.includes("const bailoutVisible=()=>!!document.querySelector('#trailreturn.active')"));console.log('PASS GPS fan-out preserves state while pausing hidden feature UI');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#comms.active,#loramap.active'))renderMeshNetwork()"));assert.ok(fieldIntelJs.includes('const groupVisible=()=>!!document.querySelector'));console.log('PASS mesh telemetry updates data without repainting hidden mesh views');
  assert.ok(fieldIntelJs.includes("const priorityVisible=()=>!!document.querySelector('#home.active')"));assert.ok(fieldIntelJs.includes("if(e.detail?.view==='home')refreshContext()"));console.log('PASS Home priority engine pauses offscreen and refreshes when Home opens');
  assert.ok(workstationCss.includes('v3.51 FINAL RESPONSIVE NORMALIZATION'));
@@ -786,7 +787,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
  assert.ok(routePlannerJs.includes("removeSpatialSegmentMutable"));
  console.log('PASS route planner clones spatial index with copy-on-write spatial buckets');
- assert.ok(routePlannerJs.includes('if(graph.spatial?.size)'));assert.ok(routePlannerJs.includes('avoid O(n) indexOf + splice'));console.log('PASS spatial endpoint snapping avoids full trail-array mutation on indexed graphs');
+ assert.ok(routePlannerJs.includes('if(graph.spatial?.size)'));assert.ok(routePlannerJs.includes('removeSpatialSegmentMutable(graph,seg);addSpatialSegmentMutable(graph,first);addSpatialSegmentMutable(graph,second)'));console.log('PASS spatial endpoint snapping avoids full trail-array mutation on indexed graphs');
  assert.ok(routePlannerJs.includes("adjShared:true"));
  assert.ok(routePlannerJs.includes("function mutableAdjacency("));
  assert.ok(routePlannerJs.includes("planner-anchor-touch-wrap"));
