@@ -112,6 +112,7 @@ const server=http.createServer((req,res)=>{
     assert.equal(homeVisibility.commands,7);
     console.log('PASS full Home dashboard remains available on mobile while offscreen panes render lazily');
 
+    await page.setViewportSize({width:1280,height:900});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
     const satelliteState=await page.evaluate(async()=>{
       document.getElementById('mapSatelliteMode').click();
