@@ -371,8 +371,8 @@
     if(!svg||!plannerMap)return;
     const pts=(Array.isArray(points)?points:[]).filter(valid);
     plannerDomRouteGeometry=pts.map(p=>({lat:+p.lat,lon:+p.lon}));
-    const rect=plannerMap.getContainer().getBoundingClientRect();
-    const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
+    const size=plannerMap.getSize();
+    const w=Math.max(1,Math.round(size.x)),h=Math.max(1,Math.round(size.y));
     svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
     svg.setAttribute('width',String(w));svg.setAttribute('height',String(h));
     const displayPts=displayRoutePoints(pts,1200);
