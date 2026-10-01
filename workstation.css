@@ -1800,77 +1800,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 @media(max-width:900px){.trail-intel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sensor-chart-grid{grid-template-columns:1fr}}
 
 
-/* v3.33 terrain + telemetry layout consolidation */
-#map .terrain-map-layout{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) 292px!important;
-  gap:12px!important;
-  align-items:start!important;
-}
-#map .terrain-map-main{min-width:0}
-#map .terrain-map-card{margin:0!important}
-#map .main-real-map{
-  height:clamp(440px,62vh,720px)!important;
-  min-height:440px!important;
-}
-#map .terrain-control-rail{
-  position:sticky;
-  top:12px;
-  min-width:0;
-}
-#map .terrain-control-rail .map-source-bar{
-  display:grid!important;
-  grid-template-columns:1fr!important;
-  gap:10px!important;
-  padding:10px!important;
-  margin:0!important;
-}
-#map .terrain-control-rail .map-control-group{padding:9px!important}
-#map .terrain-control-rail .map-control-grid{
-  display:grid!important;
-  grid-template-columns:1fr 1fr!important;
-  gap:7px!important;
-}
-#map .terrain-control-rail .map-source-btn{
-  min-height:44px!important;
-  padding:8px 7px!important;
-  font-size:12px!important;
-}
-#map .terrain-control-rail #mapLiveLocation{grid-column:1/-1}
-#map .map-quick-actions{
-  display:grid!important;
-  grid-template-columns:repeat(6,minmax(0,1fr))!important;
-  gap:7px!important;
-  margin:8px 0 0!important;
-}
-#map .map-quick-actions .action{
-  min-height:42px!important;
-  padding:7px 6px!important;
-  font-size:12px!important;
-}
-#map #mapSourceDiag{
-  margin-top:0!important;
-  border:1px solid var(--line)!important;
-  background:var(--panel)!important;
-  padding:8px!important;
-}
-@media(max-width:1180px){
-  #map .terrain-map-layout{grid-template-columns:minmax(0,1fr) 250px!important}
-  #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-}
-@media(max-width:820px){
-  #map .terrain-map-layout{grid-template-columns:1fr!important}
-  #map .terrain-control-rail{position:static}
-  #map .main-real-map{height:52vh!important;min-height:340px!important}
-  #map .terrain-control-rail .map-control-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-}
-@media(max-width:540px){
-  #map .terrain-control-rail .map-control-grid,
-  #map .map-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  #map .main-real-map{height:46vh!important;min-height:300px!important}
-}
-
+/* v3.67 terrain legacy layout removed; current terrain workspace authority is below. */
 #sensors .sensor-list{
   display:grid!important;
   grid-template-columns:repeat(5,minmax(0,1fr))!important;
@@ -1962,143 +1892,7 @@ body .native-map-terrain .native-terrain-tile{opacity:1!important;mix-blend-mode
 }
 
 
-/* v3.36 terrain rollback + stable control layout */
-#map .terrain-map-layout,
-#map .terrain-map-main,
-#map .terrain-control-rail{display:contents!important}
-
-#map .terrain-map-card{
-  display:block!important;
-  width:100%!important;
-  margin:0 0 10px!important;
-  min-width:0!important;
-}
-#map .main-real-map{
-  display:block!important;
-  width:100%!important;
-  height:clamp(430px,60vh,700px)!important;
-  min-height:430px!important;
-  position:relative!important;
-  overflow:hidden!important;
-}
-#map .map-quick-actions{
-  display:grid!important;
-  grid-template-columns:repeat(6,minmax(0,1fr))!important;
-  gap:8px!important;
-  width:100%!important;
-  margin:0 0 10px!important;
-}
-#map .map-quick-actions .action{
-  width:100%!important;
-  min-width:0!important;
-  min-height:42px!important;
-  margin:0!important;
-  padding:8px 6px!important;
-}
-
-#map .terrain-controls-below,
-#map .map-source-bar.terrain-controls-below{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
-  align-items:start!important;
-  gap:10px!important;
-  width:100%!important;
-  margin:0 0 12px!important;
-  padding:10px!important;
-  position:static!important;
-  overflow:visible!important;
-  border:1px solid var(--line)!important;
-  background:var(--panel2)!important;
-}
-#map .terrain-controls-below .map-control-group{
-  display:block!important;
-  width:100%!important;
-  min-width:0!important;
-  margin:0!important;
-  padding:9px!important;
-  border:1px solid var(--line)!important;
-  background:var(--panel)!important;
-}
-#map .terrain-controls-below .map-control-group-title{
-  display:block!important;
-  margin:0 0 8px!important;
-  color:var(--dim)!important;
-  font-size:10px!important;
-  line-height:1.2!important;
-}
-#map .terrain-controls-below .map-control-grid{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:7px!important;
-  width:100%!important;
-}
-#map .terrain-controls-below .map-source-btn{
-  display:block!important;
-  width:100%!important;
-  min-width:0!important;
-  min-height:42px!important;
-  margin:0!important;
-  padding:8px 7px!important;
-  font-size:12px!important;
-  line-height:1.25!important;
-  white-space:normal!important;
-}
-#map .terrain-controls-below #mapLiveLocation{
-  grid-column:span 2!important;
-}
-#map .terrain-controls-below #mapSourceDiag{
-  grid-column:1/-1!important;
-  display:block!important;
-  width:100%!important;
-  margin:0!important;
-  padding:8px 10px!important;
-  border:1px solid var(--line)!important;
-  background:var(--panel)!important;
-  overflow-wrap:anywhere!important;
-}
-
-@media(max-width:1050px){
-  #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  #map .terrain-controls-below .map-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-}
-@media(max-width:760px){
-  #map .main-real-map{height:50vh!important;min-height:340px!important}
-  #map .terrain-controls-below,
-  #map .map-source-bar.terrain-controls-below{
-    grid-template-columns:1fr!important;
-  }
-  #map .terrain-controls-below #mapLiveLocation{grid-column:auto!important}
-}
-@media(max-width:500px){
-  #map .map-quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  #map .terrain-controls-below .map-control-grid{grid-template-columns:1fr!important}
-  #map .main-real-map{height:44vh!important;min-height:300px!important}
-}
-
-
-/* v3.37 terrain full-width layout + slope-color clarity */
-#map .module-grid>.module-hero,
-#map .module-grid>.terrain-map-card{
-  grid-column:1/-1!important;
-  grid-row:auto!important;
-}
-#map .module-grid>.terrain-controls-below,
-#map .module-grid>.map-source-bar.terrain-controls-below,
-#map .module-grid>.offline-map-manager{
-  grid-column:1/-1!important;
-}
-#map .terrain-map-card,
-#map .terrain-controls-below,
-#map .offline-map-manager,
-#map .map-quick-actions{
-  width:100%!important;
-  max-width:none!important;
-  justify-self:stretch!important;
-}
-#map .main-real-map{
-  width:100%!important;
-  max-width:none!important;
-}
+/* v3.67 removed obsolete v3.36-v3.37 terrain rollback layers. */
 .route-planner-real-map .route-dom-slope-easy{
   stroke:#35ff9c!important;
   stroke-width:7px!important;
@@ -3709,4 +3503,60 @@ input,select,textarea{
     display:block!important;
     width:100%!important;
   }
+}
+
+
+/* v3.67 TERRAIN WORKSPACE — single vertical operational surface, never masonry. */
+@media(min-width:1024px){
+  body #map .module-grid{
+    display:flex!important;
+    flex-direction:column!important;
+    columns:auto!important;
+    gap:10px!important;
+  }
+  body #map .module-grid>*{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    margin:0!important;
+    break-inside:auto!important;
+  }
+  body #map .terrain-map-card{order:0}
+  body #map .map-quick-actions{order:1}
+  body #map .terrain-controls-below{order:2}
+  body #map .offline-map-manager{order:3}
+  body #map .route-offline-readiness{order:4}
+  body #map .main-real-map{
+    display:block!important;
+    width:100%!important;
+    height:clamp(460px,64dvh,760px)!important;
+    min-height:460px!important;
+    position:relative!important;
+    overflow:hidden!important;
+  }
+  body #map .map-quick-actions{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  body #map .terrain-controls-below{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    padding:10px!important;
+    overflow:visible!important;
+  }
+  body #map .terrain-controls-below .map-control-grid{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+  body #map #mapSourceDiag{grid-column:1/-1!important}
+}
+@media(max-width:767px){
+  body #map .module-grid{display:flex!important;flex-direction:column!important;gap:7px!important}
+  body #map .module-grid>*{width:100%!important;margin:0!important}
+  body #map .map-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  body #map .terrain-controls-below{grid-template-columns:1fr!important}
 }
