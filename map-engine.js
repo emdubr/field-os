@@ -381,8 +381,12 @@
     livePosition={lat:p.coords.latitude,lon:p.coords.longitude};
     locationAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:null;
     lastFixTime=Date.now();
-    for(const id of ['homeRealMap','realMap']){const st=states.get(id);if(st)st.center={...livePosition}}
-    refresh(true);
+    for(const id of ['homeRealMap','realMap']){
+      const st=states.get(id);if(!st)continue;
+      st.center={...livePosition};
+      if(st.el.offsetParent!==null){st.rendered=true;render(st)}
+    }
+    updateLocationLabels();
   }
 
   function startLiveLocation(){
@@ -482,7 +486,8 @@
     e.stopPropagation();handleLayerInput(input);
   },true);
 
-  setInterval(updateLocationLabels,1000);
+  setInterval(()=>{if(!document.hidden)updateLocationLabels()},1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateLocationLabels();refresh(false)}});
 
   window.FIELD_MAP_ENGINE={
     refresh,setLayers,setMode,setTrails,setTerrain,setGrid,startLiveLocation,stopLiveLocation,toggleLiveLocation,zoom,center,
