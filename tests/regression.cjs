@@ -301,6 +301,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(routePlannerJs.includes("if(initialized&&plannerMap)"));
  assert.ok(routePlannerJs.includes("if(routeVisible()&&!initialized)activate()"));
  assert.ok(routePlannerJs.includes("expired.forEach(old=>store.delete(old.key))"));
+ assert.ok(routePlannerJs.includes("nearbySegments(graph,p,maxMeters)"));
+ assert.ok(routePlannerJs.includes("spatial:buildSpatialIndex(segments)"));
  assert.ok(!routePlannerJs.includes("for(const old of all.slice(TRAIL_CACHE_MAX)){const d=await trailDb()"));
 
 
