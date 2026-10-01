@@ -383,7 +383,14 @@
   }
 
   document.addEventListener('fieldos:routechange',()=>{
-    states.forEach(st=>{st.routeFitted=false});refresh(false);
+    states.forEach(st=>{
+      st.routeFitted=false;
+      if(st.el.offsetParent===null){
+        const rect=st.el.getBoundingClientRect();
+        drawOverlay(st,Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),Math.max(220,Math.round(rect.height||st.el.clientHeight||360)));
+      }
+    });
+    refresh(false);
   });
 
   function setLayers(settings){
