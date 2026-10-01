@@ -117,13 +117,18 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      residualScale:1,residualOrigin:'50% 50%'
+      residualScale:1,residualOrigin:'50% 50%',settleTimer:0,gestureFrame:0,pendingTransform:null
     };
 
     const transformLayers=(transform,origin='50% 50%',transition='')=>{
       for(const layer of [st.base,st.terrain,st.trail,st.grid,st.overlay,st.editor]){
         layer.style.transition=transition;layer.style.transformOrigin=origin;layer.style.transform=transform;
       }
+    };
+    const queueTransform=(transform,origin='50% 50%')=>{
+      st.pendingTransform={transform,origin};
+      if(st.gestureFrame)return;
+      st.gestureFrame=requestAnimationFrame(()=>{st.gestureFrame=0;const p=st.pendingTransform;st.pendingTransform=null;if(p)transformLayers(p.transform,p.origin)});
     };
     const resetTransform=(transition='')=>{st.residualScale=1;st.residualOrigin='50% 50%';transformLayers('','50% 50%',transition)};
     const applyResidual=()=>{
@@ -135,16 +140,18 @@
       preserveAnchor(anchor,clientX,clientY,committed);st.zoom=committed;
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
       st.residualScale=Math.pow(2,visualZoom-committed);st.residualOrigin=`${x}px ${y}px`;
-      render(st);applyResidual();
+      applyResidual();
+      clearTimeout(st.settleTimer);
+      st.settleTimer=setTimeout(()=>{if(st.pointers.size===0){render(st);applyResidual()}},180);
     };
     const previewZoom=(scale,clientX,clientY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,clientX-rect.left)),y=Math.max(0,Math.min(rect.height,clientY-rect.top));
-      transformLayers(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
+      queueTransform(`scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
     };
     const previewPinch=(scale,clientX,clientY,startX,startY)=>{
       const rect=st.el.getBoundingClientRect(),x=Math.max(0,Math.min(rect.width,startX-rect.left)),y=Math.max(0,Math.min(rect.height,startY-rect.top));
       const dx=clientX-startX,dy=clientY-startY;
-      transformLayers(`translate(${dx}px,${dy}px) scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
+      queueTransform(`translate(${dx}px,${dy}px) scale(${Math.max(.5,Math.min(2,scale))})`,`${x}px ${y}px`);
     };
     const preserveAnchor=(anchor,clientX,clientY,newZoom)=>{
       if(!anchor)return;
@@ -173,7 +180,7 @@
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1&&st.dragStart){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y,t=`translate(${dx}px,${dy}px) scale(${st.dragStart.scale||1})`;
-        transformLayers(t,st.dragStart.origin||'50% 50%');
+        queueTransform(t,st.dragStart.origin||'50% 50%');
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
         const ratio=dist/Math.max(1,st.pinchStart.dist),midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
@@ -202,7 +209,10 @@
       st.dragStart=null;st.pointerDownOrigin=null;st.el.classList.remove('native-map-dragging');applyResidual();
       if(wasTap&&typeof st.tapHandler==='function'){
         try{st.tapHandler(screenToLatLon(st,e.clientX,e.clientY))}catch(err){console.warn('FIELD/OS map tap handler failed',err)}
-      }else render(st);
+      }else{
+        clearTimeout(st.settleTimer);
+        st.settleTimer=setTimeout(()=>{if(st.pointers.size===0)render(st)},120);
+      }
     };
     st.onWheel=e=>{
       if(e.ctrlKey)return;
@@ -552,7 +562,7 @@
   function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
   function unmount(id){
     const st=states.get(id);if(!st)return false;
-    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);cancelAnimationFrame(st.renderFrame);
+    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);
     st.resizeObserver?.disconnect?.();
     if(st.onResize)window.removeEventListener('resize',st.onResize);
     st.el.removeEventListener('pointerdown',st.onPointerDown);
