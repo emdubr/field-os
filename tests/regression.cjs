@@ -1,5 +1,6 @@
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
-const dir=require('path').resolve(__dirname,'..');const errors=[],alerts=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
+const dir=require('path').resolve(__dirname,'..');const errors=[],alerts=[];const vc=new VirtualConsole();
+const appJs=fs.readFileSync(dir+'/app.js','utf8'),app=appJs,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),mapEngineJs=fs.readFileSync(dir+'/map-engine.js','utf8'),workstationJs=fs.readFileSync(dir+'/workstation.js','utf8'),workstationCss=fs.readFileSync(dir+'/workstation.css','utf8'),swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8')),readme=fs.readFileSync(dir+'/README.md','utf8');vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
 const dom=new JSDOM(fs.readFileSync(dir+'/index.html','utf8'),{url:'https://test.local/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc}),w=dom.window,d=w.document;
 w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:100}),createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});
 w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
@@ -222,8 +223,6 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- const app=fs.readFileSync(dir+'/app.js','utf8');
- const appJs=app,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),readme=fs.readFileSync(dir+'/README.md','utf8');
  const sosBtn=d.getElementById('meshSos');
  sosBtn.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
  sosBtn.dispatchEvent(new w.Event('pointercancel',{bubbles:true}));
@@ -321,8 +320,6 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
- const workstationJs=fs.readFileSync(dir+'/workstation.js','utf8');
- const workstationCss=fs.readFileSync(dir+'/workstation.css','utf8');
  assert.ok(workstationCss.includes('v3.51 FINAL RESPONSIVE NORMALIZATION'));
  assert.ok(workstationCss.includes('.tab-sheet,.tab-sheet-backdrop{display:none!important}'));
  assert.ok(workstationCss.includes('@media(max-width:767px)'));
@@ -336,7 +333,6 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8'));
  const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.67');assert.equal(packageJson.version,release+'.0');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
