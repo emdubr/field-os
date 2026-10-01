@@ -1050,10 +1050,13 @@
     if(stack)stack.innerHTML=stackHtml;
     return top;
   }
+  const priorityVisible=()=>!!document.querySelector('#home.active');
+  const refreshVisibleContext=()=>{if(priorityVisible())refreshContext()};
   priorityNodes.action?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
-  document.addEventListener('fieldos:positionchange',refreshContext);document.addEventListener('fieldos:routechange',refreshContext);document.addEventListener('fieldos:missionstart',refreshContext);document.addEventListener('fieldos:missionend',refreshContext);
-  document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshContext()});
-  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible')refreshContext()},5000);window.FIELD_RUNTIME.idle(refreshContext,450);
+  document.addEventListener('fieldos:positionchange',refreshVisibleContext);document.addEventListener('fieldos:routechange',refreshVisibleContext);document.addEventListener('fieldos:missionstart',refreshVisibleContext);document.addEventListener('fieldos:missionend',refreshVisibleContext);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='home')refreshContext()});
+  document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshVisibleContext()});
+  window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible'&&priorityVisible())refreshContext()},5000);window.FIELD_RUNTIME.idle(refreshVisibleContext,450);
   window.FIELD_CONTEXT={refresh:refreshContext,candidates:contextCandidates,pushPressure:(v,t=Date.now())=>{v=Number(v);if(Number.isFinite(v)){contextState.pressure.push({t:Number(t)||Date.now(),v});contextState.pressure=contextState.pressure.slice(-120)}return refreshContext()},state:contextState};
 
   window.FIELD_MISSION={build,start,end,render,getPack:()=>read('mission-pack',null),getActive:()=>read('mission-active',null),summary,preview:missionData};
