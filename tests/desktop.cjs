@@ -81,6 +81,13 @@ const server=http.createServer((req,res)=>{
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       return {paused,resumed:before!==document.querySelector('#route .ws-route-plot')};
     });assert.deepEqual(lifecycle,{paused:true,resumed:true});
-    assert.deepEqual(errors,[]);console.log('PASS desktop card sizing, full-width elevation, bounded schematic, full route preservation, stable redraw, hidden/resume lifecycle, and no page errors');
+    await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
+    const terrainLayout=await page.evaluate(()=>{const map=document.querySelector('#map .main-real-map'),grid=document.querySelector('#map .module-grid');const mr=map.getBoundingClientRect(),gr=grid.getBoundingClientRect();return {mapHeight:mr.height,mapWidth:mr.width,gridWidth:gr.width,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth};});
+    assert.ok(terrainLayout.mapHeight>=440&&terrainLayout.mapHeight<=681,'Terrain map height remains bounded on desktop');
+    assert.ok(terrainLayout.mapWidth/terrainLayout.gridWidth>.95,'Terrain map uses full workspace width');
+    assert.ok(terrainLayout.scrollWidth<=terrainLayout.viewport+1,'Terrain workspace has no horizontal overflow');
+    const deterministic=await page.evaluate(()=>{openView('nav');const grid=document.querySelector('#nav .module-grid'),style=getComputedStyle(grid);return {display:style.display,columns:style.columnCount};});
+    assert.equal(deterministic.display,'grid');assert.equal(deterministic.columns,'auto');
+    assert.deepEqual(errors,[]);console.log('PASS deterministic desktop grid, Terrain sizing, full-width elevation, bounded schematic, full route preservation, stable redraw, hidden/resume lifecycle, and no page errors');
   }finally{await browser?.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
