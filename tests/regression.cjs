@@ -419,6 +419,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.match(appJs,/function scheduleReferenceFit\(\)[\s\S]*?requestAnimationFrame/);assert.ok(!appJs.includes("window.addEventListener('resize',fitReferenceConsole"));assert.ok(routePlannerJs.includes('function plannerWatchdog()'));assert.ok(routePlannerJs.includes('if(cancelled||tap.moved||plannerMobilePointers.size||busy)return'));assert.ok(!routePlannerJs.includes('plannerMobilePointers.size||busy||ignoreTarget(e))return'));
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
+ assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
+ console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
