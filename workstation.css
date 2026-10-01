@@ -3749,3 +3749,20 @@ input,select,textarea{
 @media(prefers-reduced-motion:reduce){
  .native-map-base,.native-map-terrain,.native-map-trails,.native-map-grid,.native-map-overlay,.native-map-editor-overlay{transition:none!important}
 }
+
+/* v3.72 MOBILE TASK-FIRST UI — primary task first, diagnostics on demand. */
+.mobile-module-details{display:none}
+@media(max-width:767px){
+ body .module-console-header,body .module-band{display:none!important}
+ body .view>.view-head{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);margin-left:-6px!important;margin-right:-6px!important;padding-left:8px!important;padding-right:8px!important}
+ body .view>.view-head h2{text-align:left!important}
+ body .module-grid{gap:8px!important}
+ body .module-grid>.panel,body .module-grid>article.panel{border-radius:0!important}
+ .mobile-module-details{display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--panel2);color:var(--fg2);font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+ body .module-secondary-grid{display:none!important}
+ body .module-secondary-grid.mobile-details-open{display:flex!important}
+ body .tabbar{box-shadow:0 -1px 0 var(--line),0 -8px 24px rgba(0,0,0,.22)}
+ body .tabbar .tab-btn.active{background:var(--panel2)!important;border-color:var(--fg2)!important}
+ body .tabbar .tab-btn small{font-weight:700}
+ #map .map-quick-actions,#route .route-planner-toolbar{position:relative;z-index:2}
+}
