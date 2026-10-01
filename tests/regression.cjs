@@ -402,6 +402,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
+ assert.ok(fieldIntelJs.includes("const priorityVisible=()=>!!document.querySelector('#home.active')"));assert.ok(fieldIntelJs.includes("if(e.detail?.view==='home')refreshContext()"));console.log('PASS Home priority engine pauses offscreen and refreshes when Home opens');
  assert.ok(workstationCss.includes('v3.51 FINAL RESPONSIVE NORMALIZATION'));
  assert.ok(workstationCss.includes('.tab-sheet,.tab-sheet-backdrop{display:none!important}'));
  assert.ok(workstationCss.includes('@media(max-width:767px)'));
