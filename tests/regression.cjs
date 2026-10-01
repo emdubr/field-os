@@ -332,7 +332,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("preserveAnchor(anchor,clientX,clientY,committed)"));
  assert.ok(mapEngineJs.includes("previewPinch(Math.pow(2,next-st.pinchStart.zoom)"));
  assert.ok(mapEngineJs.includes("st.pinchStart.visualZoom=next"));
- assert.ok(mapEngineJs.includes("transform 140ms cubic-bezier"));
+ assert.ok(mapEngineJs.includes("st.residualScale=Math.pow(2,visualZoom-committed)"));
+ assert.ok(mapEngineJs.includes("render(st);applyResidual()"));
+ assert.ok(!mapEngineJs.includes("transform 140ms cubic-bezier"));
  assert.ok(mapEngineJs.includes("settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional))"));
  assert.ok(mapEngineJs.includes("e.detail?.view==='map'?'realMap'"));
  assert.ok(mapEngineJs.includes("else{\n      let resizeTimer=0;"));
@@ -571,6 +573,9 @@ console.log('PASS Adaptive ETA panel sizes to content instead of stretching with
 assert.ok(workstationCss.includes('v3.72 SENSOR WORKSPACE'));
  assert.ok(workstationCss.includes('v3.72 MAP GESTURE'));
  assert.ok(workstationCss.includes('v3.72 MOBILE TASK-FIRST'));
+ assert.ok(workstationCss.includes('v3.73 MOBILE COMMAND UI'));
+ assert.ok(appJs.includes("sun.textContent=\`MOONRISE"));
+ assert.ok(appJs.includes("day.textContent=isDay?"));
  assert.ok(workstationJs.includes("details.textContent='SHOW DETAILS'"));
  assert.ok(workstationJs.includes("mobile-details-open"));
  assert.ok(appJs.includes("function sensorSummary()"));
