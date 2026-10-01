@@ -4205,9 +4205,9 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  .comms-launch-card b{font-size:13px}
  .comms-launch-card span{font-size:10px}
  .comms-launch-card small{font-size:9px}
- #lorachat .compose textarea{min-height:150px}
- #loramap .mesh-network-map{height:42dvh!important;min-height:260px!important}
- #loramap .mesh-coverage-map{height:34dvh!important;min-height:220px!important}
+ #lorachat .compose textarea{min-height:112px;max-height:34dvh}
+ #loramap .mesh-network-map{height:clamp(240px,36dvh,320px)!important;min-height:240px!important}
+ #loramap .mesh-coverage-map{height:clamp(210px,30dvh,280px)!important;min-height:210px!important}
 }
 
 
@@ -4218,15 +4218,7 @@ select option{background:#010a05;color:var(--crt-green-hot)}
   #lorachat .unified-inbox-controls select{grid-column:1/-1!important;width:100%!important}
   #lorachat .unified-inbox-timeline,
   #lorachat .store-forward-queue{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  #lorachat .compose textarea{min-height:112px!important;max-height:34dvh;resize:vertical}
-  #loramap .mesh-network-map{
-    height:clamp(240px,36dvh,320px)!important;
-    min-height:240px!important;
-  }
-  #loramap .mesh-coverage-map{
-    height:clamp(210px,30dvh,280px)!important;
-    min-height:210px!important;
-  }
+  #lorachat .compose textarea{resize:vertical}
   #loramap .mesh-node-roster{max-height:42dvh!important;overflow:auto!important;-webkit-overflow-scrolling:touch}
   #loramap .mesh-network-foot{align-items:center}
   #loramap .group-expedition-controls>*,
