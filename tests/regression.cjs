@@ -13,6 +13,11 @@ let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.repl
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
+ {
+   const launcher=d.getElementById('workspaceSearch'),switcher=d.getElementById('workspaceSwitcher');
+   const nativeShow=switcher.showModal;try{switcher.showModal=undefined;launcher.click();assert.ok(switcher.hasAttribute('data-open'));assert.equal(launcher.getAttribute('aria-expanded'),'true');switcher.querySelector('.switcher-close').click();assert.equal(launcher.getAttribute('aria-expanded'),'false');}finally{if(nativeShow)switcher.showModal=nativeShow}
+   console.log('PASS module finder fallback opens, exposes state, and closes without native dialog support');
+ }
  const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length,'duplicate HTML ids');
  for(const btn of d.querySelectorAll('.workstation-nav [data-open]')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
  console.log('PASS all 16 modules initialize and navigation changes active view');
