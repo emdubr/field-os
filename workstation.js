@@ -25,7 +25,7 @@
   launcher.setAttribute('aria-haspopup','dialog');launcher.setAttribute('aria-controls','workspaceSwitcher');launcher.setAttribute('aria-expanded','false');
   launcher.innerHTML='<span>FIND A MODULE</span><kbd>Ctrl / ⌘ K</kbd>';
   nav.querySelector('.ws-brand').after(launcher);
-  const mobileLauncher=document.createElement('button');mobileLauncher.type='button';mobileLauncher.id='mobileWorkspaceSearch';mobileLauncher.className='mobile-workspace-search';mobileLauncher.textContent='FIND MODULE';
+  const mobileLauncher=document.createElement('button');mobileLauncher.type='button';mobileLauncher.id='mobileWorkspaceSearch';mobileLauncher.className='mobile-workspace-search';mobileLauncher.textContent='FIND MODULE';mobileLauncher.setAttribute('aria-haspopup','dialog');mobileLauncher.setAttribute('aria-controls','workspaceSwitcher');mobileLauncher.setAttribute('aria-expanded','false');
   const sheetHead=document.querySelector('.tab-sheet-head');if(sheetHead)sheetHead.insertBefore(mobileLauncher,sheetHead.querySelector('.switcher-close,#closeTabSheet')||null);
   const switcher=document.createElement('dialog');switcher.id='workspaceSwitcher';switcher.className='workspace-switcher';
   switcher.setAttribute('aria-labelledby','workspaceSwitcherTitle');
@@ -55,26 +55,29 @@
     selectMatch(0);
   }
   function switcherOpen(){return switcher.open||switcher.hasAttribute('data-open')}
+  function setSwitcherExpanded(on){
+    const value=on?'true':'false';launcher.setAttribute('aria-expanded',value);mobileLauncher.setAttribute('aria-expanded',value);query.setAttribute('aria-expanded',value);
+  }
   function closeSwitcher(){
-    launcher.setAttribute('aria-expanded','false');
+    setSwitcherExpanded(false);
     if(switcher.open&&typeof switcher.close==='function')switcher.close();
     else{switcher.removeAttribute('data-open');switcher.removeAttribute('open');switcher.dispatchEvent(new Event('close'))}
   }
-  function showSwitcher(){
+  function showSwitcher(focusReturn=document.activeElement){
     if(switcherOpen())return;
-    returnFocus=document.activeElement;query.value='';
+    returnFocus=focusReturn;query.value='';
     try{if(typeof switcher.showModal==='function')switcher.showModal();else throw new Error('dialog unsupported')}
     catch{switcher.setAttribute('open','');switcher.setAttribute('data-open','fallback')}
-    launcher.setAttribute('aria-expanded','true');findModules();requestAnimationFrame(()=>query.focus({preventScroll:true}));
+    setSwitcherExpanded(true);findModules();requestAnimationFrame(()=>query.focus({preventScroll:true}));
   }
   function activateMatch(index){
     const item=matches[index];if(!item)return;
     returnFocus=document.getElementById('screen');closeSwitcher();openView(item[0]);
   }
   launcher.addEventListener('click',showSwitcher);
-  mobileLauncher.addEventListener('click',()=>{closeTabSheet();showSwitcher();});
+  mobileLauncher.addEventListener('click',()=>{const focusReturn=moreTabs||launcher;closeTabSheet();showSwitcher(focusReturn);});
   switcher.querySelector('.switcher-close').addEventListener('click',closeSwitcher);
-  switcher.addEventListener('close',()=>{launcher.setAttribute('aria-expanded','false');if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+  switcher.addEventListener('close',()=>{setSwitcherExpanded(false);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
   switcher.addEventListener('click',e=>{
     const option=e.target.closest('[data-result-index]');
     if(option)activateMatch(Number(option.dataset.resultIndex));
@@ -83,7 +86,7 @@
   switcher.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.isComposing){e.preventDefault();e.stopPropagation();closeSwitcher();}});
   document.addEventListener('pointerdown',e=>{
     if(!switcher.hasAttribute('data-open'))return;
-    if(e.target!==launcher&&!switcher.contains(e.target))closeSwitcher();
+    if(e.target!==launcher&&e.target!==mobileLauncher&&!switcher.contains(e.target))closeSwitcher();
   },true);
   query.addEventListener('input',findModules);
   query.addEventListener('keydown',e=>{
