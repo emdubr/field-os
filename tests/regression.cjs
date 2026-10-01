@@ -287,6 +287,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
  assert.ok(mapEngineJs.includes("if(st.el.offsetParent!==null){st.rendered=true;render(st)}"));
  assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
+ assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
+ assert.ok(mapEngineJs.includes("next.toFixed(1)"));
+ assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
+
  assert.ok(swJs.includes("field-os-v3-69"));
  assert.ok(swJs.includes("return (await c.match(url.pathname))||Response.error()"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
