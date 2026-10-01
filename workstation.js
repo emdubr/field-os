@@ -77,7 +77,11 @@
   launcher.addEventListener('click',showSwitcher);
   mobileLauncher.addEventListener('click',()=>{const focusReturn=moreTabs||launcher;closeTabSheet();showSwitcher(focusReturn);});
   switcher.querySelector('.switcher-close').addEventListener('click',closeSwitcher);
-  switcher.addEventListener('close',()=>{setSwitcherExpanded(false);if(returnFocus?.isConnected)returnFocus.focus({preventScroll:true});});
+  switcher.addEventListener('close',()=>{
+    setSwitcherExpanded(false);
+    const target=returnFocus;returnFocus=null;
+    requestAnimationFrame(()=>{if(target?.isConnected)target.focus({preventScroll:true})});
+  });
   switcher.addEventListener('click',e=>{
     const option=e.target.closest('[data-result-index]');
     if(option)activateMatch(Number(option.dataset.resultIndex));
