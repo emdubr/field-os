@@ -285,6 +285,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(fieldToolsJs.includes("fieldos-v12-map-pack"));assert.ok(!fieldToolsJs.includes("fieldos-v12-active-map-pack"));
  const qaCss=fs.readFileSync(dir+'/styles.css','utf8');assert.ok(qaCss.includes('v3.50 QA/UI stabilization'));assert.ok(qaCss.includes('#system .field-tools-panel .button-row'));assert.ok(qaCss.includes('@media(max-width:390px)'));
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
+ assert.ok(mapEngineJs.includes("if(st.el.offsetParent!==null){st.rendered=true;render(st)}"));
+ assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
+ assert.ok(swJs.includes("field-os-v3-69"));
+ assert.ok(swJs.includes("return (await c.match(url.pathname))||Response.error()"));
+ console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
  const workstationJs=fs.readFileSync(dir+'/workstation.js','utf8');
