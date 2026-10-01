@@ -332,7 +332,6 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("drawOverlay(st,Math.max(250"));
  assert.ok(mapEngineJs.includes("if(!document.hidden)updateLocationLabels()"));
  assert.ok(mapEngineJs.includes("previewZoom(Math.pow(2,st.wheelZoom)"));
- assert.ok(mapEngineJs.includes("next.toFixed(1)"));
  assert.ok(mapEngineJs.includes("st.wheelTimer=setTimeout"));
  assert.ok(mapEngineJs.includes("const preserveAnchor="));
  assert.ok(mapEngineJs.includes("preserveAnchor(anchor,clientX,clientY,committed)"));
@@ -342,6 +341,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes("st.settleTimer=setTimeout"));
  assert.ok(mapEngineJs.includes("applyResidual();"));
  assert.ok(mapEngineJs.includes("queueTransform("));
+ assert.ok(!mapEngineJs.includes("next.toFixed(1)"));
+ assert.ok(mapEngineJs.includes("requestAnimationFrame(()=>{st.gestureFrame=0"));
+ console.log('PASS gesture hot path has no pinch diagnostic text and coalesces compositor writes');
  assert.ok(!mapEngineJs.includes("corner.textContent=\`PINCH Z"));
  assert.ok(mapEngineJs.includes("st.settleTimer=setTimeout"));
  console.log('PASS native map coalesces gesture paints, defers tile rebuild, and performs no touchmove diagnostic DOM writes');
