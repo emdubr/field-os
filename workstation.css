@@ -4168,3 +4168,21 @@ select option{background:#010a05;color:var(--crt-green-hot)}
     padding-right:max(7px,env(safe-area-inset-right,0px))!important;
   }
 }
+
+/* v3.82 UI EFFICIENCY — preserve features, reduce below-fold work and mobile friction. */
+@media(max-width:767px){
+ .view.active:not(#home)>.panel,
+ #route .route-trail-name-panel,#route .trail-intel-panel,#route .route-confidence-panel,
+ #route .terrain-risk-panel,#route .route-performance-panel,#route .route-elevation-panel{
+   content-visibility:auto;contain-intrinsic-size:220px;
+ }
+ #route .route-planner-toolbar{box-shadow:none!important;border-bottom:1px solid var(--line)}
+ #route .route-planner-helpbar{position:static!important;margin-top:5px!important}
+ #route .route-planner-status,#route .route-diagnostic-strip{min-height:34px!important;padding:6px!important;font-size:8px!important}
+ #route .route-diagnostic-strip{overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+ #route .route-saved-row{display:grid!important;grid-template-columns:1fr auto!important;gap:5px!important}
+ #route .route-saved-row label{min-width:0!important}
+ #route .route-saved-row .route-anchor-readout{grid-column:1/-1!important}
+ #mission .mission-readiness-item,#route .action,#route .ghost{touch-action:manipulation}
+ #mission [data-readiness-id],#trip input,#trip select,#trip textarea{scroll-margin-top:70px}
+}
