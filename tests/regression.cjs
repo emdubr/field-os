@@ -431,7 +431,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
  assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
- assert.ok(mapEngineJs.includes('baseLoaded>=Math.min(4,basePending)')&&mapEngineJs.includes('setTimeout(commit,260)'));\n console.log('PASS native map stages replacement tiles progressively without the old long blank-frame wait');\n assert.ok(appJs.includes("zoomSnap:0")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
+ assert.ok(mapEngineJs.includes('baseLoaded>=Math.min(4,basePending)')&&mapEngineJs.includes('setTimeout(commit,260)'));
+ console.log('PASS native map stages replacement tiles progressively without the old long blank-frame wait');
+ assert.ok(appJs.includes("zoomSnap:0")&&appJs.includes("zoomDelta:.25")&&appJs.includes("wheelDebounceTime:12")&&appJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes("zoomSnap:0")&&routePlannerJs.includes("zoomDelta:.25")&&routePlannerJs.includes("wheelDebounceTime:12")&&routePlannerJs.includes("wheelPxPerZoomLevel:180"));
  assert.ok(routePlannerJs.includes('const elevationCache=new Map()'));
  assert.ok(routePlannerJs.includes('Promise.all(chunks.map'));
