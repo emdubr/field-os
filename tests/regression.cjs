@@ -542,19 +542,20 @@ assert.ok(fieldToolsJs.includes("fieldos-v12-map-pack"));
 assert.ok(!fieldToolsJs.includes('fieldos-v12-active-map-pack'));
 assert.ok(swJs.includes("e.request.mode==='navigate'"));
 assert.ok(swJs.includes("cache.match('./index.html')"));
+assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
 console.log('PASS v3.61 continuous native zoom and offline shell/map/route contracts');
 
-assert.ok(workstationCss.includes('#route .module-grid>.route-planner-panel.module-hero'));
-assert.ok(workstationCss.includes('grid-column:1 / -1!important'));
-assert.ok(workstationCss.includes('#route .module-grid>.route-performance-panel'));
-console.log('PASS v3.61 route planner and ETA reclaim full desktop width without blank column');
+assert.ok(workstationCss.includes('#route .route-planner-panel'));
+assert.ok(workstationCss.includes('#route .route-performance-panel'));
+assert.ok(workstationCss.includes('align-self:start!important'));
+console.log('PASS route planner and ETA panels keep deterministic content-sized layout');
 
 assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
 assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
-assert.ok(workstationCss.includes('v3.67 QA/UI hardening'));
-assert.ok(workstationCss.includes('.route-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}'));
+assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
+assert.ok(workstationCss.includes('body .module-secondary-grid'));
 assert.ok(workstationJs.includes('FIELD / OS <b>3.67</b>')&&workstationJs.includes('<em>v3.67</em>'));
-console.log('PASS v3.61 zoom lifecycle, mobile dense-panel layout, and runtime branding');
+console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
  // Search index must reflect all source mutations without exposing cached objects.
@@ -604,5 +605,5 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-69'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-70'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
