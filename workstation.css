@@ -3766,3 +3766,43 @@ input,select,textarea{
  body .tabbar .tab-btn small{font-weight:700}
  #map .map-quick-actions,#route .route-planner-toolbar{position:relative;z-index:2}
 }
+
+/* v3.73 MOBILE COMMAND UI — field-first, thumb-first, minimal chrome. */
+@media(max-width:767px){
+ :root{--mobile-dock-buttons:62px}
+ body{background:#020604!important}
+ .shell{padding:0 0 calc(var(--mobile-dock-h) + 8px)!important;border:0!important}
+ .topbar{position:sticky!important;top:0;z-index:80;min-height:52px!important;padding:7px 10px!important;background:color-mix(in srgb,var(--bg) 94%,#000)!important;border-width:0 0 1px!important}
+ .topbar .brand .logo{font-size:18px!important}.topbar .subtitle{display:none!important}
+ .status-strip,.signal-ticker{display:none!important}
+ .screen{padding:0 7px 8px!important}
+ #home .console-viewport{height:auto!important;min-height:0!important;overflow:visible!important}
+ #home .detail-console{transform:none!important;width:100%!important;margin:0!important}
+ #home .console-header,#home .detail-statusline,#home .console-rail,#home .terminal-title,#home .map-meta,#home .rail-mini-status{display:none!important}
+ #home .handheld-status{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;margin:7px 0!important}
+ #home .handheld-status button{min-height:68px!important;padding:9px!important;text-align:left!important;border:1px solid var(--line)!important;background:var(--panel2)!important}
+ #home .handheld-status button span,#home .handheld-status button small{font-size:8px!important;color:var(--dim)!important}
+ #home .handheld-status button b{display:block;font-size:14px!important;margin:4px 0;color:var(--fg)!important;white-space:normal!important}
+ #home .handheld-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:7px 0!important}
+ #home .handheld-actions button{min-height:48px!important}
+ #home .priority-now{margin:7px 0!important}
+ #home .console-main-grid{display:block!important}
+ #home .map-console{display:block!important;width:100%!important;margin:0!important;padding:0!important;border:1px solid var(--line)!important}
+ #home .map-workarea{display:block!important;min-height:54dvh!important}
+ #home .home-real-map{height:54dvh!important;min-height:390px!important}
+ #home .map-controls{position:absolute!important;right:8px!important;top:8px!important;width:auto!important;display:flex!important;flex-direction:column!important;gap:5px!important;z-index:20}
+ #home .map-controls button{min-width:46px!important;min-height:42px!important;padding:6px!important;font-size:0!important;background:rgba(2,8,4,.9)!important}
+ #home .map-controls button:first-child::after{content:'+';font-size:20px}
+ #home .map-controls button:nth-child(2)::after{content:'−';font-size:20px}
+ #home .map-controls button:nth-child(3)::after{content:'FIT';font-size:9px}
+ #home .console-main-grid>.terminal-panel:not(.map-console){display:none!important}
+ .view.active:not(#home){padding-top:0!important}
+ .view.active:not(#home)>.view-head{display:grid!important;position:sticky!important;top:52px!important;z-index:60!important;min-height:48px!important;background:var(--bg)!important;border:0!important;border-bottom:1px solid var(--line)!important}
+ .view.active:not(#home)>.view-head .back{min-width:58px!important}
+ .module-grid{padding-top:7px!important}
+ .mobile-module-details{border-radius:0!important;background:transparent!important}
+ .tabbar{grid-template-columns:repeat(5,1fr)!important;background:#010503!important;border-top:1px solid var(--line)!important}
+ .tabbar .tab-btn{border:0!important;border-right:1px solid color-mix(in srgb,var(--line) 65%,transparent)!important;background:transparent!important}
+ .tabbar .tab-btn.active{background:var(--fg2)!important;color:#001006!important}
+ .tabbar .tab-btn span{font-size:19px!important}.tabbar .tab-btn small{font-size:8px!important;margin-top:3px!important}
+}
