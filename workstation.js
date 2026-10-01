@@ -287,7 +287,7 @@
     });
     scheduleRefresh();
   });
-  setInterval(()=>{if(!document.hidden)scheduleRefresh()},5000);refresh();
+  window.FIELD_RUNTIME.every(()=>{if(!document.hidden)scheduleRefresh()},5000);refresh();
   window.addEventListener('resize',()=>{if(innerWidth>=1024)closeTabSheet();scheduleRefresh();});
 })();
 
