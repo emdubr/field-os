@@ -36,6 +36,8 @@
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
   let plannerUserLayer=null;
+  let plannerUserAccuracyLayer=null;
+  let plannerUserMarker=null;
   let plannerBaseFallbackActive=false;
   let hasActivated=false;
   let hoverPoint=null;
@@ -921,14 +923,18 @@
 
   function drawPlannerPosition(pos=latestFollowPosition){
     if(!plannerMap||!plannerUserLayer||!valid(pos))return;
-    plannerUserLayer.clearLayers();
     const c=plannerColors(),p=[pos.lat,pos.lon],acc=Math.max(0,Number(pos.accuracy)||0);
     if(acc){
-      L.circle(p,{radius:acc,color:c.fg2,weight:1,opacity:.8,fillColor:c.fg2,fillOpacity:.08,interactive:false}).addTo(plannerUserLayer);
+      if(!plannerUserAccuracyLayer)plannerUserAccuracyLayer=L.circle(p,{radius:acc,color:c.fg2,weight:1,opacity:.8,fillColor:c.fg2,fillOpacity:.08,interactive:false}).addTo(plannerUserLayer);
+      else plannerUserAccuracyLayer.setLatLng(p).setRadius(acc).setStyle({color:c.fg2,fillColor:c.fg2});
+    }else if(plannerUserAccuracyLayer){
+      plannerUserLayer.removeLayer(plannerUserAccuracyLayer);plannerUserAccuracyLayer=null;
     }
-    L.circleMarker(p,{radius:8,color:'#ffffff',weight:2,fillColor:c.fg2,fillOpacity:1,interactive:false})
-      .bindTooltip('YOU',{permanent:true,direction:'top',offset:[0,-8],className:'planner-user-label'})
-      .addTo(plannerUserLayer);
+    if(!plannerUserMarker){
+      plannerUserMarker=L.circleMarker(p,{radius:8,color:'#ffffff',weight:2,fillColor:c.fg2,fillOpacity:1,interactive:false})
+        .bindTooltip('YOU',{permanent:true,direction:'top',offset:[0,-8],className:'planner-user-label'})
+        .addTo(plannerUserLayer);
+    }else plannerUserMarker.setLatLng(p).setStyle({fillColor:c.fg2});
     if(followEnabled)plannerMap.panTo(p,{animate:true,duration:.35});
     const gps=$('plannerGpsStatus');
     if(gps)gps.textContent=`GPS // ${acc?('±'+Math.round(acc)+' m'):'LIVE'}${followEnabled?' // FOLLOWING':''}`;
