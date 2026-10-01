@@ -86,8 +86,8 @@ const server=http.createServer((req,res)=>{
     assert.ok(terrainLayout.mapHeight>=440&&terrainLayout.mapHeight<=681,'Terrain map height remains bounded on desktop');
     assert.ok(terrainLayout.mapWidth/terrainLayout.gridWidth>.95,'Terrain map uses full workspace width');
     assert.ok(terrainLayout.scrollWidth<=terrainLayout.viewport+1,'Terrain workspace has no horizontal overflow');
-    const deterministic=await page.evaluate(()=>{openView('nav');const grid=document.querySelector('#nav .module-grid'),style=getComputedStyle(grid);return {display:style.display,columns:style.columnCount};});
-    assert.equal(deterministic.display,'grid');assert.equal(deterministic.columns,'auto');
-    assert.deepEqual(errors,[]);console.log('PASS deterministic desktop grid, Terrain sizing, full-width elevation, bounded schematic, full route preservation, stable redraw, hidden/resume lifecycle, and no page errors');
+    const deterministic=await page.evaluate(()=>{openView('nav');const grid=document.querySelector('#nav .module-grid'),secondary=grid.querySelector('.module-secondary-grid'),style=getComputedStyle(grid),secondaryStyle=getComputedStyle(secondary);return {display:style.display,columns:style.columnCount,secondaryDisplay:secondaryStyle.display,secondaryColumns:secondaryStyle.columnCount};});
+    assert.equal(deterministic.display,'flex');assert.equal(deterministic.columns,'auto');assert.equal(deterministic.secondaryColumns,'2');
+    assert.deepEqual(errors,[]);console.log('PASS compact desktop flow, Terrain sizing, full-width elevation, bounded schematic, full route preservation, stable redraw, hidden/resume lifecycle, and no page errors');
   }finally{await browser?.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
