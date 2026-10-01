@@ -319,7 +319,7 @@
       let resizeFrame=0,lastW=0,lastH=0;
       st.resizeObserver=new ResizeObserver(entries=>{
         const box=entries[0]?.contentRect;if(!box||box.width<1||box.height<1)return;
-        const w=Math.round(box.width),h=Math.round(box.height);
+        const w=Math.round(box.width),h=Math.round(box.height);st.layoutRect=null;
         // Mobile browser chrome and safe-area settling can report a stream of
         // 1–3 px resizes. They do not require rebuilding the raster tile frame.
         if(lastW&&lastH&&Math.abs(w-lastW)<8&&Math.abs(h-lastH)<8)return;
@@ -330,7 +330,7 @@
       st.resizeObserver.observe(el);
     }else{
       let resizeTimer=0;
-      st.onResize=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&isVisible(st))render(st)},100)};
+      st.onResize=()=>{st.layoutRect=null;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(st.rendered&&isVisible(st))render(st)},100)};
       window.addEventListener('resize',st.onResize,{passive:true});
     }
     states.set(id,st);
