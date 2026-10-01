@@ -757,6 +757,9 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("lastDirectionGeometryKey"));
  console.log('PASS route overlay projection is geometry-keyed so preview edits do not rebuild route directions');
 assert.ok(workstationCss.includes('v3.81 UI STABILITY'));
+assert.ok(workstationCss.includes('v3.81 SAFE AREA GEOMETRY'));
+assert.ok(workstationCss.includes('--mobile-top-safe:env(safe-area-inset-top,0px)'));
+assert.ok(workstationCss.includes('top:var(--mobile-topbar-h)!important'));
 assert.ok(workstationCss.includes('select option'));
 assert.ok(mapEngineJs.includes('st.onPointerCancel'));
 assert.ok(mapEngineJs.includes('cancelAnimationFrame(st.gestureFrame)'));
