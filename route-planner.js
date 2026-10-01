@@ -1135,9 +1135,9 @@
       graph.adj.get(id).push({to,w,tags:seg.tags});graph.adj.get(to).push({to:id,w,tags:seg.tags});
     }
     const first={...seg,b:id,pb:node},second={...seg,a:id,pa:node},segIndex=graph.segments.indexOf(seg);
-    if(graph.spatial)removeSpatialSegment(graph.spatial,seg);
+    if(graph.spatial)removeSpatialSegmentMutable(graph,seg);
     graph.segments.splice(segIndex,1,first,second);
-    if(graph.spatial){addSpatialSegment(graph.spatial,first);addSpatialSegment(graph.spatial,second)}
+    if(graph.spatial){addSpatialSegmentMutable(graph,first);addSpatialSegmentMutable(graph,second)}
     return {id,node,d:best.d};
   }
 
@@ -1372,15 +1372,39 @@
   }
 
   function cloneRoutingGraph(source){
-    // Nodes/edges are immutable during a search except at the two snapped
-    // endpoints. Share the untouched edge arrays and copy only the map/set
-    // containers; nearestNode replaces endpoint arrays before mutation.
+    // Search mutates only the two snapped endpoints. Keep immutable node/edge
+    // values shared and make the spatial buckets copy-on-write instead of
+    // cloning every Set in a potentially large Overpass graph for every leg.
     return {
       nodes:new Map(source.nodes),
       adj:new Map(source.adj),
       segments:source.segments.slice(),
-      spatial:new Map([...source.spatial].map(([key,bucket])=>[key,new Set(bucket)]))
+      spatial:new Map(source.spatial),
+      spatialShared:true,
+      spatialOwned:new Set()
     };
+  }
+  function mutableSpatialBucket(graph,key,create=false){
+    let bucket=graph.spatial.get(key);
+    if(graph.spatialShared&&!graph.spatialOwned.has(key)){
+      bucket=bucket?new Set(bucket):(create?new Set():null);
+      if(bucket)graph.spatial.set(key,bucket);
+      graph.spatialOwned.add(key);
+    }else if(!bucket&&create){
+      bucket=new Set();graph.spatial.set(key,bucket);
+    }
+    return bucket;
+  }
+  function removeSpatialSegmentMutable(graph,seg){
+    const keys=spatialKeys(seg)||['*'];
+    for(const key of keys){
+      const bucket=mutableSpatialBucket(graph,key,false);if(!bucket)continue;
+      bucket.delete(seg);if(!bucket.size)graph.spatial.delete(key);
+    }
+  }
+  function addSpatialSegmentMutable(graph,seg){
+    const keys=spatialKeys(seg)||['*'];
+    for(const key of keys)mutableSpatialBucket(graph,key,true).add(seg);
   }
 
   async function routeLeg(a,b,signal,retry=false){
