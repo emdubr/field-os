@@ -544,11 +544,13 @@ function renderEssentials(){
   el.innerHTML=essentials.map((x,i)=>`<label class="check-item"><input type="checkbox" data-essential="${i}" ${essentialsState[i]?'checked':''}> <span>${x}</span></label>`).join('');
 }
 renderEssentials();
-document.addEventListener('change',e=>{const c=e.target.closest('[data-essential]');if(c){essentialsState[c.dataset.essential]=c.checked;saveJSON('essentials',essentialsState)}});
+document.addEventListener('change',e=>{const c=e.target.closest('[data-essential]');if(c){essentialsState[c.dataset.essential]=c.checked;saveJSON('essentials',essentialsState);document.dispatchEvent(new CustomEvent('fieldos:tripchange',{detail:{kind:'essentials'}}))}});
 const trip=loadJSON('trip',{});
 ['tripName','tripBase','tripReturn','checkinInterval','tripEmergency'].forEach(id=>{const el=document.getElementById(id);if(el&&trip[id]!=null) el.value=trip[id]});
 document.getElementById('saveTrip')?.addEventListener('click',()=>{
-  const data={}; ['tripName','tripBase','tripReturn','checkinInterval','tripEmergency'].forEach(id=>data[id]=document.getElementById(id)?.value||''); saveJSON('trip',data); navigator.vibrate?.(30); alert('Trip plan saved locally on this device.');
+  const data={}; ['tripName','tripBase','tripReturn','checkinInterval','tripEmergency'].forEach(id=>data[id]=document.getElementById(id)?.value||''); saveJSON('trip',data); navigator.vibrate?.(30);
+  const saved=document.getElementById('tripSaveState');if(saved){saved.textContent='SAVED '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});setTimeout(()=>{if(saved.textContent.startsWith('SAVED'))saved.textContent='LOCAL STORAGE'},2500)}
+  document.dispatchEvent(new CustomEvent('fieldos:tripchange',{detail:{kind:'plan',trip:data}}));
 });
 document.getElementById('checkinNow')?.addEventListener('click',()=>{
   const message=`CHECK-IN — position ${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}; source ${currentNavPosition.source||'POSITION'}; status OK.`;
