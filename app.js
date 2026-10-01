@@ -284,11 +284,12 @@ function toDMS(value, lat){
 }
 const dmsEl=document.getElementById('coordDMS');
 if(dmsEl) dmsEl.textContent=`${toDMS(currentNavPosition.lat,true)} ${toDMS(currentNavPosition.lon,false)}`;
+const solarUiVisible=()=>!!document.querySelector('#home.active,#nav.active');
 function updatePositionDisplays(){
   const dd=document.getElementById('coordDD'),dms=document.getElementById('coordDMS');
   if(dd) dd.textContent=`${currentNavPosition.lat.toFixed(6)}, ${currentNavPosition.lon.toFixed(6)}`;
   if(dms) dms.textContent=`${toDMS(currentNavPosition.lat,true)} ${toDMS(currentNavPosition.lon,false)}`;
-  updateSolar();
+  if(solarUiVisible())updateSolar();
 }
 let lastFixAt=Date.now()-4000,fixAge=4;
 const fixAgeEl=document.getElementById('fixAge'),homeFixAgeEl=document.getElementById('homeFixAge');
@@ -474,7 +475,8 @@ function updateSolar(){
   }
   return ev;
 }
-updateSolar(); window.FIELD_RUNTIME.every(()=>{if(!document.hidden)updateSolar()},60000);
+updateSolar(); window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&solarUiVisible())updateSolar()},60000);
+document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='home'||e.detail?.view==='nav')updateSolar()});
 
 const sendDemo=document.getElementById('sendDemo');
 sendDemo?.addEventListener('click', ()=>{
