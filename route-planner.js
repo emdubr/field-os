@@ -576,7 +576,7 @@
     const map=ensurePlannerMap();
     if(map&&plannerRouteLayer&&plannerPreviewLayer&&plannerAnchorLayer&&plannerSnapLayer&&plannerDirectionLayer){
       const c=plannerColors();
-      plannerRouteLayer.clearLayers();plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
+      plannerPreviewLayer.clearLayers();plannerAnchorLayer.clearLayers();plannerSnapLayer.clearLayers();
       const pts=authoritativeGeometry(route);
       $('routePlannerMap')?.classList.toggle('route-has-line',gaiaRouteEnabled&&pts.length>1);
       const geometryState=$('routeGeometryState');
@@ -585,7 +585,10 @@
       // Expensive route projection/direction markers are rebuilt only when
       // the actual geometry changes. Preview/anchor updates stay cheap.
       const geometryKey=routeGeometryKey(pts);
-      if(geometryKey!==lastOverlayGeometryKey){drawDomRouteLayer(pts);lastOverlayGeometryKey=geometryKey}
+      if(geometryKey!==lastOverlayGeometryKey){
+        plannerRouteLayer.clearLayers();
+        drawDomRouteLayer(pts);lastOverlayGeometryKey=geometryKey;
+      }
       let arrowCount=plannerDirectionLayer.getLayers?.().length||0;
       const directionKey=(gaiaRouteEnabled?'1:':'0:')+geometryKey;
       if(directionKey!==lastDirectionGeometryKey){
