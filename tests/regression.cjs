@@ -590,8 +590,10 @@ assert.ok(workstationCss.includes('#route .route-performance-panel'));
 assert.ok(workstationCss.includes('align-self:start!important'));
 console.log('PASS route planner and ETA panels keep deterministic content-sized layout');
 
-assert.ok(appJs.includes('clearTimeout(st.zoomSettleTimer)'));
-assert.ok(appJs.includes('st.renderedZoom=st.zoom'));
+assert.ok(!appJs.includes('fieldNativeMaps'));
+assert.ok(!appJs.includes('function fieldNativeRender('));
+assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
+assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
 assert.ok(workstationJs.includes('FIELD / OS <b>3.67</b>')&&workstationJs.includes('<em>v3.67</em>'));
@@ -647,3 +649,4 @@ assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(Stri
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
 assert.ok(swJs.includes("const CACHE='field-os-v3-70'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
+assert.ok(!appJs.includes('/* v2.3 native online map engine'));console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
