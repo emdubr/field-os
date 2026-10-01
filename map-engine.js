@@ -526,14 +526,22 @@
   function zoom(target,delta){const st=ensure(target)||ensure('realMap');if(!st)return;st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+delta));render(st)}
   function center(target){const st=ensure(target)||ensure('realMap');if(!st)return;st.center={...centerCandidate()};render(st)}
 
+  function metersBetween(a,b){if(!a||!b)return Infinity;const r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLon=(b.lon-a.lon)*r,la1=a.lat*r,la2=b.lat*r;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return 12742000*Math.asin(Math.min(1,Math.sqrt(h)))}
+
   function applyPosition(p){
-    livePosition={lat:p.coords.latitude,lon:p.coords.longitude};
-    locationAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:null;
-    lastFixTime=Date.now();
+    const next={lat:p.coords.latitude,lon:p.coords.longitude};
+    livePosition=next;locationAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:null;lastFixTime=Date.now();
     for(const id of ['homeRealMap','realMap']){
       const st=states.get(id);if(!st)continue;
-      st.center={...livePosition};
-      if(isVisible(st)){st.rendered=true;render(st)}
+      // GPS fixes commonly wander a few metres while stationary. Re-centering
+      // and rebuilding the tile frame for every fix makes the map visibly pulse.
+      const drift=metersBetween(st.center,next)??Infinity;
+      if(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65)){
+        st.center={...next};
+        if(isVisible(st)){st.rendered=true;render(st)}
+      }else{
+        const rect=st.el.getBoundingClientRect();drawOverlay(st,Math.max(250,Math.round(rect.width||600)),Math.max(220,Math.round(rect.height||360)));
+      }
     }
     updateLocationLabels();
   }
