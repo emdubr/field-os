@@ -673,16 +673,24 @@ function updateRouteMetrics(){
   const badge=document.getElementById('routeDifficulty');if(badge){badge.textContent=routePoints.length<2?'PLOT ROUTE':label;badge.className=`route-grade-badge ${cls}`}
   updateOfflineEstimate(); drawRouteProfile(dist,gain,terrain); return {dist,gain,grade,terrain,label,hours};
 }
+const routeProfileEl=document.getElementById('routeProfile'),routeProfileCtx=routeProfileEl?.getContext('2d')||null;
+let routeProfileThemeKey='',routeProfileTheme=null;
+function routeProfileColors(){
+  const key=document.body.dataset.theme||'green';
+  if(routeProfileTheme&&routeProfileThemeKey===key)return routeProfileTheme;
+  const st=getComputedStyle(document.body);routeProfileThemeKey=key;
+  return routeProfileTheme={line:st.getPropertyValue('--line').trim(),fg:st.getPropertyValue('--fg').trim(),warn:st.getPropertyValue('--warn').trim()};
+}
 function drawRouteProfile(dist,gain,terrain){
-  const c=document.getElementById('routeProfile');if(!c)return;
-  const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body);
-  ctx.clearRect(0,0,w,h);ctx.strokeStyle=st.getPropertyValue('--line').trim();ctx.lineWidth=1;
+  const c=routeProfileEl,ctx=routeProfileCtx;if(!c||!ctx)return;
+  const w=c.width,h=c.height,colors=routeProfileColors();
+  ctx.clearRect(0,0,w,h);ctx.strokeStyle=colors.line;ctx.lineWidth=1;
   for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
   const samples=routePlan.elevationProfile;
-  ctx.fillStyle=st.getPropertyValue('--fg').trim();ctx.font='20px monospace';
+  ctx.fillStyle=colors.fg;ctx.font='20px monospace';
   if(routePoints.length<2||!Array.isArray(samples)||samples.length<2){ctx.fillText(routePoints.length<2?'Add a start and destination':'Elevation profile unavailable',14,28);return;}
   const vals=samples.map(p=>p.elevationFt),min=Math.min(...vals),span=Math.max(40,Math.max(...vals)-min);
-  ctx.strokeStyle=st.getPropertyValue('--warn').trim();ctx.lineWidth=3;ctx.beginPath();
+  ctx.strokeStyle=colors.warn;ctx.lineWidth=3;ctx.beginPath();
   samples.forEach((p,i)=>{const x=i/(samples.length-1)*w,y=h-18-(p.elevationFt-min)/span*(h-55);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
   ctx.fillText(`${dist.toFixed(2)} mi // +${Math.round(gain)} ft`,14,25);
 }
