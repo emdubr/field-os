@@ -280,6 +280,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("if(action==='location')return engine?.toggleLiveLocation?.()"));
  assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
  assert.ok(mapEngineJs.includes("function isVisible(st)"));
+ assert.ok(mapEngineJs.includes("fieldos:mapstatechange"));
+ assert.ok(appJs.includes("['osm','topo','satellite','offline']"));
+ assert.ok(appJs.includes("fieldMapMode!=='offline'&&['osm','topo','satellite'].includes(detail.mode)"));
  assert.ok(mapEngineJs.includes("function unmount(id)"));
  assert.ok(mapEngineJs.includes("preserveAnchor(anchor,e.clientX,e.clientY,nextZoom)"));
  console.log('PASS unified map storage, offline PMTiles ownership, external-engine unmount, and anchored double-click zoom');
