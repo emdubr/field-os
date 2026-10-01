@@ -458,9 +458,13 @@
     // guarantees the custom tap path and Leaflet cannot add the same point twice.
   }
 
+  let plannerColorCache=null,plannerColorTheme='';
   function plannerColors(){
+    const theme=document.body.dataset.theme||'green';
+    if(plannerColorCache&&plannerColorTheme===theme)return plannerColorCache;
     const st=getComputedStyle(document.body);
-    return {
+    plannerColorTheme=theme;
+    return plannerColorCache={
       route:st.getPropertyValue('--warn').trim()||'#ffd166',
       fg:st.getPropertyValue('--fg').trim()||'#baf7c7',
       fg2:st.getPropertyValue('--fg2').trim()||'#72e58e',
@@ -468,6 +472,7 @@
       bg:st.getPropertyValue('--bg').trim()||'#071009'
     };
   }
+  document.addEventListener('fieldos:themechange',()=>{plannerColorCache=null;plannerColorTheme=''});
 
   function ensurePlannerMap(){
     if(plannerMap)return plannerMap;
