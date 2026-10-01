@@ -429,6 +429,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(fieldIntelJs.includes('data-readiness-id='));
  assert.ok(fieldIntelJs.includes('window.FIELD_MISSION_READINESS='));
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
+ assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
  console.log('PASS route planner hot-path optimizations and actionable mission readiness contracts are wired');
  console.log('PASS main and route-planner maps use smooth fractional animated wheel zoom');
 
@@ -730,6 +731,11 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
  assert.ok(routePlannerJs.includes("removeSpatialSegmentMutable"));
  console.log('PASS route planner clones spatial index with copy-on-write spatial buckets');
+ assert.ok(routePlannerJs.includes("adjShared:true"));
+ assert.ok(routePlannerJs.includes("function mutableAdjacency("));
+ assert.ok(routePlannerJs.includes("planner-anchor-touch-wrap"));
+ assert.ok(routePlannerJs.includes("draggable:!busy"));
+ console.log('PASS route planner uses copy-on-write adjacency and draggable mobile control points');
  assert.ok(mapEngineJs.includes("Invert the compositor's residual fractional-zoom transform"));
  assert.ok(mapEngineJs.includes("dx/scale"));
  console.log('PASS native map inverts residual zoom for touch anchors and drag commits');
@@ -740,4 +746,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("displayRoutePoints(pts,600)"));
  assert.ok(routePlannerJs.includes("displayRoutePoints(pts,1200)"));
  console.log('PASS route planner display geometry is capped without changing full navigation geometry');
+ assert.ok(routePlannerJs.includes("lastOverlayGeometryKey"));
+ assert.ok(routePlannerJs.includes("lastDirectionGeometryKey"));
+ console.log('PASS route overlay projection is geometry-keyed so preview edits do not rebuild route directions');
 console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
