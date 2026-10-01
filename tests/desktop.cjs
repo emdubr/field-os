@@ -94,6 +94,23 @@ const server=http.createServer((req,res)=>{
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
       return {paused,resumed:before!==document.querySelector('#route .ws-route-plot')};
     });assert.deepEqual(lifecycle,{paused:true,resumed:true});
+    await page.evaluate(()=>openView('home'));await page.waitForTimeout(30);
+    const homeVisibility=await page.evaluate(()=>({
+      status:getComputedStyle(document.querySelector('#home .handheld-status')).display,
+      actions:getComputedStyle(document.querySelector('#home .handheld-actions')).display,
+      priority:getComputedStyle(document.querySelector('#home .priority-now')).display,
+      map:getComputedStyle(document.querySelector('#home .map-console')).display,
+      nav:getComputedStyle(document.querySelector('#home .detailed-nav')).display,
+      sensors:getComputedStyle(document.querySelector('#home .detailed-sensors')).display,
+      route:getComputedStyle(document.querySelector('#home .detailed-route-info')).display,
+      mid:getComputedStyle(document.querySelector('#home .console-mid-grid')).display,
+      bottom:getComputedStyle(document.querySelector('#home .console-bottom-grid')).display,
+      commands:[...document.querySelectorAll('#home .console-command-strip button')].filter(b=>getComputedStyle(b).display!=='none').length
+    }));
+    for(const [key,value] of Object.entries(homeVisibility)){if(key!=='commands')assert.notEqual(value,'none',key+' should remain visible on mobile Home')}
+    assert.equal(homeVisibility.commands,7);
+    console.log('PASS full Home dashboard remains available on mobile while offscreen panes render lazily');
+
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
     const satelliteState=await page.evaluate(async()=>{
       document.getElementById('mapSatelliteMode').click();
