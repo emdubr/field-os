@@ -156,6 +156,23 @@ const server=http.createServer((req,res)=>{
     assert.ok(Math.abs(pinchResult.after-Math.round(pinchResult.after))>.03,'Touch release must retain a fractional zoom instead of snapping');
     console.log('PASS mobile native map preserves fractional zoom after touch release');
 
+    await page.evaluate(()=>openView('route'));await page.waitForTimeout(100);
+    const routeTap=await page.evaluate(async()=>{
+      const el=document.getElementById('routePlannerMap'),before=FIELD_ROUTE_STATE.getPoints().length,box=el.getBoundingClientRect();
+      const x=box.left+box.width*.58,y=box.top+box.height*.48,id=77;
+      const fire=(type,cx,cy)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,clientX:cx,clientY:cy,buttons:type==='pointerup'?0:1}));
+      fire('pointerdown',x,y);fire('pointerup',x,y);
+      await new Promise(r=>setTimeout(r,80));
+      const afterTap=FIELD_ROUTE_STATE.getPoints().length;
+      fire('pointerdown',x,y);fire('pointermove',x+45,y+5);fire('pointerup',x+45,y+5);
+      await new Promise(r=>setTimeout(r,80));
+      return {before,afterTap,afterDrag:FIELD_ROUTE_STATE.getPoints().length};
+    });
+    assert.equal(routeTap.afterTap,routeTap.before+1,'Short mobile tap adds exactly one route point');
+    assert.equal(routeTap.afterDrag,routeTap.afterTap,'Mobile drag/pan must not add a route point');
+    assert.ok(await page.locator('#route .planner-anchor-touch').count()>=routeTap.afterTap,'Mobile route handles render for editable anchors');
+    console.log('PASS mobile route editor distinguishes tap-to-add from drag and exposes touch handles');
+
     await page.setViewportSize({width:1280,height:900});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(50);
     const satelliteState=await page.evaluate(async()=>{
