@@ -3918,11 +3918,12 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  #home .map-console .terminal-title{display:flex!important}
  #home .map-console .terminal-title::after{content:"  [ LIVE PLOT ]";margin-left:auto;color:var(--crt-green-dim);font-size:7px}
 
- /* Hide verbose desktop windows; expose them through module tabs/More. */
- #home .detailed-route-info,#home .console-mid-grid,#home .console-bottom-grid{display:none!important}
+ /* Keep the full field dashboard available; expensive offscreen panes render lazily. */
+ #home .detailed-route-info{display:block!important}
+ #home .console-mid-grid,#home .console-bottom-grid{display:grid!important}
  #home .console-command-strip{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:3px!important;margin:0!important;padding:4px!important;border:1px solid var(--crt-rule)!important;background:#020b06!important}
  #home .console-command-strip button{min-height:31px!important;padding:3px!important;font-size:6.5px!important;border:1px solid rgba(126,255,166,.45)!important;background:#06160c!important;color:var(--crt-green)!important}
- #home .console-command-strip button:nth-child(n+5){display:none!important}
+ #home .console-command-strip button{display:block!important}
 
  /* Remove the huge blank-space behavior from the old handheld instrument rules. */
  #home .terminal-panel{min-height:0!important;height:auto!important}
@@ -3978,10 +3979,15 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
    content-visibility:auto;contain-intrinsic-size:180px;
  }
  .module-secondary-grid{display:none!important}
- /* Home: only the field-critical instrument bank participates in layout. */
- #home .console-mid-grid,#home .console-bottom-grid,#home .detailed-route-info,
- #home .console-header,#home .detail-statusline,#home .console-rail,#home .map-meta,#home .map-footer{
+ /* Home keeps the complete field dashboard. Only decorative desktop chrome is removed. */
+ #home .console-header,#home .detail-statusline,#home .console-rail{
    display:none!important;
+ }
+ #home .map-meta,#home .map-footer{display:flex!important}
+ #home .detailed-route-info{display:block!important}
+ #home .console-mid-grid,#home .console-bottom-grid{display:grid!important}
+ #home .console-mid-grid>.terminal-panel,#home .console-bottom-grid>.terminal-panel,#home .detailed-route-info{
+   content-visibility:auto;contain-intrinsic-size:150px;
  }
  #home .detail-console{contain:layout style!important}
  #home .console-main-grid{contain:layout style!important}
@@ -3997,4 +4003,28 @@ input,select,textarea,.terminal-input,.terminal-area{background:#010a05!importan
  #home .sensor-lines span{padding:2px 0!important}
  #home .mini-chart{height:76px!important}
  .tabbar{contain:layout paint style!important}
+}
+
+/* v3.77 HOME DASHBOARD RESTORE — complete field dashboard, lazy offscreen paint. */
+@media(max-width:767px){
+ #home .handheld-status{display:grid!important}
+ #home .handheld-actions{display:grid!important}
+ #home .priority-now{display:grid!important}
+ #home .map-console{display:block!important}
+ #home .detailed-nav,#home .detailed-sensors,#home .detailed-route-info{display:grid!important}
+ #home .detailed-route-info{grid-column:1/-1!important}
+ #home .console-mid-grid{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin-top:5px!important}
+ #home .console-bottom-grid{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin-top:5px!important}
+ #home .console-mid-grid>.terminal-panel,#home .console-bottom-grid>.terminal-panel{
+   display:block!important;min-height:0!important;height:auto!important;
+   content-visibility:auto;contain-intrinsic-size:140px;
+ }
+ #home .console-command-strip{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ #home .console-command-strip button{display:block!important}
+ #home .map-meta{display:block!important;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+ #home .map-footer{display:flex!important;overflow-x:auto;justify-content:flex-start!important;gap:12px!important;scrollbar-width:none}
+ #home .waypoint-table-rich{overflow-x:auto!important}
+ #home .waypoint-table-rich>div{min-width:430px}
+ #home .event-lines{max-height:145px;overflow:auto}
+ #home .survival-rich{display:grid!important;grid-template-columns:1fr 1fr!important}
 }
