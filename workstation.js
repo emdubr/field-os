@@ -202,7 +202,11 @@
     head.after(consoleBar);consoleBar.after(band);
     const secondary=document.createElement('div');secondary.className='module-secondary-grid';
     for(const [title,label,type] of specs[view.id]||[]){const holder=document.createElement('div');holder.className='module-slot';holder.dataset.panelType=type;holder.innerHTML=card(title,label,'');secondary.append(holder);}
-    if(secondary.childElementCount)grid.append(secondary);
+    if(secondary.childElementCount){
+      const details=document.createElement('button');details.type='button';details.className='mobile-module-details';details.textContent='SHOW DETAILS';details.setAttribute('aria-expanded','false');
+      details.addEventListener('click',()=>{const open=secondary.classList.toggle('mobile-details-open');details.setAttribute('aria-expanded',String(open));details.textContent=open?'HIDE DETAILS':'SHOW DETAILS'});
+      grid.append(details);grid.append(secondary);
+    }
     // Generated diagnostic/readout cards live in their own compact flow so
     // different card heights cannot create blank paired-grid rows.
   }
