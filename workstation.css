@@ -3578,3 +3578,9 @@ input,select,textarea{
 #loraNodeList{max-height:260px;overflow:auto;margin-top:10px}
 #loraChatTimeline{max-height:55dvh;overflow:auto;overscroll-behavior:contain}
 @media(max-width:767px){.lora-real-map{height:52dvh;min-height:320px}}
+
+/* v3.67 LoRa first-class workspaces */
+.lora-map-panel{min-height:0}.lora-real-map{min-height:520px;position:relative;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
+.lora-real-map>svg{display:block;width:100%;height:100%;min-height:520px}.lora-grid{fill:none;stroke:currentColor;opacity:.12;stroke-width:1}.lora-node circle{fill:var(--panel);stroke:var(--fg2);stroke-width:2}.lora-self circle{fill:var(--fg2);stroke:var(--fg);stroke-width:2}.lora-node text,.lora-self text{fill:var(--fg);font:700 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.lora-chat-compose{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px;margin-top:10px}.lora-chat-panel .unified-inbox-timeline{max-height:58dvh;overflow:auto;overscroll-behavior:contain}.lora-out{border-left:2px solid var(--fg2)}
+@media(min-width:1024px){body #loramap .module-grid,body #lorachat .module-grid{display:flex!important;flex-direction:column!important;columns:auto!important;gap:10px!important}body #loramap .module-grid>*,body #lorachat .module-grid>*{display:block!important;width:100%!important;margin:0!important}}
+@media(max-width:767px){.lora-real-map,.lora-real-map>svg{min-height:52dvh}.lora-chat-compose{grid-template-columns:1fr}.lora-chat-compose .action{min-height:44px}}
