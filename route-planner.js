@@ -29,6 +29,7 @@
   let plannerDomRouteSvg=null;
   let plannerDomRouteGeometry=[];
   let plannerRouteRedrawFrame=0;
+  let plannerHoverFrame=0,pendingHoverPoint=null;
   let plannerZooming=false;
   let activeElevationProfile=null;
   let plannerAnchorLayer=null;
@@ -149,7 +150,7 @@
     const count=anchors.length;
     const a=$('routeAnchorCount');if(a)a.textContent=String(count);
     const help=$('routePlannerHelp');
-    if(help)help.textContent=count===0?'Tap the map to set a start point.':count===1?'Start set. Tap the map to set a destination.':'Tap the map to add another via point. The route will recalculate.';
+    if(help)help.textContent=count===0?'Tap the map to set a start point.':count===1?'Start set. Tap the map to set a destination.':'Tap map to add a via point. Drag S / E / numbered control points to edit the route.';
     $('undoRoutePoint')?.toggleAttribute('disabled',count===0||busy);
     $('reverseRoute')?.toggleAttribute('disabled',count<2||busy);
     $('clearRoute')?.toggleAttribute('disabled',count===0);
@@ -517,16 +518,21 @@
 
     plannerMap.on('click',e=>{if(!busy&&Date.now()>=suppressPlannerClickUntil)addAnchor({lat:e.latlng.lat,lon:e.latlng.lng})});
     bindMobilePlannerTap(plannerMap,el);
-    plannerMap.on('mousemove',e=>{
-      if(busy||!anchors.length)return;
-      hoverPoint={lat:e.latlng.lat,lon:e.latlng.lng};
-      overlay(state()?.getPoints?.()||[]);
-    });
-    plannerMap.on('mouseout',()=>{
-      if(!hoverPoint)return;
-      hoverPoint=null;
-      overlay(state()?.getPoints?.()||[]);
-    });
+    if(!window.matchMedia||window.matchMedia('(pointer:fine)').matches){
+      plannerMap.on('mousemove',e=>{
+        if(busy||!anchors.length)return;
+        pendingHoverPoint={lat:e.latlng.lat,lon:e.latlng.lng};
+        if(plannerHoverFrame)return;
+        plannerHoverFrame=requestAnimationFrame(()=>{
+          plannerHoverFrame=0;if(!pendingHoverPoint)return;
+          hoverPoint=pendingHoverPoint;pendingHoverPoint=null;overlay(state()?.getPoints?.()||[]);
+        });
+      });
+      plannerMap.on('mouseout',()=>{
+        cancelAnimationFrame(plannerHoverFrame);plannerHoverFrame=0;pendingHoverPoint=null;
+        if(!hoverPoint)return;hoverPoint=null;overlay(state()?.getPoints?.()||[]);
+      });
+    }
     plannerMap.on('load',()=>requestAnimationFrame(()=>{plannerMap?.invalidateSize(false);refreshDomRouteLayer()}));
     // Pan redraws are coalesced to one paint per animation frame. Zoom uses
     // Leaflet's animation without recomputing every route point on every tick.
@@ -593,7 +599,7 @@
       anchors.forEach((p,i)=>{
         if(!valid(p))return;
         const label=i===0?'S':i===anchors.length-1?'E':String(i);
-        const icon=L.divIcon({className:'planner-anchor-touch-wrap',html:`<span class="planner-anchor-touch">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]});
+        const icon=L.divIcon({className:'planner-anchor-touch-wrap',html:`<span class="planner-anchor-touch" title="Drag control point ${label}">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]});
         const marker=L.marker([p.lat,p.lon],{pane:'fieldRouteAnchorPane',icon,draggable:!busy,autoPan:true,keyboard:false,riseOnHover:true}).addTo(plannerAnchorLayer);
         if(!busy){
           marker.on('dragstart',()=>{suppressPlannerClickUntil=Date.now()+500;hoverPoint=null;status(`EDITING CONTROL POINT ${label} // DRAG TO NEW POSITION`,'loading')});
