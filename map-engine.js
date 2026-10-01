@@ -19,6 +19,8 @@
 
   const clampLat=lat=>Math.max(-85.05112878,Math.min(85.05112878,Number(lat)||0));
   const maxZoom=()=>mode==='topo'?17:19;
+  const tileZoomFor=z=>Math.max(2,Math.min(maxZoom(),Math.round(z)));
+  const rasterScaleFor=z=>Math.pow(2,z-tileZoomFor(z));
   const world=(lat,lon,z)=>{
     const size=TILE*Math.pow(2,z),s=Math.sin(clampLat(lat)*Math.PI/180);
     return {x:(Number(lon)+180)/360*size,y:(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*size};
@@ -121,13 +123,12 @@
     };
 
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
-    const tileZoomFor=z=>Math.max(2,Math.min(maxZoom(),Math.round(z)));
-    const rasterScaleFor=z=>Math.pow(2,z-tileZoomFor(z));
     const applyRestingCamera=()=>{
       const scale=rasterScaleFor(st.zoom);
       for(const layer of rasterLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=Math.abs(scale-1)<.001?'':`scale(${scale})`}
       for(const layer of vectorLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=''}
     };
+    st.applyRestingCamera=applyRestingCamera;
     const paintGesture=gesture=>{
       const rect=st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
       const ax=gesture.originX==null?w/2:Math.max(0,Math.min(w,gesture.originX-rect.left));
@@ -403,7 +404,7 @@
     function commit(){
       if(committed||token!==st.token)return;committed=true;
       st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
-      st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);applyRestingCamera();
+      st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();
     }
     if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,420);
 
