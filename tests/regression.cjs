@@ -1,6 +1,6 @@
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const dir=require('path').resolve(__dirname,'..');const errors=[],alerts=[];const vc=new VirtualConsole();
-const appJs=fs.readFileSync(dir+'/app.js','utf8'),app=appJs,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),mapEngineJs=fs.readFileSync(dir+'/map-engine.js','utf8'),workstationJs=fs.readFileSync(dir+'/workstation.js','utf8'),workstationCss=fs.readFileSync(dir+'/workstation.css','utf8'),swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8')),readme=fs.readFileSync(dir+'/README.md','utf8');vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
+const appJs=fs.readFileSync(dir+'/app.js','utf8'),app=appJs,html=fs.readFileSync(dir+'/index.html','utf8'),fieldIntelJs=fs.readFileSync(dir+'/field-intel.js','utf8'),fieldOpsJs=fs.readFileSync(dir+'/field-ops.js','utf8'),fieldToolsJs=fs.readFileSync(dir+'/field-tools.js','utf8'),routePlannerJs=fs.readFileSync(dir+'/route-planner.js','utf8'),mapEngineJs=fs.readFileSync(dir+'/map-engine.js','utf8'),workstationJs=fs.readFileSync(dir+'/workstation.js','utf8'),workstationCss=fs.readFileSync(dir+'/workstation.css','utf8'),swJs=fs.readFileSync(dir+'/sw.js','utf8'),manifest=fs.readFileSync(dir+'/manifest.webmanifest','utf8'),packageJson=JSON.parse(fs.readFileSync(dir+'/package.json','utf8')),readme=fs.readFileSync(dir+'/README.md','utf8');vc.on('jsdomError',e=>{if(!/not implemented/i.test(e.message))errors.push(e.message)});
 const dom=new JSDOM(fs.readFileSync(dir+'/index.html','utf8'),{url:'https://test.local/',runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc}),w=dom.window,d=w.document;
 w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:100}),createLinearGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});
 w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
@@ -301,7 +301,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS browser offline-route corridor coverage controls and pack selection are wired');
  assert.ok(appJs.includes('corridorTemplateUrl'));assert.ok(appJs.includes('downloadRouteCorridorPack'));assert.ok(html.includes('id="routeCorridorTemplate"'));assert.ok(html.includes('id="downloadRouteCorridor"'));
  console.log('PASS provider-safe automatic route corridor download workflow is wired');
- assert.ok(fieldIntelJs.includes('FIELD_ENVIRONMENT_INTEL'));assert.ok(fieldIntelJs.includes('air-quality-api.open-meteo.com'));assert.ok(fieldIntelJs.includes('earthquake.usgs.gov'));assert.ok(html.includes('id="environmentIntelRefresh"'));assert.ok(html.includes('id="environmentAqi"'));
+ assert.ok(fieldIntelJs.includes("const fetchBounded=async"));
+ assert.ok(fieldIntelJs.includes("fetchBounded(aqUrl"));
+ assert.ok(fieldIntelJs.includes("fetchBounded('https://overpass-api.de/api/interpreter"));
+ assert.ok(fieldOpsJs.includes("async function boundedFetch("));
+  assert.ok(fieldIntelJs.includes('FIELD_ENVIRONMENT_INTEL'));assert.ok(fieldIntelJs.includes('air-quality-api.open-meteo.com'));assert.ok(fieldIntelJs.includes('earthquake.usgs.gov'));assert.ok(html.includes('id="environmentIntelRefresh"'));assert.ok(html.includes('id="environmentAqi"'));
  console.log('PASS cached browser environmental intelligence is wired to air-quality and earthquake sources');
  assert.ok(fieldIntelJs.includes("read('environment-intel-cache'"));assert.ok(fieldIntelJs.includes('routeCorridorStatus'));assert.ok(fieldIntelJs.includes('forecastCache:weatherCache'));
  console.log('PASS mission pack bundles cached forecast, environmental intel, and offline corridor readiness');
@@ -530,7 +534,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const previousFetch=w.fetch;w.fetch=async()=>{throw new Error('test outage')};
  click('waterSearchOnline');await tick();assert.equal(d.getElementById('waterSearchOnline').disabled,false);
  assert.match(d.getElementById('waterIntelState').textContent,/SEARCH FAILED/);w.fetch=previousFetch;
- await w.FIELD_WATER.searchOnline(async(url,init)=>{assert.match(decodeURIComponent(init.body),/out body/);return {ok:true,json:async()=>({elements:[{id:1,lat:44,lon:-73,tags:{natural:'spring'}}]})}});
+ await w.FIELD_WATER.searchOnline(async(url,init)=>{assert.match(decodeURIComponent(init.body),/out body/);assert.ok(init.signal,'water lookup should receive an abort signal');return {ok:true,json:async()=>({elements:[{id:1,lat:44,lon:-73,tags:{natural:'spring'}}]})}});
  assert.equal(w.FIELD_WATER.state.cache.items.length,1);
  console.log('PASS failed water lookup unlocks button and successful query requests coordinates');
 
