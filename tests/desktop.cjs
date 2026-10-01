@@ -141,6 +141,9 @@ const server=http.createServer((req,res)=>{
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>openView('map'));await page.waitForTimeout(40);
     const pinchResult=await page.evaluate(async()=>{
+      const initial=FIELD_MAP_ENGINE.getView('realMap');
+      FIELD_MAP_ENGINE.setView('realMap',initial.center,14);
+      await new Promise(r=>requestAnimationFrame(r));
       const el=document.getElementById('realMap'),box=el.getBoundingClientRect(),cx=box.left+box.width/2,cy=box.top+box.height/2;
       const before=FIELD_MAP_ENGINE.getView('realMap').zoom;
       const fire=(type,id,x,y)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:id===1,clientX:x,clientY:y,buttons:type==='pointerup'?0:1}));
