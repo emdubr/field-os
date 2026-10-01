@@ -423,7 +423,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  assert.ok(appJs.includes("document.hidden||!document.querySelector('#home.active,#sensors.active,#nav.active,#map.active,#breadcrumb.active')"));
  console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
- assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
+ assert.ok(workstationJs.includes("e.target instanceof Element&&e.target.matches"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
