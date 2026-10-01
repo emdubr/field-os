@@ -445,7 +445,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(mapEngineJs.includes('st.deferredPinch={visualZoom,midX,midY,anchor:pinch.anchor}')&&mapEngineJs.includes('if(st.deferredPinch)'));
  assert.ok(mapEngineJs.includes('st.wheelZoom-delta/560')&&mapEngineJs.includes('},120);'));
  console.log('PASS map gesture engine preserves pinch-to-drag continuity and damps dense wheel bursts');
- assert.ok(mapEngineJs.includes("lastTileBounds:''")&&mapEngineJs.includes('st.lastTileBounds===tileBoundsKey'));
+ assert.ok(mapEngineJs.includes('st.lastTileBounds===tileBoundsKey')&&mapEngineJs.includes('st.lastTileBounds=tileBoundsKey')&&mapEngineJs.includes("st.lastTileBounds=''"));
  assert.ok(mapEngineJs.includes('Math.abs(w-lastW)<8&&Math.abs(h-lastH)<8'));
  console.log('PASS native map reuses buffered tile envelopes and ignores mobile chrome micro-resizes');
  assert.ok(mapEngineJs.includes('layoutRect:null'));assert.ok(mapEngineJs.includes('const readLayout=()=>'));assert.ok(mapEngineJs.includes('st.layoutRect=null;'));console.log('PASS native map gestures cache layout measurements and invalidate them on resize');
