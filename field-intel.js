@@ -1014,17 +1014,30 @@
     if(!list.length)list.push({id:'nominal',score:1,level:'good',title:'FIELD STATUS NOMINAL',detail:'Monitoring route, position, daylight, battery, check-in and field conditions.',view:'mission',action:'MISSION STATUS'});
     return list.sort((a,b)=>b.score-a.score);
   }
+  const priorityNodes={
+    box:document.getElementById('priorityNow'),
+    level:document.getElementById('priorityLevel'),
+    title:document.getElementById('priorityTitle'),
+    detail:document.getElementById('priorityDetail'),
+    action:document.getElementById('priorityAction'),
+    stack:document.getElementById('priorityStack')
+  };
+  let lastPriorityRender='';
   function refreshContext(){
-    const list=contextCandidates(),top=list[0],box=document.getElementById('priorityNow'),level=document.getElementById('priorityLevel'),title=document.getElementById('priorityTitle'),detail=document.getElementById('priorityDetail'),action=document.getElementById('priorityAction'),stack=document.getElementById('priorityStack');
+    const list=contextCandidates(),top=list[0],{box,level,title,detail,action,stack}=priorityNodes;
     if(!box)return top;
+    const stackHtml=list.slice(1,4).map(x=>`<span>${esc(x.title)}</span>`).join('');
+    const renderKey=`${top.level}|${top.title}|${top.detail}|${top.action}|${top.view}|${stackHtml}`;
+    if(renderKey===lastPriorityRender)return top;
+    lastPriorityRender=renderKey;
     box.classList.remove('priority-good','priority-warn','priority-danger');box.classList.add(`priority-${top.level}`);
     if(level)level.textContent=top.level==='danger'?'IMMEDIATE':top.level==='warn'?'ATTENTION':'NOMINAL';
     if(title)title.textContent=top.title;if(detail)detail.textContent=top.detail;
     if(action){action.textContent=top.action;action.dataset.contextOpen=top.view}
-    if(stack)stack.innerHTML=list.slice(1,4).map(x=>`<span>${esc(x.title)}</span>`).join('');
+    if(stack)stack.innerHTML=stackHtml;
     return top;
   }
-  document.getElementById('priorityAction')?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
+  priorityNodes.action?.addEventListener('click',e=>{const target=e.currentTarget.dataset.contextOpen||'mission';window.FIELD_OPEN_VIEW?.(target)});
   document.addEventListener('fieldos:positionchange',refreshContext);document.addEventListener('fieldos:routechange',refreshContext);document.addEventListener('fieldos:missionstart',refreshContext);document.addEventListener('fieldos:missionend',refreshContext);
   document.addEventListener('fieldos:telemetry',e=>{const p=Number(e.detail?.pressureHpa);if(Number.isFinite(p)){contextState.pressure.push({t:Date.now(),v:p});contextState.pressure=contextState.pressure.filter(x=>x.t>Date.now()-4*60*60*1000).slice(-120)}refreshContext()});
   window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible')refreshContext()},5000);window.FIELD_RUNTIME.idle(refreshContext,450);
