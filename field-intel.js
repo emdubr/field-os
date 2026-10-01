@@ -645,6 +645,46 @@
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='comms')renderMeshNetwork()});document.addEventListener('fieldos:positionchange',()=>{if(document.querySelector('#comms.active'))renderMeshNetwork()});setInterval(()=>{if(!document.hidden&&document.querySelector('#comms.active'))renderMeshNetwork()},10000);setTimeout(renderMeshNetwork,220);
   window.FIELD_MESH={ingest:ingestMeshNodes,render:renderMeshNetwork,normalize:normalizeMeshNode,quality:meshQuality,point:meshPoint,state:meshState};
 
+  // v3.67 — dedicated real-data LoRa map + chat surfaces.
+  const loraChatState={items:[]};
+  function renderLoraMap(){
+    const host=document.getElementById('loraRealMap'),empty=document.getElementById('loraMapEmpty'),state=document.getElementById('loraMapState'),count=document.getElementById('loraNodeCount'),list=document.getElementById('loraNodeList');
+    if(!host)return;
+    const nodes=(meshState.nodes||[]).filter(n=>Number.isFinite(Number(n.lat))&&Number.isFinite(Number(n.lon)));
+    if(state)state.textContent=nodes.length?nodes.length+' POSITIONED NODE'+(nodes.length===1?'':'S'):'WAITING FOR RADIO DATA';
+    if(count)count.textContent=(meshState.nodes||[]).length+' NODES';
+    if(empty)empty.hidden=nodes.length>0;
+    if(list)list.innerHTML=(meshState.nodes||[]).map(n=>'<div class="mesh-node-row '+meshQuality(n)+'"><b>'+esc(n.name||n.id)+'</b><small>'+esc(n.id)+' // '+(Number.isFinite(n.rssi)?Math.round(n.rssi)+' dBm':'RSSI —')+' // '+(Number.isFinite(n.snr)?n.snr.toFixed(1)+' dB':'SNR —')+' // '+meshAgeLabel(n.lastHeard)+' AGO</small></div>').join('')||'<p class="muted">Waiting for Meshtastic telemetry.</p>';
+    if(!nodes.length){host.innerHTML='<div class="lora-map-no-data">NO POSITIONED MESHTASTIC NODES</div>';return}
+    const lats=nodes.map(n=>Number(n.lat)),lons=nodes.map(n=>Number(n.lon)),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),pad=.0005;
+    const project=n=>({x:4+92*((Number(n.lon)-minLon+pad)/(Math.max(maxLon-minLon,0)+2*pad)),y:96-92*((Number(n.lat)-minLat+pad)/(Math.max(maxLat-minLat,0)+2*pad))});
+    host.innerHTML='<svg class="lora-node-svg" viewBox="0 0 100 100" role="img" aria-label="Relative plot of received Meshtastic node positions">'+nodes.map(n=>{const p=project(n);return '<g><circle cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="1.6"/><text x="'+(p.x+2).toFixed(2)+'" y="'+(p.y-2).toFixed(2)+'">'+esc(n.name||n.id)+'</text></g>'}).join('')+'</svg>';
+  }
+  function renderLoraChat(){
+    const log=document.getElementById('loraChatLog'),state=document.getElementById('loraChatState');if(!log)return;
+    if(state)state.textContent=loraChatState.items.length?loraChatState.items.length+' MESSAGE'+(loraChatState.items.length===1?'':'S'):'RADIO QUEUE';
+    log.innerHTML=loraChatState.items.length?loraChatState.items.slice(-100).map(m=>'<div class="lora-chat-line"><b>'+esc(m.direction==='out'?'YOU':m.from||'LORA')+'</b><span>'+esc(m.channel||'PRIMARY')+' // '+new Date(m.time).toLocaleTimeString()+'</span><p>'+esc(m.text)+'</p></div>').join(''):'<p class="muted">No LoRa messages in this session.</p>';
+    log.scrollTop=log.scrollHeight;
+  }
+  function ingestLoraMessage(detail={}){
+    const text=String(detail.text||detail.message||'').trim();if(!text)return;
+    loraChatState.items.push({direction:'in',from:String(detail.from||detail.sender||detail.node||'LORA'),channel:String(detail.channel||'PRIMARY'),text,time:Number(detail.createdAt||detail.time)||Date.now()});
+    if(loraChatState.items.length>100)loraChatState.items.splice(0,loraChatState.items.length-100);renderLoraChat();
+  }
+  document.getElementById('loraChatSend')?.addEventListener('click',()=>{
+    const box=document.getElementById('loraChatInput'),text=box?.value?.trim(),channel=document.getElementById('loraChatChannel')?.value?.trim()||'PRIMARY';if(!text)return;
+    const ev=new CustomEvent('fieldos:outgoingmessage',{detail:{text,channel,createdAt:Date.now(),meta:{source:'lora-chat'}},cancelable:true});
+    const accepted=!document.dispatchEvent(ev);if(!accepted)return;
+    loraChatState.items.push({direction:'out',from:'YOU',channel,text,time:Date.now()});if(loraChatState.items.length>100)loraChatState.items.shift();box.value='';renderLoraChat();
+  });
+  document.addEventListener('fieldos:incomingmessage',e=>ingestLoraMessage(e.detail||{}));
+  document.addEventListener('fieldos:meshmessage',e=>ingestLoraMessage(e.detail||{}));
+  document.addEventListener('fieldos:meshroster',renderLoraMap);
+  document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='loramap')renderLoraMap();if(e.detail?.view==='lorachat')renderLoraChat()});
+  document.getElementById('loraMapFit')?.addEventListener('click',renderLoraMap);
+  window.FIELD_LORA={renderMap:renderLoraMap,renderChat:renderLoraChat,ingestMessage:ingestLoraMessage,state:loraChatState};
+
+
   // Feature 08 — Position Confidence.
   function numericFromText(id){
     const raw=text(id),m=raw.match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):null;
