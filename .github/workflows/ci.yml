@@ -16,6 +16,12 @@ jobs:
         with:
           node-version: 24
       - run: npm install --no-audit --no-fund
+      - name: Capture dependency lock snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-lock-snapshot
+          path: package-lock.json
+          retention-days: 1
       - name: Syntax check browser scripts
         run: |
           node --check app.js
