@@ -1780,12 +1780,22 @@
   }
 
   function routeVisible(){return !!document.querySelector('#route.active')}
+  let plannerKickFrame=0;
   function kickPlanner(){
     if(!routeVisible())return;
-    const ok=activate();
-    if(ok&&state()&&initialized)return;
-    setTimeout(()=>{if(routeVisible())activate()},250);
-    setTimeout(()=>{if(routeVisible())activate()},900);
+    if(plannerKickFrame)return;
+    plannerKickFrame=requestAnimationFrame(()=>{
+      plannerKickFrame=0;if(!routeVisible())return;
+      if(initialized&&plannerMap){
+        plannerMap.invalidateSize(false);
+        overlay(state()?.getPoints?.()||[]);
+        return;
+      }
+      const ok=activate();
+      if(ok&&state()&&initialized)return;
+      setTimeout(()=>{if(routeVisible()&&!initialized)activate()},250);
+      setTimeout(()=>{if(routeVisible()&&!initialized)activate()},900);
+    });
   }
 
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
