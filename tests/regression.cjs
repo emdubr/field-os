@@ -415,7 +415,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
  const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.82');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
- assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);
+ assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  console.log('PASS shared runtime scheduler replaces recurring module polling, defers startup work, and gates hidden sensor-chart paints');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
