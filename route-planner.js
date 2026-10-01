@@ -62,6 +62,21 @@
     return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
   };
   const meters=(a,b)=>miles(a,b)*1609.344;
+  const fastMeters=(a,b)=>{
+    const lat=(Number(a.lat)+Number(b.lat))*.5*Math.PI/180;
+    const dy=(Number(b.lat)-Number(a.lat))*111320,dx=(Number(b.lon)-Number(a.lon))*111320*Math.cos(lat);
+    return Math.hypot(dx,dy);
+  };
+  const routeMetricCache=new Map(),ROUTE_METRIC_CACHE_MAX=48;
+  function routeMetrics(points=[]){
+    const pts=Array.isArray(points)?points:[];
+    const key=routeGeometryKey(pts),cached=routeMetricCache.get(key);if(cached)return cached;
+    let metersTotal=0;
+    for(let i=1;i<pts.length;i++)if(valid(pts[i-1])&&valid(pts[i]))metersTotal+=fastMeters(pts[i-1],pts[i]);
+    const value={meters:metersTotal,miles:metersTotal/1609.344};
+    routeMetricCache.set(key,value);if(routeMetricCache.size>ROUTE_METRIC_CACHE_MAX)routeMetricCache.delete(routeMetricCache.keys().next().value);
+    return value;
+  }
   const state=()=>window.FIELD_ROUTE_STATE;
 
   class RoutePlannerError extends Error{
@@ -411,6 +426,9 @@
     el.addEventListener('pointermove',move,{passive:true});
     el.addEventListener('pointerup',finish,{passive:true});
     el.addEventListener('pointercancel',e=>finish(e,true),{passive:true});
+    // iOS can synthesize a click without a complete PointerEvent sequence.
+    // Leaflet's click remains the primary fallback; suppressPlannerClickUntil
+    // guarantees the custom tap path and Leaflet cannot add the same point twice.
   }
 
   function plannerColors(){
@@ -1237,7 +1255,7 @@
   function shortestPath(graph,startId,endId){
     if(startId===endId)return {path:[graph.nodes.get(startId)],edgeTags:[],visits:0,limitHit:false};
     const goal=graph.nodes.get(endId),open=new MinHeap(),g=new Map([[startId,0]]),came=new Map(),closed=new Set();
-    open.push({id:startId,f:meters(graph.nodes.get(startId),goal)});
+    open.push({id:startId,f:fastMeters(graph.nodes.get(startId),goal)});
     let visits=0;
     const VISIT_LIMIT=120000;
     while(open.size&&visits<VISIT_LIMIT){
@@ -1257,7 +1275,7 @@
         const ng=(g.get(cur.id)||0)+edge.w;
         if(ng<(g.get(edge.to)??Infinity)){
           g.set(edge.to,ng);came.set(edge.to,{from:cur.id,tags:edge.tags||{}});
-          const h=meters(graph.nodes.get(edge.to),goal);
+          const h=fastMeters(graph.nodes.get(edge.to),goal);
           open.push({id:edge.to,f:ng+h*.84});
         }
       }
@@ -1557,9 +1575,7 @@
     return result;
   }
 
-  function routeDistanceMiles(points){
-    return (Array.isArray(points)?points:[]).reduce((sum,p,i,arr)=>i?sum+miles(arr[i-1],p):0,0);
-  }
+  function routeDistanceMiles(points){return routeMetrics(points).miles}
 
   function samplePolyline(points,maxSamples=140){
     const pts=(Array.isArray(points)?points:[]).filter(valid);
@@ -1827,9 +1843,11 @@
       set('routeElevRange',rangeText);set('plannerRouteElevRange',rangeText);
       set('plannerElevationSource','ELEVATION // COPERNICUS GLO-90 DEM');
       const gainInput=$('routeGain'),gradeInput=$('routeGrade');
-      if(gainInput)gainInput.value=String(gain);
-      if(gradeInput)gradeInput.value=String(Math.round(profile.maxGrade));
-      gainInput?.dispatchEvent(new Event('input',{bubbles:true}));
+      const gainValue=String(gain),gradeValue=String(Math.round(profile.maxGrade));
+      const gainChanged=!!gainInput&&gainInput.value!==gainValue;
+      if(gainInput)gainInput.value=gainValue;
+      if(gradeInput)gradeInput.value=gradeValue;
+      if(gainChanged)gainInput.dispatchEvent(new Event('input',{bubbles:true}));
       drawElevationProfile(profile,dist);
       refreshDomRouteLayer();
     }else{
@@ -1932,8 +1950,9 @@
         });
         overlay(partial);
         renderTrailNames(legs);
-        applyRouteStats(partial,null,'loading');
-        status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${routeDistanceMiles(partial).toFixed(2)} MI // LINE DRAWN // ROUTING NEXT LEG`,'loading');
+        const partialMi=routeDistanceMiles(partial);
+        if(i===anchors.length-1)applyRouteStats(partial,null,'loading');
+        status(`SNAPPED LEG ${i} / ${anchors.length-1} -- ${partialMi.toFixed(2)} MI // LINE DRAWN // ROUTING NEXT LEG`,'loading');
       }
       if(signal.aborted)return;
       const clean=dedupe(full);
