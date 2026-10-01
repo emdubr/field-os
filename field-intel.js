@@ -965,8 +965,9 @@
     const sunState=text('sunState'),sunNext=text('sunNextEvent');
     if(/SUN HAS SET|POLAR NIGHT/i.test(sunState))list.push({id:'dark',score:48,level:'good',title:'SUN HAS SET',detail:sunNext&&sunNext!=='---'?sunNext:'Night navigation active. Check lighting and route conditions.',view:'nav',action:'SUN / NAV'});
     else if(/CIVIL TWILIGHT/i.test(sunState))list.push({id:'dark',score:76,level:'warn',title:'CIVIL TWILIGHT',detail:sunNext&&sunNext!=='---'?sunNext:'Natural light is fading. Check lighting and route conditions.',view:'nav',action:'SUN / NAV'});
-    else if(Number.isFinite(light)&&light<=60)list.push({id:'dark',score:76,level:'warn',title:'DARKNESS APPROACHING',detail:`Approximately ${light} minutes of daylight remain. Recheck route, turnaround and lighting.`,view:'nav',action:'SUN / NAV'});
-    else if(Number.isFinite(light)&&light<=120)list.push({id:'dark',score:58,level:'warn',title:'DAYLIGHT WINDOW CLOSING',detail:`Approximately ${light} minutes of daylight remain.`,view:'trip',action:'TRIP TIMING'});
+    else if(Number.isFinite(light)&&light>0&&light<=60)list.push({id:'dark',score:76,level:'warn',title:'DAYLIGHT ENDING SOON',detail:`Approximately ${light} minutes of daylight remain. Recheck route, turnaround and lighting.`,view:'nav',action:'SUN / NAV'});
+    else if(Number.isFinite(light)&&light>60&&light<=120)list.push({id:'dark',score:58,level:'warn',title:'DAYLIGHT WINDOW CLOSING',detail:`Approximately ${light} minutes of daylight remain.`,view:'trip',action:'TRIP TIMING'});
+    else if(Number.isFinite(light)&&light===0)list.push({id:'dark',score:48,level:'good',title:'SUN HAS SET',detail:sunNext&&sunNext!=='---'?sunNext:'Night navigation active. Check lighting and route conditions.',view:'nav',action:'SUN / NAV'});
     const active=read('mission-active',null),pack=read('mission-pack',null);
     if(!active&&!pack)list.push({id:'mission',score:35,level:'good',title:'BUILD MISSION PACK',detail:'No frozen pre-trip mission package is saved yet.',view:'mission',action:'MISSION MODE'});
     else if(!active&&pack)list.push({id:'mission',score:28,level:'good',title:'MISSION PACK READY',detail:'A pre-trip package is built but the mission has not been started.',view:'mission',action:'START MISSION'});
