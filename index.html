@@ -737,6 +737,13 @@
 
       <section class="view" id="sensors" data-view="sensors">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>TELEMETRY</h2><span></span></div>
+        <div class="sensor-live-summary" aria-label="Current sensor values">
+          <div><span>GNSS</span><b id="sensorGnssNow">--</b></div>
+          <div><span>ENV</span><b id="sensorEnvNow">--</b></div>
+          <div><span>MESH</span><b id="sensorMeshNow">--</b></div>
+          <div><span>IMU</span><b id="sensorImuNow">--</b></div>
+          <div><span>POWER</span><b id="sensorPowerNow">--</b></div>
+        </div>
         <div class="sensor-list">
           <article class="panel sensor-card"><div class="sensor-top"><b>GNSS</b><span class="badge good-badge">GOOD</span></div><p>18 satellites • 3D fix • ±4 m</p><div class="bar"><i style="width:88%"></i></div></article>
           <article class="panel sensor-card"><div class="sensor-top"><b>RAK1905 IMU</b><span class="badge good-badge">ONLINE</span></div><p>Heading 037° • Pitch +2° • Roll -1°</p><div class="bar"><i style="width:76%"></i></div></article>
