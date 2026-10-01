@@ -659,8 +659,16 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function mapXYToLatLon(x,y){return {lat:routeCenter.lat+(0.5-y)*routeCenter.latSpan,lon:routeCenter.lon+(x-0.5)*routeCenter.lonSpan}}
 function haversineMiles(a,b){const R=3958.7613,rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad,la1=a.lat*rad,la2=b.lat*rad;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
 function bearingDeg(a,b){const r=Math.PI/180,dLon=(b.lon-a.lon)*r,la1=a.lat*r,la2=b.lat*r;const y=Math.sin(dLon)*Math.cos(la2),x=Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(dLon);return normalizeDeg(Math.atan2(y,x)*180/Math.PI)}
-function routeMiles(){let d=0;for(let i=1;i<routePoints.length;i++)d+=haversineMiles(routePoints[i-1],routePoints[i]);return d}
+let routeMileageCache=null;
+function routeMileageProfile(){
+  if(routeMileageCache)return routeMileageCache;
+  const cumulative=[0],legs=[];let total=0;
+  for(let i=1;i<routePoints.length;i++){const d=haversineMiles(routePoints[i-1],routePoints[i]);legs.push(d);total+=d;cumulative.push(total)}
+  return routeMileageCache={cumulative,legs,total};
+}
+function routeMiles(){return routeMileageProfile().total}
 function drawRoute(){
+  routeMileageCache=null;
   if(routeSvgLine) routeSvgLine.setAttribute('points',routePoints.map(p=>`${(p.x*1000).toFixed(1)},${(p.y*1000).toFixed(1)}`).join(' '));
   if(routePointsLayer) routePointsLayer.innerHTML=routePoints.map((p,i)=>`<i class="route-point" data-n="${String(i+1).padStart(2,'0')}" style="left:${p.x*100}%;top:${p.y*100}%"></i>`).join('');
   updateRouteMetrics(); updateReturnGuidance();
@@ -778,10 +786,8 @@ const savedPack=loadJSON('offlineRoutePack',null);if(savedPack){const st=documen
 // v0.7 Route Watch / Waypoints / Breadcrumb Track / Check-in Timer
 function routeProgressAt(pos){
   const n=nearestPointOnRoute(pos); if(!n) return null;
-  let before=0; for(let i=1;i<n.leg;i++) before+=haversineMiles(routePoints[i-1],routePoints[i]);
-  const legStart=routePoints[n.leg-1],legEnd=routePoints[n.leg];
-  const legDist=haversineMiles(legStart,legEnd);
-  const progress=before+legDist*n.t,total=routeMiles();
+  const mileage=routeMileageProfile(),legIndex=Math.max(0,n.leg-1),before=mileage.cumulative[legIndex]||0,legDist=mileage.legs[legIndex]||0;
+  const progress=before+legDist*n.t,total=mileage.total;
   return {...n,progress,total,remaining:Math.max(0,total-progress)};
 }
 function updateRouteMonitor(){
