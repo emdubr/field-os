@@ -400,7 +400,7 @@
     const coverW=w/Math.max(.5,renderScale),coverH=h/Math.max(.5,renderScale);
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
     const bf=document.createDocumentFragment(),hf=document.createDocumentFragment(),tf=document.createDocumentFragment();
-    const hadTiles=st.base.childElementCount>0;let basePending=0,baseSettled=0,committed=false;
+    const hadTiles=st.base.childElementCount>0;let basePending=0,baseSettled=0,baseLoaded=0,committed=false;
     st.loaded=0;st.errors=0;
     const diag=st.el.querySelector('.native-map-diag');
     const updateDiag=()=>{if(token===st.token&&diag)diag.textContent=`TILES ${st.loaded} / ERR ${st.errors}`};
@@ -412,7 +412,7 @@
       const gatesFrame=isBase&&((mode==='osm'&&cls==='native-osm-base')||(mode==='topo'&&cls==='native-topo-tile')||(mode==='satellite'&&cls==='native-satellite-tile'));
       if(gatesFrame)basePending++;
       const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
-      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(baseSettled>=basePending)commit()}};
+      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(ok)baseLoaded++;if((baseLoaded>=Math.min(4,basePending)&&baseSettled>=Math.ceil(basePending*.35))||baseSettled>=basePending)commit()}};
       img.style.left=left+'px';img.style.top=top+'px';img.onload=()=>settle(true);img.onerror=()=>settle(false);img.src=src;frag.appendChild(img);
     };
 
@@ -434,7 +434,7 @@
       st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
       st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();
     }
-    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,420);
+    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,260);
 
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib){
