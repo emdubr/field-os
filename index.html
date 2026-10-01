@@ -330,6 +330,17 @@
         </div>
       </section>
 
+      <section class="view" id="loramap" data-view="loramap">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA MAP</h2><span id="loraMapState" class="tiny">NO RADIO DATA</span></div>
+        <article class="panel lora-map-panel"><div class="panel-title"><span>MESHTASTIC POSITION MAP</span><span class="tiny">REAL NODE POSITIONS ONLY</span></div><div id="loraRealMap" class="field-real-map lora-real-map" aria-label="Meshtastic LoRa node position map"></div><div id="loraMapEmpty" class="field-map-fallback"><b>WAITING FOR POSITIONED LORA NODES</b><span>Connect TAP V2 / Meshtastic telemetry. FIELD/OS will not invent node locations.</span></div></article>
+        <article class="panel"><div class="panel-title"><span>LORA NODE ROSTER</span><span class="tiny" id="loraPositionedCount">0 POSITIONED</span></div><div id="loraMapRoster" class="mesh-node-roster"><p class="muted">No Meshtastic node telemetry received.</p></div></article>
+      </section>
+
+      <section class="view" id="lorachat" data-view="lorachat">
+        <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>LORA CHAT</h2><span id="loraChatState" class="tiny">TRANSPORT IDLE</span></div>
+        <article class="panel lora-chat-panel"><div class="panel-title"><span>MESHTASTIC CHAT</span><span class="tiny">STORE + FORWARD</span></div><div id="loraChatTimeline" class="unified-inbox-timeline"><p class="muted">No LoRa messages received yet.</p></div><div class="lora-chat-compose"><select id="loraChatChannel" class="terminal-input" aria-label="LoRa channel"><option value="PRIMARY">PRIMARY</option><option value="SECONDARY">SECONDARY</option></select><input id="loraChatInput" class="terminal-input" maxlength="220" placeholder="Message over Meshtastic…" /><button id="loraChatSend" class="action" type="button">SEND LORA</button></div><p class="muted">Messages use the existing FIELD/OS transport queue. Delivery depends on a connected Meshtastic/TAP V2 transport.</p></article>
+      </section>
+
       <section class="view" id="comms" data-view="comms">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>CHANNELS</h2><span></span></div>
         <article class="panel">
