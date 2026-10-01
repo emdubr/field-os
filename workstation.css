@@ -3570,3 +3570,11 @@ input,select,textarea{
 .lora-chat-log{min-height:280px;max-height:52dvh;overflow:auto}.lora-chat-line{padding:8px 0;border-bottom:1px solid var(--line)}.lora-chat-line>span{float:right;color:var(--dim);font-size:10px}.lora-chat-line p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(min-width:1024px){body #loramap .module-grid,body #lorachat .module-grid{display:flex!important;flex-direction:column!important;columns:auto!important;gap:10px!important}body #loramap .module-grid>*,body #lorachat .module-grid>*{display:block!important;width:100%!important;margin:0!important}}
 @media(max-width:767px){#loramap .lora-real-map,.lora-map-no-data{min-height:52dvh}.lora-node-svg{height:52dvh}.lora-chat-line>span{float:none;display:block;margin-top:2px}}
+
+/* v3.67 LoRa operational surfaces */
+.lora-real-map{width:100%;height:clamp(420px,62dvh,720px);min-height:420px;border:1px solid var(--line);background:var(--panel2)}
+.lora-map-panel,.lora-chat-panel{width:100%;box-sizing:border-box}
+#loraMapEmpty{position:static!important;min-height:120px!important;margin-top:8px}
+#loraNodeList{max-height:260px;overflow:auto;margin-top:10px}
+#loraChatTimeline{max-height:55dvh;overflow:auto;overscroll-behavior:contain}
+@media(max-width:767px){.lora-real-map{height:52dvh;min-height:320px}}
