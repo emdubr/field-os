@@ -41,6 +41,9 @@ const server=http.createServer((req,res)=>{
     await page.setViewportSize({width:390,height:844});
     await page.keyboard.press('Control+k');
     assert.ok(await page.locator('#workspaceSwitcher').evaluate(e=>e.getBoundingClientRect().width<=innerWidth));
+    await page.keyboard.press('Escape');
+    await page.locator('#moreTabs').click();await page.locator('#mobileWorkspaceSearch').click();
+    assert.equal(await page.locator('#workspaceSwitcher').evaluate(e=>e.open||e.hasAttribute('data-open')),true);
     if(process.env.FIELD_SCREENSHOT)await page.screenshot({path:process.env.FIELD_SCREENSHOT});
     await page.keyboard.press('Escape');
     console.log('PASS quick switcher aliases, keyboard selection, pointer selection, empty results, Escape focus restoration, and narrow layout');
