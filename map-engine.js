@@ -147,6 +147,7 @@
       for(const layer of vectorLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=''}
     };
     st.applyRestingCamera=applyRestingCamera;
+    st.readLayout=readLayout;
     st.invalidateLayout=invalidateLayout;
     const paintGesture=gesture=>{
       const rect=readLayout(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
@@ -621,7 +622,7 @@
   function toggleLiveLocation(){liveEnabled?stopLiveLocation():startLiveLocation()}
 
   function screenToLatLon(st,clientX,clientY){
-    const rect=readLayout(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
+    const rect=st.readLayout?.()||st.el.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height),c=world(st.center.lat,st.center.lon,st.zoom);
     return unworld(c.x+(clientX-rect.left-w/2),c.y+(clientY-rect.top-h/2),st.zoom);
   }
   function mount(id,opts={}){
