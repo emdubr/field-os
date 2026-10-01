@@ -201,33 +201,48 @@ const sensorHistory={
 function pushSensorHistory(key,value){if(!Number.isFinite(Number(value))||!sensorHistory[key])return;sensorHistory[key].push(Number(value));if(sensorHistory[key].length>SENSOR_HISTORY_MAX)sensorHistory[key].shift()}
 function drawSensorSeries(canvasId,series,title){
   const c=document.getElementById(canvasId);if(!c)return;
-  const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
-  ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
-  const all=series.flatMap(s=>s.data).filter(Number.isFinite);if(!all.length)return;let min=Math.min(...all),max=Math.max(...all);if(max-min<1){min-=.5;max+=.5}const pad=(max-min)*.12;min-=pad;max+=pad;
-  const dashSets=[[],[9,5],[2,4]];
+  const rect=c.getBoundingClientRect(),cssW=Math.max(280,Math.round(rect.width||c.clientWidth||900)),cssH=Math.max(150,Math.round(rect.height||c.clientHeight||220)),dpr=Math.min(2,window.devicePixelRatio||1);
+  const pxW=Math.round(cssW*dpr),pxH=Math.round(cssH*dpr);
+  if(c.width!==pxW||c.height!==pxH){c.width=pxW;c.height=pxH}
+  const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  const w=cssW,h=cssH,st=getComputedStyle(document.body),fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',dim=st.getPropertyValue('--dim').trim()||'#64806a';
+  ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;
+  for(let i=1;i<4;i++){const y=30+(h-64)*i/4;ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-8,y);ctx.stroke()}
+  const dashSets=[[],[8,5],[2,4]],plotTop=30,plotBottom=h-34,plotH=Math.max(30,plotBottom-plotTop);
   series.forEach((s,si)=>{
-    ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?3:2;ctx.globalAlpha=si===0?1:.72;
-    ctx.setLineDash(dashSets[si%dashSets.length]);ctx.beginPath();
-    s.data.forEach((v,i)=>{const x=i/Math.max(1,s.data.length-1)*w,y=h-34-(v-min)/(max-min)*(h-62);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+    const data=s.data.filter(Number.isFinite);if(!data.length)return;
+    let min=Number.isFinite(s.min)?s.min:Math.min(...data),max=Number.isFinite(s.max)?s.max:Math.max(...data);
+    if(max-min<.001){min-=.5;max+=.5}else if(!Number.isFinite(s.min)&&!Number.isFinite(s.max)){const pad=(max-min)*.12;min-=pad;max+=pad}
+    ctx.strokeStyle=s.stroke||fg;ctx.lineWidth=si===0?2.5:2;ctx.globalAlpha=si===0?1:.7;ctx.setLineDash(dashSets[si%dashSets.length]);ctx.beginPath();
+    data.forEach((v,i)=>{const x=8+i/Math.max(1,data.length-1)*(w-16),y=plotBottom-(v-min)/(max-min)*plotH;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
     ctx.stroke();
   });
-  ctx.setLineDash([]);ctx.globalAlpha=1;
-  ctx.fillStyle=fg;ctx.font='15px monospace';ctx.fillText(title,12,19);
-  ctx.fillStyle=dim;ctx.font='11px monospace';
-  const slot=w/Math.max(1,series.length);
-  series.forEach((s,idx)=>{
-    const x=12+idx*slot,label=`${s.label} ${Number(s.data.at(-1)).toFixed(s.decimals??1)}${s.unit||''}`;
-    ctx.strokeStyle=fg;ctx.lineWidth=2;ctx.setLineDash(dashSets[idx%dashSets.length]);ctx.beginPath();ctx.moveTo(x,h-11);ctx.lineTo(x+18,h-11);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=dim;ctx.fillText(label,x+24,h-7);
-  });
+  ctx.setLineDash([]);ctx.globalAlpha=1;ctx.fillStyle=fg;ctx.font='600 12px ui-monospace,monospace';ctx.fillText(title,10,16);
+  const latest=series.map(s=>{const v=s.data.filter(Number.isFinite).at(-1);return v==null?null:`${s.label} ${Number(v).toFixed(s.decimals??1)}${s.unit||''}`}).filter(Boolean);
+  ctx.fillStyle=dim;ctx.font='10px ui-monospace,monospace';
+  let x=10;for(const label of latest){ctx.fillText(label,x,h-9);x+=Math.min(w*.36,ctx.measureText(label).width+22)}
+  c.setAttribute('aria-label',`${title}. ${latest.join(', ')}`);
+}
+function sensorSummary(){
+  const last=k=>sensorHistory[k].filter(Number.isFinite).at(-1);
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  set('sensorGnssNow',`${Math.round(last('gnssSats')||0)} SAT · ±${(last('gnssAcc')||0).toFixed(1)}m`);
+  set('sensorEnvNow',`${(last('temp')||0).toFixed(1)}°F · ${Math.round(last('humidity')||0)}% RH`);
+  set('sensorMeshNow',`${Math.round(last('meshRssi')||0)} dBm · ${(last('meshSnr')||0).toFixed(1)} dB`);
+  set('sensorImuNow',`P ${(last('pitch')||0).toFixed(1)}° · R ${(last('roll')||0).toFixed(1)}°`);
+  set('sensorPowerNow',`${Math.round(last('battery')||0)}%`);
 }
 function drawAllSensorCharts(){
   drawSensorSeries('gnssSignalChart',[{label:'SAT',data:sensorHistory.gnssSats,decimals:0},{label:'ACC',data:sensorHistory.gnssAcc,unit:'m'}],'GNSS SIGNAL / FIX');
   drawSensorSeries('meshSignalChart',[{label:'RSSI',data:sensorHistory.meshRssi,unit:'dBm',decimals:0},{label:'SNR',data:sensorHistory.meshSnr,unit:'dB'},{label:'NODES',data:sensorHistory.meshNodes,decimals:0}],'MESH LINK QUALITY');
   drawSensorSeries('environmentChart',[{label:'TEMP',data:sensorHistory.temp,unit:'°F'},{label:'RH',data:sensorHistory.humidity,unit:'%'}],'ENVIRONMENT');
   drawSensorSeries('imuChart',[{label:'PITCH',data:sensorHistory.pitch,unit:'°'},{label:'ROLL',data:sensorHistory.roll,unit:'°'}],'IMU MOTION');
-  drawSensorSeries('batteryChart',[{label:'BAT',data:sensorHistory.battery,unit:'%'}],'POWER TREND');
+  drawSensorSeries('batteryChart',[{label:'BAT',data:sensorHistory.battery,unit:'%',min:0,max:100}],'POWER TREND');
+  sensorSummary();
 }
+let sensorChartResizeTimer=0;
+window.addEventListener('resize',()=>{clearTimeout(sensorChartResizeTimer);sensorChartResizeTimer=setTimeout(()=>{if(document.querySelector('#sensors.active'))drawAllSensorCharts()},120)},{passive:true});
+document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='sensors')requestAnimationFrame(drawAllSensorCharts)});
 document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);drawAllSensorCharts()});
 function headingCardinal(deg){
   const dirs = ['N','NE','E','SE','S','SW','W','NW'];
