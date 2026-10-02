@@ -536,6 +536,17 @@ guideSearch?.addEventListener('input',renderGuides); renderFilters(); renderGuid
 const essentials=['Navigation','Headlamp / illumination','Sun protection','Insulation / extra clothing','First aid','Fire / ignition','Repair kit / tools','Extra food','Extra water + treatment','Emergency shelter'];
 function loadJSON(key,fallback){try{return JSON.parse(storageGet(STORE_PREFIX+key))??fallback}catch{return fallback}}
 function saveJSON(key,val){return storageSet(STORE_PREFIX+key,JSON.stringify(val))}
+function fieldNotice(message,{urgent=false}={}){
+ let node=document.getElementById('fieldActionNotice');
+ if(!node){node=document.createElement('div');node.id='fieldActionNotice';node.setAttribute('role','status');node.setAttribute('aria-live','polite');document.body.append(node);}
+ node.textContent=String(message);node.classList.toggle('urgent',urgent);
+ clearTimeout(fieldNotice.timeout);fieldNotice.timeout=setTimeout(()=>{if(node.textContent===String(message))node.textContent=''},7000);
+}
+function requireTrustedFix(action='THIS ACTION'){
+ if(hasTrustedMapPosition())return true;
+ fieldNotice(action+' BLOCKED — obtain a recent accurate live GPS fix. Demo or stale coordinates will not be saved.',{urgent:true});
+ return false;
+}
 function validLatLon(p){if(p?.lat==null||p?.lon==null||p.lat===''||p.lon==='')return false;const lat=Number(p?.lat),lon=Number(p?.lon);return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180}
 let essentialsState=loadJSON('essentials',{});
 function renderEssentials(){
@@ -785,7 +796,7 @@ function updateReturnBase(){if(!hasTrustedMapPosition()){['rtbDistance','rtbBear
 function updateReturnGuidance(){if(!hasTrustedMapPosition()){['rttDistance','rttBigDistance','rttBearing','rttBigBearing','rttPoint','rttLeg'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='NO TRUSTED FIX';});updateReturnBase();return;}const n=nearestPointOnRoute(currentNavPosition),name=document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE';const ids=['rttDistance','rttBigDistance'];if(!n){ids.forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='NO ROUTE'});['rttBearing','rttBigBearing','rttPoint','rttLeg'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='---'});updateReturnBase();return}const mi=n.meters/1609.344,deg=bearingDeg(currentNavPosition,n.point),card=headingCardinal(deg);ids.forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=mi<.1?`${Math.round(n.meters*3.28084)} ft`:`${mi.toFixed(2)} mi`});const rb=document.getElementById('rttBearing');if(rb)rb.textContent=`${deg.toFixed(0).padStart(3,'0')}° ${card}`;const rbb=document.getElementById('rttBigBearing');if(rbb)rbb.innerHTML=`${deg.toFixed(0).padStart(3,'0')}° <small>${card}</small>`;const rr=document.getElementById('rttRouteName');if(rr)rr.textContent=name;const rbr=document.getElementById('rttBigRoute');if(rbr)rbr.textContent=name;const rp=document.getElementById('rttPoint');if(rp)rp.textContent=`LEG ${n.leg}`;const rl=document.getElementById('rttLeg');if(rl)rl.textContent=`${n.leg} / ${Math.max(1,routePoints.length-1)}`;const arr=document.getElementById('returnArrow');if(arr)arr.style.transform=`rotate(${deg}deg)`;const ps=document.getElementById('rttPosSource');if(ps)ps.textContent=currentNavPosition.source||'POSITION';updateReturnBase();updateRouteMonitor()}
 document.getElementById('usePhonePos')?.addEventListener('click',()=>requestFieldLiveLocation());
 document.getElementById('followBreadcrumbs')?.addEventListener('click',()=>{addLog(`RETURN TO BASE STARTED — target ${routePlan.name||'route start'}.`,'NAV')});
-document.getElementById('mapMarkBtn')?.addEventListener('click',()=>addLog(`MAP MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}.`,'POSITION'));
+document.getElementById('mapMarkBtn')?.addEventListener('click',()=>{if(requireTrustedFix('MAP MARK'))addLog(`MAP MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}.`,'POSITION')});
 const cleanSharedRoutePoints=(list=[],limit=1000)=>(Array.isArray(list)?list:[]).filter(validLatLon).slice(0,limit).map(p=>({lat:Number(p.lat),lon:Number(p.lon)}));
 window.FIELD_ROUTE_STATE={
   getPoints:()=>cleanSharedRoutePoints(routePoints),
@@ -853,11 +864,12 @@ function renderWaypoints(){
   updateWaypointNav();
 }
 function saveWaypointCurrent(forceBase=false){
+  if(!requireTrustedFix(forceBase?'SAVE BASE':'SAVE WAYPOINT'))return false;
   if(waypoints.length>=500){alert('Waypoint limit reached (500). Export or delete old waypoints before adding more.');return;}
   const name=(document.getElementById('waypointName')?.value||'').trim()||(forceBase?'BASE':'WAYPOINT '+String(waypoints.length+1).padStart(2,'0'));
   const type=forceBase?'BASE':document.getElementById('waypointType')?.value||'NOTE', notes=document.getElementById('waypointNotes')?.value||'';
-  const w={id:`wp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name,type,notes,lat:currentNavPosition.lat,lon:currentNavPosition.lon,alt:currentNavPosition.alt??demo.alt,created:new Date().toISOString()};
-  waypoints.push(w); saveJSON('waypoints',waypoints); if(forceBase){activeWaypointId=w.id;storageSet(STORE_PREFIX+'active-waypoint',w.id)} renderWaypoints(); notifyWaypointsChange({added:w}); addLog(`WAYPOINT — ${name} at ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}.`,'POSITION'); navigator.vibrate?.(25);
+  const w={id:`wp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,name,type,notes,lat:currentNavPosition.lat,lon:currentNavPosition.lon,alt:Number.isFinite(currentNavPosition.alt)?currentNavPosition.alt:null,created:new Date().toISOString()};
+  waypoints.push(w); saveJSON('waypoints',waypoints); if(forceBase){activeWaypointId=w.id;storageSet(STORE_PREFIX+'active-waypoint',w.id)} renderWaypoints(); notifyWaypointsChange({added:w}); addLog(`WAYPOINT — ${name} at ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}.`,'POSITION'); navigator.vibrate?.(25);return true;
 }
 function updateWaypointNav(){
   if(!hasTrustedMapPosition()){['waypointDistance','waypointBearing'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='NO TRUSTED FIX';});return;}
@@ -912,13 +924,14 @@ function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fi
 function addTrackPoint(pos,accuracy=null){
  if(!validLatLon(pos)||accuracy!=null&&(!Number.isFinite(accuracy)||accuracy>100))return;
  const prev=recordedTrack.at(-1),leg=prev?haversineMiles(prev,pos):0;
- if(prev&&leg<.003)return;
+ if(prev&&leg*1609.344<Math.max(5,Number.isFinite(Number(accuracy))?Number(accuracy)*.5:5,Number.isFinite(Number(prev.accuracy))?Number(prev.accuracy)*.5:5))return;
  const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};
  recordedTrack.push(point);
  if(trackDistanceCache!==null)trackDistanceCache+=leg;
  if(recordedTrack.length>5000){
-  if(trackDistanceCache!==null)trackDistanceCache=Math.max(0,trackDistanceCache-haversineMiles(recordedTrack[0],recordedTrack[1]));
-  recordedTrack.shift();
+  // Preserve the trailhead. Display sampling may shed the oldest interior point, never the starting fix.
+  trackDistanceCache=null;
+  recordedTrack.splice(1,1);
  }
  if(trackStore){trackStore.append(point);if(!trackStore.persistent)saveJSON('track',recordedTrack)}
  else saveJSON('track',recordedTrack);
@@ -928,9 +941,11 @@ function addTrackPoint(pos,accuracy=null){
 function startTrack(){
  if(!navigator.geolocation)return alert('Phone geolocation unavailable.');
  if(trackWatchId!=null)return;
- trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');
+ trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageSet(STORE_PREFIX+'track-active','yes');storageRemove(STORE_PREFIX+'track-stop');
  const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';
  const onFix=p=>{
+  storageSet(STORE_PREFIX+'track-last-fix',String(Date.now()));
+  const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';
   if(!window.FIELD_GEO_HUB||!window.FIELD_MAP_ENGINE?.live)applyFieldGeolocation(p,'PHONE TRACK');
   // Record the raw fix rather than a coalesced screen update.
   addTrackPoint({lat:p.coords.latitude,lon:p.coords.longitude,
@@ -939,15 +954,35 @@ function startTrack(){
    Number.isFinite(p.coords.accuracy)?'±'+Math.round(p.coords.accuracy)+'m':'UNKNOWN';
   if(fieldViewActive('home','nav','track'))updateLiveNavigationUI();
  };
- const onFail=err=>{stopTrack();alert('Track recorder stopped: '+String(err.message||err))};
+ const onFail=err=>{
+  const permissionDenied=Number(err?.code)===1;
+  if(permissionDenied){stopTrack();fieldNotice('TRACK STOPPED — location permission denied. Re-enable GPS permission and resume manually.',{urgent:true});return}
+  const state=document.getElementById('trackState');
+  if(state)state.textContent='WEAK GPS — RECORDING ARMED';
+  fieldNotice('GPS SIGNAL INTERRUPTED — tracking remains armed; a browser may suspend location in the background.',{urgent:true});
+};
  trackWatchId=window.FIELD_GEO_HUB?
   window.FIELD_GEO_HUB.subscribe(onFix,onFail,{role:'track'}):
   navigator.geolocation.watchPosition(onFix,onFail,{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
 }
 window.FIELD_TRACK_STATUS=()=>({active:trackWatchId!=null,points:recordedTrack.length,distanceMiles:trackDistanceMiles()});
-function stopTrack(){if(trackWatchId!=null){if(window.FIELD_GEO_HUB)window.FIELD_GEO_HUB.unsubscribe(trackWatchId);else navigator.geolocation?.clearWatch(trackWatchId);}if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
+if(storageGet(STORE_PREFIX+'track-active')==='yes'){
+  const previousFix=Number(storageGet(STORE_PREFIX+'track-last-fix'))||trackStartedAt;
+  const time=previousFix?new Date(previousFix).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'UNKNOWN';
+  const state=document.getElementById('trackState');if(state)state.textContent='RECORDING INTERRUPTED';
+  const host=document.getElementById('trackRecovery');
+  if(host){
+    const message=document.createElement('span');message.textContent='Previous recording interrupted around '+time+'. This browser cannot guarantee background GPS.';
+    const resume=document.createElement('button');resume.type='button';resume.className='action';resume.id='resumeTrack';resume.textContent='RESUME GPS TRACK';
+    resume.addEventListener('click',()=>{host.replaceChildren();startTrack()});
+    host.replaceChildren(message,resume);
+  }
+  // Do not pretend that a remembered flag means a native GPS watcher is running.
+  storageRemove(STORE_PREFIX+'track-active');
+}
+function stopTrack(){storageRemove(STORE_PREFIX+'track-active');if(trackWatchId!=null){if(window.FIELD_GEO_HUB)window.FIELD_GEO_HUB.unsubscribe(trackWatchId);else navigator.geolocation?.clearWatch(trackWatchId);}if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.85" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
-document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',async()=>{
+document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>{if(requireTrustedFix('ADD CURRENT TRACK POINT'))addTrackPoint(currentNavPosition,currentAccuracy)});document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',async()=>{
   if(!confirm('Clear recorded breadcrumb track?'))return;
   stopTrack();
   if(!trackStore){saveJSON('track',[])}
@@ -990,8 +1025,8 @@ document.getElementById('resetCheckin')?.addEventListener('click',resetCheckinTi
 updateRouteMonitor();
 
 
-document.getElementById('copyCurrentCoord')?.addEventListener('click',async()=>{await copyText(`${currentNavPosition.lat.toFixed(6)}, ${currentNavPosition.lon.toFixed(6)}`);navigator.vibrate?.(15)});
-document.getElementById('saveCurrentAsBase')?.addEventListener('click',()=>{const nameEl=document.getElementById('waypointName');if(nameEl&&!nameEl.value.trim())nameEl.value='BASE';saveWaypointCurrent(true);openView('waypoints')});
+document.getElementById('copyCurrentCoord')?.addEventListener('click',async()=>{if(!requireTrustedFix('COPY CURRENT COORDINATES'))return;if(await copyText(`${currentNavPosition.lat.toFixed(6)}, ${currentNavPosition.lon.toFixed(6)}`))navigator.vibrate?.(15)});
+document.getElementById('saveCurrentAsBase')?.addEventListener('click',()=>{const nameEl=document.getElementById('waypointName');if(nameEl&&!nameEl.value.trim())nameEl.value='BASE';if(saveWaypointCurrent(true))openView('waypoints')});
 
 // v1.1 reference-fit: preserve the full generated workstation composition on small landscape screens.
 function fitReferenceConsole(){
