@@ -10,7 +10,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,routeSlopeDisplayPieces,debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -503,8 +503,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-horizon1'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-horizon1'"));
+ assert.ok(html.includes('app.js?v=3.85-gradeview1'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-gradeview1'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
@@ -632,6 +632,20 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  ]};
  assert.equal(r.slopeClass(r.gradeAtDistance(sustainedSteep,50)).key,'hard');
  console.log('PASS flat/noisy DEM route segment remains easy, not red');
+ // A meandering 900-vertex trail shortens dramatically when decimated to
+ // straight chords. Route-colored segments must refer to FULL trail mileage,
+ // or warning colors appear on the wrong part of the route.
+ const winding=Array.from({length:901},(_,i)=>({lat:44+(i%2)*.0008,lon:-73+i*.00002}));
+ const fullM=winding.slice(1).reduce((sum,p,i)=>sum+r.meters(winding[i],p),0);
+ const pieces=r.routeSlopeDisplayPieces(winding,120);
+ assert.ok(pieces.length<=119,'color renderer must bound the display segment count');
+ assert.ok(Math.abs(pieces.at(-1).endM-fullM)<.001,'last color segment ends at true routed mileage');
+ const first=pieces[0],shortChord=r.meters(first.a,first.b);
+ assert.ok(first.endM-first.startM>shortChord*8,'winding geometry must use original accumulated trail length, not shortened display chords');
+ assert.ok(Math.abs(first.midM-(first.startM+first.endM)/2)<.001);
+ assert.equal(r.routeSlopeDisplayPieces([],120).length,0,'an empty route has no slope overlay geometry');
+ console.log('PASS route slope colors retain original winding-trail mileage after decimation');
+
  assert.ok(w.FIELD_ROUTE_SLOPE,'main map shares the live route planner sustained-grade classifier');
  assert.equal(w.FIELD_ROUTE_SLOPE.slopeClass(w.FIELD_ROUTE_SLOPE.gradeAtDistance(sustainedSteep,50)).key,'hard');
  const gradedRoute=Array.from({length:6},(_,i)=>({lat:44+i*.0009,lon:-73}));
@@ -1006,7 +1020,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-horizon1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-gradeview1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
@@ -1034,7 +1048,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(fieldIntelJs.includes('data-readiness-id'));
  assert.ok(fieldIntelJs.includes('FIELD_MISSION_READINESS'));
  console.log('PASS mission readiness is actionable and styled as touch controls');
- assert.ok(routePlannerJs.includes("displayRoutePoints(pts,600)"));
+ assert.ok(routePlannerJs.includes("routeSlopeDisplayPieces(pts,600)"));
  assert.ok(routePlannerJs.includes("displayRoutePoints(pts,1200)"));
  console.log('PASS route planner display geometry is capped without changing full navigation geometry');
  assert.ok(routePlannerJs.includes("lastOverlayGeometryKey"));

@@ -336,6 +336,23 @@
     for(let i=step;i<pts.length-1;i+=step)out.push(pts[i]);
     out.push(pts.at(-1));return out;
   }
+  // Every colored display leg uses the FULL route's cumulative mileage.
+  // Chords between decimated vertices underestimate winding trails and used
+  // to paint the orange/red sections well before their actual trail location.
+  function routeSlopeDisplayPieces(pts,limit=600){
+    if(!Array.isArray(pts)||pts.length<2)return [];
+    const cumulative=new Float64Array(pts.length);
+    for(let i=1;i<pts.length;i++)cumulative[i]=cumulative[i-1]+meters(pts[i-1],pts[i]);
+    const step=Math.max(1,Math.ceil((pts.length-1)/(Math.max(2,limit)-1)));
+    const indices=[0];
+    for(let i=step;i<pts.length-1;i+=step)indices.push(i);
+    indices.push(pts.length-1);
+    return indices.slice(1).map((end,j)=>{
+      const start=indices[j];
+      return {a:pts[start],b:pts[end],startM:cumulative[start],endM:cumulative[end],
+        midM:(cumulative[start]+cumulative[end])/2};
+    });
+  }
   function drawRouteSlopeOverlay(svg,pts){
     const g=svg?.querySelector('.route-dom-slope-segments');
     if(!g)return;
@@ -349,12 +366,9 @@
     // The DEM profile is capped at 140 samples, so drawing thousands of tiny
     // OSM vertices cannot add useful slope detail. Cap the display geometry
     // while keeping the full route for navigation/export.
-    const slopePts=displayRoutePoints(pts,600),totalM=routeDistanceMiles(pts)*1609.344;
-    let cumulative=0;
-    for(let i=1;i<slopePts.length;i++){
-      const a=slopePts[i-1],b=slopePts[i],segM=meters(a,b),mid=Math.min(totalM,cumulative+segM/2);
-      const cls=slopeClass(gradeAtDistance(activeElevationProfile,mid));
-      cumulative+=segM;
+    const pieces=routeSlopeDisplayPieces(pts,600);
+    for(const {a,b,midM} of pieces){
+      const cls=slopeClass(gradeAtDistance(activeElevationProfile,midM));
       const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
       paths[cls.key].push(`M${qa.x.toFixed(1)},${qa.y.toFixed(1)}L${qb.x.toFixed(1)},${qb.y.toFixed(1)}`);
     }
@@ -2174,6 +2188,7 @@
 
   // Share sustained DEM grade classes with the Home/Terrain overview.
   window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
+  document.dispatchEvent(new Event('fieldos:slopeclassifierready'));
   window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 
   // The horizontal elevation overview must work even when the optional

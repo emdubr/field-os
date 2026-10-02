@@ -4427,3 +4427,13 @@ select option{background:#010a05;color:var(--crt-green-hot)}
     max-height:190px!important;
   }
 }
+
+/* Horizontal schematic uses the same sustained DEM grade bands as the map.
+   These are grade estimates, not a surveyed trail difficulty or safety rating. */
+.ws-route-plot .ws-route-slope{
+  fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-width:3.6px;vector-effect:non-scaling-stroke;pointer-events:none;
+}
+.ws-route-plot .ws-route-slope-easy{stroke:#35ff9c}
+.ws-route-plot .ws-route-slope-medium{stroke:#f28c28;stroke-width:4.2px}
+.ws-route-plot .ws-route-slope-hard{stroke:#e5484d;stroke-width:4.8px}

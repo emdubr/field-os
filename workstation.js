@@ -168,8 +168,64 @@
     };
     let tolerance=.3,indices=simplify(tolerance);
     while(indices.length>600&&tolerance<256){tolerance*=1.65;indices=simplify(tolerance);}
+    // Pathological zigzag tracks can still exceed 600 vertices after the
+    // standard tolerance pass. A bounded binary search enforces the SVG cap
+    // while keeping the maximum possible number of meaningful turns.
+    if(indices.length>600){
+      let low=tolerance,high=512,selected=simplify(high);
+      for(let pass=0;pass<9;pass++){
+        const mid=(low+high)/2,candidate=simplify(mid);
+        if(candidate.length<=600){high=mid;selected=candidate}
+        else low=mid;
+      }
+      indices=selected;
+    }
     const pts=indices.map(i=>screen[i]);
-    return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Top-down schematic of actual route geometry with uniform map scale; not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Geometry only; uniform map projection preserves turns and aspect. No terrain or obstacle information.');
+    let gradedPaths='',hasGrades=false;
+    const plan=window.FIELD_ROUTE_STATE?.getPlan?.(),samples=plan?.elevationProfile,grader=window.FIELD_ROUTE_SLOPE;
+    if(grader?.gradeAtDistance&&grader?.slopeClass&&Array.isArray(samples)&&samples.length>1&&
+       [samples[0],samples.at(-1)].every(p=>Number.isFinite(p?.lat)&&Number.isFinite(p?.lon))){
+      // Grade is rendered only for the same route that produced the DEM.
+      // Unrelated/stale profiles must NEVER color a newly edited route.
+      const cumulative=[0];
+      for(let i=1;i<routePoints.length;i++)
+        cumulative.push(cumulative[i-1]+haversineMiles(routePoints[i-1],routePoints[i])*1609.344);
+      const total=cumulative.at(-1),sampleTotal=Number(samples.at(-1)?.distanceM);
+      const profileMatches=total>10&&Number.isFinite(sampleTotal)&&Math.abs(sampleTotal-total)/total<.06&&
+        haversineMiles(samples[0],routePoints[0])*1609.344<60&&
+        haversineMiles(samples.at(-1),routePoints.at(-1))*1609.344<60;
+      if(profileMatches){
+        const paths={easy:[],medium:[],hard:[]};
+        // Slope coloring requires a DIFFERENT resolution than the neutral
+        // route outline: a geometrically straight climb may have a flat,
+        // medium, then hard slope while RDP keeps only its two endpoints.
+        // Keep class transitions by sampling the real cumulative trail
+        // independently from the shape simplification (bounded ~450 pieces).
+        const colorStride=Math.max(1,Math.ceil((screen.length-1)/450));
+        for(let start=0;start<screen.length-1;start+=colorStride){
+          const end=Math.min(screen.length-1,start+colorStride);
+          const run=cumulative[end]-cumulative[start],substeps=Math.min(4,
+            Math.max(1,Math.ceil(run/Math.max(40,total/240))));
+          for(let j=0;j<substeps;j++){
+            const t0=j/substeps,t1=(j+1)/substeps;
+            const mid=cumulative[start]+run*(t0+t1)/2;
+            const grade=grader.gradeAtDistance({samples},mid);
+            // Flat sections retain the normal base route line.
+            if(!Number.isFinite(grade)||Math.abs(grade)<3)continue;
+            const key=grader.slopeClass(grade).key;
+            if(!paths[key])continue;
+            const from=screen[start],to=screen[end],x0=from[0]+(to[0]-from[0])*t0,
+              y0=from[1]+(to[1]-from[1])*t0,x1=from[0]+(to[0]-from[0])*t1,
+              y1=from[1]+(to[1]-from[1])*t1;
+            paths[key].push(`M${x0.toFixed(2)},${y0.toFixed(2)}L${x1.toFixed(2)},${y1.toFixed(2)}`);
+          }
+        }
+        gradedPaths=['easy','medium','hard'].filter(key=>paths[key].length).map(key=>
+          `<path class="ws-route-slope ws-route-slope-${key}" d="${paths[key].join('')}"/>`).join('');
+        hasGrades=!!gradedPaths;
+      }
+    }
+    return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Top-down schematic of actual route geometry with uniform map scale; not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${gradedPaths}${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note(hasGrades?'Green / orange / red indicate estimated sustained DEM grade. Verify actual trail conditions independently.':'Geometry only; uniform map projection preserves turns and aspect. No terrain or obstacle information.');
   }
   const bodies={
     status:()=>rows([
@@ -304,7 +360,8 @@
     refreshFrame=requestAnimationFrame(()=>{refreshFrame=0;refresh();});
   }
   document.addEventListener('fieldos:routechange',()=>{plotHtml=null;scheduleRefresh();});
-  document.addEventListener('fieldos:routemetadatachange',scheduleRefresh);
+  document.addEventListener('fieldos:routemetadatachange',()=>{plotHtml=null;scheduleRefresh()});
+  document.addEventListener('fieldos:slopeclassifierready',()=>{plotHtml=null;scheduleRefresh()});
   document.addEventListener('fieldos:positionchange',scheduleRefresh);
   document.addEventListener('fieldos:trackchange',scheduleRefresh);
   document.addEventListener('fieldos:meshroster',scheduleRefresh);
