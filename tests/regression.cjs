@@ -8,8 +8,8 @@ w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MA
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
 async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out: '+d.getElementById('routePlannerStatus').textContent+' '+d.getElementById('routePlannerDiag').textContent+' '+errors.join(' | '))}
 for(const f of ['survival-data.js','route-state.js','runtime.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
-let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
-w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
+let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},bindTooltip(){return this},setOpacity(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
+w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
 let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
@@ -620,6 +620,30 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(let i=0;i<50;i++)w.FIELD_ROUTE_PLANNER.activate();
  assert.equal(d.querySelectorAll('#undoRoutePoint').length,1);assert.equal(d.querySelectorAll('#routePlannerMap').length,1);
  console.log('PASS 50x route-planner activation stress');
+ // Dragging away from GPS must disengage follow without stopping live marker updates.
+ let onPlannerFix=null,clearedPlannerWatch=0;
+ Object.defineProperty(w.navigator,'geolocation',{configurable:true,value:{
+   watchPosition(cb){onPlannerFix=cb;return 77},
+   clearWatch(){clearedPlannerWatch++}
+ }});
+ assert.equal(typeof plannerDragStart,'function','Planner registers a manual drag listener');
+ click('routeFollowMe');
+ assert.equal(d.getElementById('routeFollowMe').getAttribute('aria-pressed'),'true');
+ assert.equal(typeof onPlannerFix,'function');
+ onPlannerFix({coords:{latitude:44.4759,longitude:-73.2121,accuracy:4,heading:0}});
+ assert.ok(plannerPanCount>0,'Follow mode pans to live GPS');
+ const panCountAtDrag=plannerPanCount;
+ plannerDragStart();
+ assert.equal(d.getElementById('routeFollowMe').getAttribute('aria-pressed'),'false','Manual drag disables planner follow');
+ onPlannerFix({coords:{latitude:44.49,longitude:-73.21,accuracy:4,heading:0}});
+ assert.equal(plannerPanCount,panCountAtDrag,'GPS updates cannot undo manual planner pan');
+ assert.equal(clearedPlannerWatch,0,'Planner still receives live GPS while manual panning');
+ click('routeFollowMe');
+ assert.equal(d.getElementById('routeFollowMe').getAttribute('aria-pressed'),'true','FOLLOW ME can resume following');
+ onPlannerFix({coords:{latitude:44.50,longitude:-73.20,accuracy:4,heading:0}});
+ assert.ok(plannerPanCount>panCountAtDrag,'Explicit FOLLOW ME resumes GPS camera movement');
+ click('routeFollowMe');
+ console.log('PASS planner manual dragging suspends GPS camera follow while marker keeps updating');
  assert.ok(html.includes('id="routeEditPoints"'));
  assert.ok(routePlannerJs.includes('function moveEditPoint(p)'));
  assert.ok(routePlannerJs.includes("marker.on('click'"));
