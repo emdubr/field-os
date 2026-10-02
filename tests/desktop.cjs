@@ -84,7 +84,7 @@ const server=http.createServer((req,res)=>{
     const profileMobile=await page.locator('#routeProfile').evaluate(c=>({width:c.getBoundingClientRect().width,height:c.getBoundingClientRect().height,wrap:c.parentElement.getBoundingClientRect().width,prepared:Number(c.dataset.fieldCssWidth)||0,scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
     assert.ok(profileMobile.width>180&&profileMobile.width<=profileMobile.wrap+1,'Phone horizontal profile stays inside its wrapper');
     assert.ok(profileMobile.height>=185&&profileMobile.height<=195,'Phone profile has fixed height instead of stretched intrinsic canvas');
-    assert.ok(Math.abs(profileMobile.prepared-profileMobile.width)<=3,'Horizontal canvas re-renders at the new responsive width');
+    assert.ok(Math.abs(profileMobile.prepared-profileMobile.width)<=3,'Horizontal canvas re-renders at the new responsive width: '+JSON.stringify({mobile:profileMobile,desktop:profileDesktop}));
     assert.ok(profileMobile.scroll<=profileMobile.viewport+1,'Horizontal chart must not create a sideways-scrolling page');
     await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(130);
     console.log('PASS horizontal route overview sizes and re-renders correctly on desktop and phone');
