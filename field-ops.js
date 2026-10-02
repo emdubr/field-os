@@ -21,11 +21,17 @@
   const getPlan=()=>window.FIELD_ROUTE_STATE?.getPlan?.()||{};
   const cleanPoints=list=>(Array.isArray(list)?list:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null}));
   let routeGeometryCacheKey='',routeGeometryCache=null;
+  document.addEventListener('fieldos:routechange',()=>{routeGeometryCacheKey='';routeGeometryCache=null});
   function routeGeometry(plan=getPlan()){
     const raw=Array.isArray(plan?.points)?plan.points:[],key=plan?.updatedAt?`${plan.updatedAt}|${raw.length}`:'';
     if(key&&routeGeometryCacheKey===key&&routeGeometryCache)return routeGeometryCache;
-    const pts=cleanPoints(raw),cum=[0];for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+meters(pts[i-1],pts[i]);
-    const value={pts,cum,total:cum.at(-1)||0};
+    const pts=cleanPoints(raw),cum=[0],segments=[];
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1],b=pts[i],latAngle=rad((a.lat+b.lat)/3);
+      cum.push(cum.at(-1)+meters(a,b));
+      segments.push({lat:a.lat,lon:a.lon,dLat:b.lat-a.lat,dLon:b.lon-a.lon,cosLat:Math.cos(latAngle),sinLat:Math.sin(latAngle)});
+    }
+    const value={pts,cum,segments,total:cum.at(-1)||0};
     if(key){routeGeometryCacheKey=key;routeGeometryCache=value}
     return value;
   }
@@ -34,11 +40,14 @@
   const weatherCache=()=>window.FIELD_WEATHER?.state?.cache||null;
   const nearestRouteIndex=(pts,pos)=>{if(!validPoint(pos)||!pts.length)return 0;let best=Infinity,idx=0;for(let i=0;i<pts.length;i++){const d=meters(pos,pts[i]);if(d<best){best=d;idx=i}}return idx};
   const routeProgressFraction=(plan=getPlan(),pos=getPosition())=>{
-    const {pts,cum,total}=routeGeometry(plan);if(pts.length<2||!validPoint(pos)||!total)return 0;
+    const {pts,cum,segments,total}=routeGeometry(plan);if(pts.length<2||!validPoint(pos)||!total)return 0;
+    // cos((a.lat+b.lat+pos.lat)/3) = cos(segmentAngle + positionAngle).
+    // Cache segment trig once per route; do only two trig calls per GPS fix.
+    const positionAngle=rad(pos.lat/3),cosPos=Math.cos(positionAngle),sinPos=Math.sin(positionAngle),latScale=111320;
     let bestDist=Infinity,bestAlong=0;
-    for(let i=0;i<pts.length-1;i++){
-      const a=pts[i],b=pts[i+1],latScale=111320,lonScale=111320*Math.cos(rad((a.lat+b.lat+pos.lat)/3));
-      const abx=(b.lon-a.lon)*lonScale,aby=(b.lat-a.lat)*latScale,apx=(pos.lon-a.lon)*lonScale,apy=(pos.lat-a.lat)*latScale,len2=abx*abx+aby*aby;
+    for(let i=0;i<segments.length;i++){
+      const seg=segments[i],lonScale=111320*(seg.cosLat*cosPos-seg.sinLat*sinPos);
+      const abx=seg.dLon*lonScale,aby=seg.dLat*latScale,apx=(pos.lon-seg.lon)*lonScale,apy=(pos.lat-seg.lat)*latScale,len2=abx*abx+aby*aby;
       const t=len2?clamp((apx*abx+apy*aby)/len2,0,1):0,dx=apx-t*abx,dy=apy-t*aby,d=Math.hypot(dx,dy);
       if(d<bestDist){bestDist=d;bestAlong=cum[i]+t*(cum[i+1]-cum[i])}
     }
@@ -138,7 +147,7 @@
     return d-cum[lo-1]<=cum[lo]-d?lo-1:lo;
   }
   function generateTurns(plan=getPlan()){const {pts,cum}=routeGeometry(plan);if(pts.length<2){turnState.cues=[];return []}const cues=[{id:'start',index:0,distanceM:0,type:'start',instruction:'START ROUTE',trail:String(plan.name||'ROUTE'),bearing:bearing(pts[0],pts[1])}],minSpacing=80;let lastCueD=0;for(let i=1;i<pts.length-1;i++){const inB=bearing(pts[i-1],pts[i]),outB=bearing(pts[i],pts[i+1]),d=deltaBearing(inB,outB);if(Math.abs(d)>=38&&cum[i]-lastCueD>=minSpacing){cues.push({id:'turn-'+i,index:i,distanceM:cum[i],type:d>0?'right':'left',instruction:`${Math.abs(d)>=100?'SHARP ':''}TURN ${d>0?'RIGHT':'LEFT'}`,trail:'ROUTE',bearing:outB});lastCueD=cum[i]}}let secD=0,lastTrail='';for(const s of window.FIELD_GUIDANCE?.continuity(plan.trailSections)||(Array.isArray(plan.trailSections)?plan.trailSections:[])){const name=String(s.name||s.label||s.ref||'').trim();if(!name){secD+=Number(s.distanceM)||0;continue}const idx=pointIndexAtDistance(cum,secD);if(secD>0&&name.toLowerCase()!==lastTrail){const outB=idx<pts.length-1?bearing(pts[idx],pts[idx+1]):0;cues.push({id:'trail-'+cues.length,index:idx,distanceM:secD,type:'trail',instruction:`CONTINUE ON ${name.toUpperCase()}`,trail:name,bearing:outB});}lastTrail=name.toLowerCase();secD+=Number(s.distanceM)||0}cues.push({id:'finish',index:pts.length-1,distanceM:cum.at(-1),type:'finish',instruction:'ARRIVE AT ROUTE END',trail:String(plan.name||'ROUTE'),bearing:0});cues.sort((a,b)=>a.distanceM-b.distanceM);turnState.cues=cues;turnState.index=0;return cues}
-  function nextTurn(position=getPosition(),plan=getPlan()){if(!turnState.cues.length)generateTurns(plan);const {pts,cum,total}=routeGeometry(plan);if(!pts.length||!turnState.cues.length)return null;const progress=routeProgressFraction(plan,position)*total;let ci=turnState.cues.findIndex(c=>c.distanceM>=progress-20);if(ci<0)ci=turnState.cues.length-1;turnState.index=ci;const cue=turnState.cues[ci],distanceM=Math.max(0,cue.distanceM-progress);return {...cue,distanceToCueM:distanceM,progressM:progress,totalM:total,remaining:Math.max(0,turnState.cues.length-ci-1)}}
+  function nextTurn(position=getPosition(),plan=getPlan()){if(!turnState.cues.length)generateTurns(plan);const {pts,cum,total}=routeGeometry(plan);if(!pts.length||!turnState.cues.length)return null;const progress=routeProgressFraction(plan,position)*total,threshold=progress-20;let lo=0,hi=turnState.cues.length;while(lo<hi){const mid=(lo+hi)>>1;if(turnState.cues[mid].distanceM<threshold)lo=mid+1;else hi=mid}const ci=Math.min(lo,turnState.cues.length-1);turnState.index=ci;const cue=turnState.cues[ci],distanceM=Math.max(0,cue.distanceM-progress);return {...cue,distanceToCueM:distanceM,progressM:progress,totalM:total,remaining:Math.max(0,turnState.cues.length-ci-1)}}
   function renderTurnNav(forceIndex=null){const plan=getPlan();if(!turnState.cues.length)generateTurns(plan);if(forceIndex!=null)turnState.index=clamp(forceIndex,0,Math.max(0,turnState.cues.length-1));const cue=forceIndex==null?nextTurn():turnState.cues[turnState.index],set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v},arrow=document.getElementById('turnNavArrow');if(!cue){set('turnNavState','WAITING FOR ROUTE');set('turnNavInstruction','NO ACTIVE INSTRUCTION');return null}const dist=cue.distanceToCueM??0;set('turnNavState','CUE '+(turnState.index+1)+' / '+turnState.cues.length);set('turnNavInstruction',cue.instruction);set('turnNavDistance',dist<160.934?Math.round(dist*3.28084)+' ft':fmtMiles(dist));set('turnNavTrail',cue.trail||'ROUTE');set('turnNavNext',cue.type.toUpperCase());set('turnNavRemaining',String(cue.remaining??Math.max(0,turnState.cues.length-turnState.index-1)));set('turnNavProgress',cue.totalM?Math.round((cue.progressM||0)/cue.totalM*100)+'%':'—');set('turnNavHapticsState',turnState.haptics?'ON':'OFF');if(arrow)arrow.style.transform=`rotate(${Number(cue.bearing)||0}deg)`;if(forceIndex==null&&turnState.haptics&&dist<=60&&turnState.lastVibrated!==cue.id){navigator.vibrate?.([80,50,80]);turnState.lastVibrated=cue.id}return cue}
   document.getElementById('turnNavPrev')?.addEventListener('click',()=>renderTurnNav(turnState.index-1));document.getElementById('turnNavNextBtn')?.addEventListener('click',()=>renderTurnNav(turnState.index+1));document.getElementById('turnNavToggleHaptics')?.addEventListener('click',()=>{turnState.haptics=!turnState.haptics;renderTurnNav(turnState.index)});
   const opsViewVisible=id=>!!document.querySelector(`#${id}.active`);
