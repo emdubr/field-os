@@ -227,6 +227,18 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const etaPlan={points:[{lat:44,lon:-73},{lat:44.04,lon:-73}],distanceMiles:4,elevationGainFt:1800,trailSections:[{surface:'ground',distanceM:3000}]};
  const eta=w.FIELD_ADAPTIVE_ETA.compute(etaPlan,{lat:44.01,lon:-73});assert.equal(eta.pace.source,'RECORDED TRACK');assert.ok(eta.totalHours>0);assert.ok(eta.remainingHours<eta.totalHours);w.FIELD_ADAPTIVE_ETA.render(eta);
  console.log('PASS feature 25 Adaptive ETA learns a bounded personal pace from recorded tracks and adjusts time for grade, conditions and route progress');
+ const projectionPoints=Array.from({length:601},(_,i)=>({lat:44+i*.00002,lon:-73+.00002*Math.sin(i/30)})),projectionPlan={points:projectionPoints},projectionPosition={lat:44+.00002*390+.00003,lon:-73+.00002*Math.sin(390/30)+.00004};
+ const projectedCum=[0];for(let i=1;i<projectionPoints.length;i++)projectedCum[i]=projectedCum[i-1]+r.meters(projectionPoints[i-1],projectionPoints[i]);
+ let referenceDist=Infinity,referenceAlong=0;
+ for(let i=0;i<projectionPoints.length-1;i++){
+   const a=projectionPoints[i],b=projectionPoints[i+1],latScale=111320,lonScale=111320*Math.cos((a.lat+b.lat+projectionPosition.lat)*Math.PI/540);
+   const abx=(b.lon-a.lon)*lonScale,aby=(b.lat-a.lat)*latScale,apx=(projectionPosition.lon-a.lon)*lonScale,apy=(projectionPosition.lat-a.lat)*latScale,len2=abx*abx+aby*aby;
+   const t=len2?Math.max(0,Math.min(1,(apx*abx+apy*aby)/len2)):0,dist=Math.hypot(apx-t*abx,apy-t*aby);
+   if(dist<referenceDist){referenceDist=dist;referenceAlong=projectedCum[i]+t*(projectedCum[i+1]-projectedCum[i])}
+ }
+ const projectedEta=w.FIELD_ADAPTIVE_ETA.compute(projectionPlan,projectionPosition);
+ assert.ok(Math.abs(projectedEta.progress-referenceAlong/projectedCum.at(-1))<1e-8,'cached projection should preserve reference nearest-segment progress');
+ console.log('PASS precomputed route-segment projection preserves GPS progress on a long route');
  assert.ok(fieldOpsJs.includes('let routeGeometryCacheKey'));assert.ok(fieldOpsJs.includes('routeGeometryCacheKey===key&&routeGeometryCache'));assert.ok(!fieldOpsJs.includes('function routeCumulative('));console.log('PASS ETA and turn navigation reuse cached route geometry and cumulative distance');
  assert.ok(!fieldOpsJs.includes('routeDistanceM('));assert.ok(fieldOpsJs.includes('function computeFatigue')&&fieldOpsJs.includes('geometry.total/1609.344'));console.log('PASS fatigue model also reuses cached route distance');
 
