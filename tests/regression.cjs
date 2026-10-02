@@ -25,7 +25,15 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS all workstation modules initialize and navigation changes active view');
  for(const theme of ['amber','red','mono','green']){d.querySelector(`[data-theme-choice="${theme}"]`).click();await tick();assert.equal(d.body.dataset.theme,theme);assert.equal(w.localStorage.getItem('fieldos-v12-theme'),theme)}
  console.log('PASS four themes and preference persistence');
- d.getElementById('waypointName').value='QA Base';click('setBaseWaypoint');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'))[0].name,'QA Base');assert.match(d.getElementById('waypointList').textContent,/QA Base/);
+ d.getElementById('waypointName').value='QA Base';
+ assert.match(d.getElementById('sunState').textContent,/NO VERIFIED LOCATION/,'demo coordinates must not populate solar calculations');
+ click('setBaseWaypoint');click('mapMarkBtn');click('addDemoTrackPoint');click('copyCurrentCoord');
+ assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints')||'[]').length,0,'base must reject demo GPS');
+ assert.equal(w.FIELD_MAP_DATA.track().length,0,'track recorder must not accept demo GPS');
+ assert.match(d.getElementById('fieldActionNotice').textContent,/BLOCKED/);
+ w.applyFieldGeolocation({coords:{latitude:44.4759,longitude:-73.2121,altitude:100,accuracy:5,speed:1.2},timestamp:Date.now()});
+ assert.doesNotMatch(d.getElementById('solarPositionSource').textContent,/DEMO/);
+ click('setBaseWaypoint');await tick();assert.equal(JSON.parse(w.localStorage.getItem('fieldos-v12-waypoints'))[0].name,'QA Base');assert.match(d.getElementById('waypointList').textContent,/QA Base/);
  d.getElementById('tripName').value='QA Hike';click('saveTrip');assert.match(w.localStorage.getItem('fieldos-v12-trip'),/QA Hike/);
  console.log('PASS waypoint/base and trip persistence');
  d.getElementById('tripReturn').value='2026-10-04T18:00';
@@ -880,6 +888,36 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
  assert.ok((trackLine.getAttribute('points')||'').length>0,'Track chart updates immediately on entry');
  click('clearTrack');assert.equal(w.FIELD_TRACK_STATUS().distanceMiles,0);assert.equal(w.FIELD_TRACK_STATUS().points,0);
  console.log('PASS incremental track mileage and offscreen track chart scheduling');
+// Normal GPS timeout must not end a recording.
+ let trackError,clearedGps=0;
+ Object.defineProperty(w.navigator,'geolocation',{configurable:true,value:{
+   watchPosition(onFix,onError){trackError=onError;return 23},
+   clearWatch(){clearedGps++}
+ }});
+ click('startTrack');assert.equal(w.FIELD_TRACK_STATUS().active,true);
+ trackError({code:3,message:'Timed out'});
+ assert.equal(w.FIELD_TRACK_STATUS().active,true,'timeout must retain recording intent');
+ assert.equal(d.getElementById('trackState').textContent,'WEAK GPS — RECORDING ARMED');
+ assert.equal(w.localStorage.getItem('fieldos-v12-track-active'),'yes');
+ trackError({code:1,message:'Permission denied'});
+ assert.equal(w.FIELD_TRACK_STATUS().active,false,'permission loss disarms watcher');
+ assert.equal(w.localStorage.getItem('fieldos-v12-track-active'),null);
+ assert.ok(clearedGps>=1);
+ console.log('PASS transient GPS timeout recovery and explicit permission-denial stop');
+ const rawGuide=w.FIELD_GUIDES,injected={id:'injection-qa',category:null,title:'<img src=x onerror=alert(9)>',
+   summary:'<svg/onload=alert(1)>',urgency:'HIGH',steps:['<img src=x onerror=alert(8)>'],source:'<b>spoof</b>',url:'<script>x</script>'};
+ rawGuide.push(injected);w.renderGuides();w.showGuide(injected.id);
+ assert.equal(d.querySelector('#guideGrid img'),null);
+ assert.equal(d.querySelector('#guideDetail img'),null);
+ assert.equal(d.querySelector('#guideDetail script'),null);
+ assert.match(d.getElementById('guideDetail').textContent,/GENERAL/);
+ rawGuide.pop();w.renderGuides();
+ const zigzag=Array.from({length:1500},(_,i)=>({lat:44+i*.00001+Math.sin(i/10)*.0002,lon:-73+i*.00002}));
+ const reduced=w.FIELD_GPX_SIMPLIFY(zigzag,500);
+ assert.ok(reduced.length<=500);
+ assert.equal(reduced[0],zigzag[0]);assert.equal(reduced.at(-1),zigzag.at(-1));
+ assert.ok(reduced.some(p=>zigzag.indexOf(p)>5&&Math.abs((p.lat-44-zigzag.indexOf(p)*.00001))>.0001),'keeps interior bends');
+ console.log('PASS malformed field guide escaping and curvature-aware GPX simplification');
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
@@ -892,7 +930,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-gpsfix3'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-fieldfix1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
