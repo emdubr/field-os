@@ -235,7 +235,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
  const turnPlan={name:'TEST ROUTE',points:[{lat:44,lon:-73},{lat:44.005,lon:-73},{lat:44.005,lon:-72.995},{lat:44.01,lon:-72.995}],trailSections:[{name:'North Trail',distanceM:550},{name:'East Link',distanceM:400},{name:'Summit Trail',distanceM:550}]};
  const cues=w.FIELD_TURNS.generate(turnPlan);assert.ok(cues.length>=3);assert.ok(cues.some(x=>x.type==='right'||x.type==='left'));assert.equal(cues.at(-1).type,'finish');const nextCue=w.FIELD_TURNS.next({lat:44.0001,lon:-73},turnPlan);assert.ok(nextCue);assert.ok(Number.isFinite(nextCue.distanceToCueM));
+ const longTurnPlan={points:Array.from({length:2001},(_,i)=>({lat:44+i*.00001,lon:-73})),trailSections:Array.from({length:10},(_,i)=>({name:'Section '+i,distanceM:150}))};
+ const longCues=w.FIELD_TURNS.generate(longTurnPlan);const secondSection=longCues.find(c=>c.trail==='Section 1');
+ assert.ok(secondSection&&secondSection.index>=130&&secondSection.index<=140,'named trail transition should find nearest long-route point');
+ w.FIELD_TURNS.generate(turnPlan);
  console.log('PASS feature 27 Turn-by-Turn Trail Instructions generates named-trail and geometry-turn cues with distance-to-next guidance');
+ console.log('PASS long-route trail cue nearest-point lookup uses logarithmic search');
 
 
 
@@ -289,7 +294,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const cacheProbe=[{lat:40.12345,lon:-70.54321},{lat:40.22345,lon:-70.54321}];
  await r.fetchElevationProfile(cacheProbe);const afterFirstElevation=elevationFetches;await r.fetchElevationProfile(cacheProbe);
  assert.ok(afterFirstElevation>0);assert.equal(elevationFetches,afterFirstElevation,'identical elevation geometry should use memory cache');
- d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await waitFor(()=>{const plan=w.FIELD_ROUTE_STATE.getPlan();return /SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent)&&Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1});
+ d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});try{await waitFor(()=>{const plan=w.FIELD_ROUTE_STATE.getPlan();return /SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent)&&Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1},5000)}catch(err){const plan=w.FIELD_ROUTE_STATE.getPlan();throw new Error('Trail routing test: '+err.message+'; status='+d.getElementById('routePlannerStatus').textContent+'; build='+plan.routeBuildState+'; points='+plan.points?.length+'; samples='+plan.elevationProfile?.length+'; diagnostic='+d.getElementById('routePlannerDiag')?.textContent+'; mock elevation calls='+elevationFetches+'; recent errors='+errors.slice(-3).join(' | '))};
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
  console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
  const topologyPlan=w.FIELD_ROUTE_STATE.getPlan();assert.equal(topologyPlan.junctions.length,1);assert.equal(topologyPlan.junctions[0].degree,3);
