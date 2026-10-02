@@ -7,7 +7,7 @@ w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedi
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
 async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out: '+d.getElementById('routePlannerStatus').textContent+' '+d.getElementById('routePlannerDiag').textContent+' '+errors.join(' | '))}
-for(const f of ['survival-data.js','route-state.js','runtime.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
+for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
 let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
@@ -24,6 +24,20 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(const btn of d.querySelectorAll('.workstation-nav [data-open]')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
  console.log('PASS all workstation modules initialize and navigation changes active view');
  for(const theme of ['amber','red','mono','green']){d.querySelector(`[data-theme-choice="${theme}"]`).click();await tick();assert.equal(d.body.dataset.theme,theme);assert.equal(w.localStorage.getItem('fieldos-v12-theme'),theme)}
+ w.localStorage.removeItem('fieldos-v12-migration-v3-85');
+ w.localStorage.setItem('fieldos-v06-opt-migrated','same-value');
+ w.localStorage.setItem('fieldos-v05-opt-conflict','older-unique-value');
+ w.localStorage.setItem('fieldos-v12-opt-conflict','newer-value');
+ w.localStorage.setItem('fieldos-v04-track','legacy-track-backup');
+ const migration=w.migrateLegacyKeys();
+ assert.equal(migration.failed,false);
+ assert.equal(w.localStorage.getItem('fieldos-v12-opt-migrated'),'same-value');
+ assert.equal(w.localStorage.getItem('fieldos-v06-opt-migrated'),null,'verified identical migrated values may be cleaned up');
+ assert.equal(w.localStorage.getItem('fieldos-v05-opt-conflict'),'older-unique-value','conflicting historical values cannot be discarded');
+ assert.equal(w.localStorage.getItem('fieldos-v04-track'),'legacy-track-backup','IDB migration retains independent recovery source');
+ assert.match(w.localStorage.getItem('fieldos-v12-migration-v3-85'),/^complete/);
+ assert.equal(w.migrateLegacyKeys(),undefined,'repeated launch should skip full migration work');
+ console.log('PASS one-time, copy-verified storage migration preserves conflicts and old track backups');
  console.log('PASS four themes and preference persistence');
  d.getElementById('waypointName').value='QA Base';
  assert.match(d.getElementById('sunState').textContent,/NO VERIFIED LOCATION/,'demo coordinates must not populate solar calculations');
@@ -451,8 +465,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-fieldfix2'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-fieldfix2'"));
+ assert.ok(html.includes('app.js?v=3.85-optcanvas2'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-optcanvas2'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
@@ -943,7 +957,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-fieldfix2'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-optcanvas2'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
