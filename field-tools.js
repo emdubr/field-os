@@ -200,7 +200,7 @@ async function permissions(){const names=['geolocation','notifications'];const o
  const inspectCacheWhenVisible=()=>{if(!cacheChecked&&!document.hidden&&document.querySelector('#system.active')){cacheChecked=true;cacheHealth();}};
  document.addEventListener('fieldos:viewchange',inspectCacheWhenVisible);
  document.addEventListener('visibilitychange',inspectCacheWhenVisible);
- inspectCacheWhenVisible();setTimeout(()=>{if(window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)void snapshot({includeTrack:false})},1500);
+ inspectCacheWhenVisible();setTimeout(()=>{let hasBackup=false;try{hasBackup=!!localStorage.getItem(SK)}catch{}if(!hasBackup&&window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)void snapshot({includeTrack:false})},1500);
  
  async function copyDiagnosticReport(){
   let events=[];try{events=JSON.parse(localStorage.getItem(DK)||'[]')}catch{}
