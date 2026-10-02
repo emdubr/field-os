@@ -449,7 +449,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
  assert.ok(swJs.includes("field-os-v3-85"));
- assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
+ assert.ok(swJs.includes("cache.match(req,ignoreSearch?{ignoreSearch:true}:undefined)"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
  console.log('PASS hidden NAV view no longer redraws position-confidence UI on every telemetry/timer tick');
@@ -795,9 +795,9 @@ assert.ok(routePlannerJs.includes('window.FIELD_OFFLINE_MAPS.leafletLayer()'));
 assert.ok(routePlannerJs.includes("if(navigator.onLine!==false)osm.addTo(plannerMap)"));
 assert.ok(fieldToolsJs.includes("fieldos-v12-map-pack"));
 assert.ok(!fieldToolsJs.includes('fieldos-v12-active-map-pack'));
-assert.ok(swJs.includes("e.request.mode==='navigate'"));
+assert.ok(swJs.includes("req.mode==='navigate'"));
 assert.ok(swJs.includes("cache.match('./index.html')"));
-assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
+assert.ok(swJs.includes("cache.match(req,ignoreSearch?{ignoreSearch:true}:undefined)"));
 console.log('PASS dedicated map engine continuous zoom and offline shell/map/route contracts');
 
 assert.ok(workstationCss.includes('#route .route-planner-panel'));
