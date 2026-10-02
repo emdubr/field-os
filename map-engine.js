@@ -351,12 +351,14 @@
     return source;
   }
   function bridgeWaypoints(){
+    const source=bridgeSource();
     if(waypointCache)return waypointCache;
-    return waypointCache=(bridgeSource()?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+    return waypointCache=(source?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
   }
   function bridgeTrack(){
+    const source=bridgeSource();
     if(trackCache)return trackCache;
-    return trackCache=(bridgeSource()?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+    return trackCache=(source?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
   }
 
   let cachedRoute=null,routeBridge=null;
