@@ -1,3 +1,12 @@
+const FIELD_APP_BUILD='3.85-gpsfix4';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-gpsfix4';
+window.FIELD_OS_BUILD=FIELD_APP_BUILD;
+const fieldBuildLabel=document.getElementById('fieldBuildLabel');
+const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
+const fieldReleaseDetails=document.getElementById('fieldReleaseDetails');
+if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · FIX4';
+if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT FIX4 LOADED';
+if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: CHECKING';
 const views = [...document.querySelectorAll('.view')];
 const tabButtons = [...document.querySelectorAll('.tab-btn[data-tab-for]')];
 const moreTabs = document.getElementById('moreTabs');
@@ -610,44 +619,123 @@ document.getElementById('wipeLocal')?.addEventListener('click',async()=>{if(!con
   storageKeys().filter(k=>k.startsWith(STORE_PREFIX)).forEach(storageRemove);location.reload();
 });
 
+// Expose the running JS build and separately verify the controlling cache.
+// An update notice is not proof that this tab has loaded new scripts.
 if('serviceWorker' in navigator){
  window.addEventListener('load',async()=>{
   try{
-   const reg=await navigator.serviceWorker.register('./sw.js?v=3.85',{updateViaCache:'none'});
-   let approved=false;
-   const showUpdate=()=>{
-    if(!reg.waiting||!navigator.serviceWorker.controller)return;
-    let bar=document.getElementById('fieldUpdateNotice');
-    if(!bar){
-     bar=document.createElement('div');bar.id='fieldUpdateNotice';bar.className='field-update-notice';
-     bar.setAttribute('role','status');
-     const copy=document.createElement('span');copy.textContent='FIELD/OS UPDATE READY — your current session is preserved until you approve.';
-     const btn=document.createElement('button');btn.type='button';btn.textContent='UPDATE WHEN SAFE';btn.className='action';
-     btn.addEventListener('click',()=>{
-      if(!confirm('Reload FIELD/OS to install the update? Export any unsaved notes or active track first.'))return;
-      approved=true;
-      // Journaled track points are flushed before activating the next worker.
-      Promise.resolve(window.FIELD_TRACK_STORE?.flush?.()).then(()=>{
-       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-      }).catch(()=>{approved=false;alert('Track persistence did not finish. Update postponed.')});
-     });
-     bar.append(copy,btn);document.body.append(bar);
-    }
-    const state=document.getElementById('browserSwHealth');if(state)state.textContent='UPDATE AVAILABLE — CONFIRM WHEN SAFE';
+   const reg=await navigator.serviceWorker.register('./sw.js?v='+FIELD_APP_BUILD,{updateViaCache:'none'});
+   let approved=false,activationTimer=0;
+   const status=(message)=>{
+     if(fieldReleaseStatus)fieldReleaseStatus.textContent=message;
+     const state=document.getElementById('browserSwHealth');
+     if(state)state.textContent=message;
+   };
+   const readWorkerBuild=worker=>new Promise(resolve=>{
+     if(!worker||typeof MessageChannel==='undefined'){resolve(null);return}
+     const channel=new MessageChannel();
+     let finished=false;
+     const done=build=>{
+       if(finished)return;
+       finished=true;clearTimeout(timer);
+       try{channel.port1.close();channel.port2.close()}catch{}
+       resolve(typeof build==='string'?build:null);
+     };
+     const timer=setTimeout(()=>done(null),1300);
+     channel.port1.onmessage=e=>done(e.data?.build);
+     try{worker.postMessage({type:'GET_BUILD'},[channel.port2])}catch{done(null)}
+   });
+   const verifyCache=async()=>{
+     const controller=navigator.serviceWorker.controller;
+     if(!controller){
+       status('OFFLINE CACHE NOT CONTROLLING THIS PAGE');
+       if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OPEN ONLINE TO INSTALL OFFLINE CACHE';
+       return;
+     }
+     const actual=await readWorkerBuild(controller);
+     if(actual===FIELD_EXPECTED_CACHE)status('CURRENT BUILD + CACHE VERIFIED');
+     else if(actual)status('CLIENT/CACHE DIFFER — REOPEN WHEN SAFE');
+     else status('CLIENT LOADED · CACHE VERSION UNCONFIRMED');
+     if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: '+(actual||'UNKNOWN')+
+      ' · RECENT FIXES: TERRAIN SHADING, MANUAL MAP PAN, OFFLINE READINESS';
+   };
+   const showUpdate=(reloadOnly=false)=>{
+     if(!reloadOnly&&(!reg.waiting||!navigator.serviceWorker.controller))return;
+     let bar=document.getElementById('fieldUpdateNotice');
+     if(!bar){
+       bar=document.createElement('div');bar.id='fieldUpdateNotice';bar.className='field-update-notice';
+       bar.setAttribute('role','status');
+       const copy=document.createElement('span');
+       const btn=document.createElement('button');btn.type='button';btn.className='action';
+       bar.append(copy,btn);document.body.append(bar);
+     }
+     const copy=bar.querySelector('span'),btn=bar.querySelector('button');
+     copy.textContent=reloadOnly?
+       'FIELD/OS UPDATE INSTALLED — this open tab still has its old scripts. Save work and reopen to apply.':
+       'FIELD/OS UPDATE READY — save any ongoing activity, then install the new build.';
+     btn.textContent=reloadOnly?'REOPEN TO APPLY':'UPDATE WHEN SAFE';
+     btn.disabled=false;
+     btn.onclick=async()=>{
+       if(!confirm('Save any unsaved notes or active route first. Apply the FIELD/OS update now?'))return;
+       btn.disabled=true;
+       copy.textContent='SAVING RECORDED TRACK BEFORE UPDATE…';
+       try{
+         await window.FIELD_TRACK_STORE?.flush?.();
+         if(reloadOnly||!reg.waiting){
+           copy.textContent='TRACK SAVED — REOPENING WITH THE NEW BUILD…';
+           location.reload();return;
+         }
+         approved=true;
+         copy.textContent='INSTALLING UPDATE — VERIFYING NEW SERVICE WORKER…';
+         status('UPDATE INSTALLING — WAITING FOR ACTIVATION');
+         reg.waiting.postMessage({type:'SKIP_WAITING'});
+         clearTimeout(activationTimer);
+         activationTimer=setTimeout(()=>{
+           if(!approved)return;
+           approved=false;copy.textContent='ACTIVATION NOT CONFIRMED — KEEP YOUR DATA AND RETRY.';
+           btn.textContent='RETRY UPDATE';btn.disabled=false;
+           status('UPDATE NOT CONFIRMED — RETRY WHEN SAFE');
+           void reg.update().catch(err=>console.warn('FIELD/OS update retry failed',err));
+         },10000);
+       }catch(err){
+         approved=false;copy.textContent='TRACK SAVE FAILED — UPDATE WAS POSTPONED.';
+         btn.disabled=false;status('UPDATE POSTPONED — TRACK NOT SAVED');
+         console.warn('FIELD/OS update postponed while saving track',err);
+       }
+     };
+     if(!reloadOnly)status('UPDATE READY — APPROVAL REQUIRED');
    };
    if(reg.waiting)showUpdate();
    reg.addEventListener('updatefound',()=>{
-    const installing=reg.installing;
-    installing?.addEventListener('statechange',()=>{if(installing.state==='installed')showUpdate()});
+     reg.installing?.addEventListener('statechange',()=>{
+       if(reg.installing?.state==='installed'||reg.waiting)showUpdate();
+     });
    });
    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(approved){location.reload();return;}
-    document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
+     clearTimeout(activationTimer);
+     if(approved){approved=false;location.reload();return}
+     showUpdate(true);
+     void verifyCache();
+     document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
    });
-   // Checks in the background; never auto-reloads while route planning or recording.
+   await verifyCache();
+   // Check when a suspended PWA resumes, never forcibly reload live navigation.
+   let lastUpdateCheck=Date.now();
+   document.addEventListener('visibilitychange',()=>{
+     if(document.hidden)return;
+     if(reg.waiting)showUpdate();
+     if(Date.now()-lastUpdateCheck<60000)return;
+     lastUpdateCheck=Date.now();
+     void reg.update().catch(err=>console.warn('FIELD/OS update check failed',err));
+   });
    void reg.update().catch(err=>console.warn('FIELD/OS SW update check failed',err));
-  }catch(err){console.warn('FIELD/OS service worker registration failed',err)}
+  }catch(err){
+   if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT LOADED · CACHE CHECK FAILED';
+   console.warn('FIELD/OS service worker registration failed',err);
+  }
  });
+}else{
+ if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT LOADED · OFFLINE CACHE UNSUPPORTED';
 }
 
 const bootLines=['FIELD/OS FIELD CONSOLE v3.85','MOUNTING OFFLINE MAP CORE...','PREPARING NAVIGATION...','LOADING OFFLINE LIBRARY...','READY'];
