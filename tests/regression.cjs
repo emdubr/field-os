@@ -115,11 +115,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  d.getElementById('mobileFixState').textContent='3D / ±4m';w.FIELD_DR.update();assert.equal(w.FIELD_DR.state.active,false);w.FIELD_DR.reset();
  console.log('PASS feature 07 Dead Reckoning keeps a separately labeled estimate with growing uncertainty and returns authority to GNSS');
  d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';w.FIELD_DR.reset();
- let conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'trusted');assert.ok(conf.score>=90);assert.match(d.getElementById('posConfidenceLabel').textContent,/TRUSTED/);
+ const originalTestPosition=w.FIELD_ROUTE_STATE.current;assert.equal(w.FIELD_POSITION_CONFIDENCE.compute().mode,'stale','demo coordinates must never be trusted');w.FIELD_ROUTE_STATE.current=()=>({...originalTestPosition(),source:'PHONE GNSS'});let conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'trusted');assert.ok(conf.score>=90);assert.match(d.getElementById('posConfidenceLabel').textContent,/TRUSTED/);
  d.getElementById('navAccuracy').textContent='±35 m';conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'degraded');assert.ok(conf.score<90);
  d.getElementById('mobileFixState').textContent='STALE';w.FIELD_DR.arm();w.FIELD_DR.state.active=true;w.FIELD_DR.state.uncertaintyM=420;conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'estimated');assert.equal(conf.authority,'DEAD RECKONING');assert.ok(conf.score<70);
  w.FIELD_DR.reset();d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';
- console.log('PASS feature 08 Position Confidence distinguishes trusted, degraded, stale, and DR-estimated authority with uncertainty visualization');
+ w.FIELD_ROUTE_STATE.current=originalTestPosition;console.log('PASS feature 08 Position Confidence distinguishes trusted, degraded, stale, and DR-estimated authority with uncertainty visualization');
  const nowMesh=Date.now();w.FIELD_MESH.ingest([
    {id:'ridge-1',name:'RIDGE-1',role:'ROUTER',lat:44.48,lon:-73.21,rssi:-78,snr:9,battery:81,hops:1,lastHeard:nowMesh},
    {id:'valley-2',name:'VALLEY-2',role:'CLIENT',lat:44.46,lon:-73.23,rssi:-104,snr:-1,battery:52,hops:2,lastHeard:nowMesh-120000,via:'ridge-1'}
