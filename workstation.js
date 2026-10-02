@@ -196,16 +196,29 @@
         haversineMiles(samples.at(-1),routePoints.at(-1))*1609.344<60;
       if(profileMatches){
         const paths={easy:[],medium:[],hard:[]};
-        for(let i=1;i<indices.length;i++){
-          const start=indices[i-1],end=indices[i],mid=(cumulative[start]+cumulative[end])/2;
-          const grade=grader.gradeAtDistance({samples},mid);
-          // Flat segments retain the ordinary route line, like the main map.
-          if(!Number.isFinite(grade)||Math.abs(grade)<3)continue;
-          const key=grader.slopeClass(grade).key;
-          if(!paths[key])continue;
-          const path=screen.slice(start,end+1).map(([x,y],j)=>
-            `${j?'L':'M'}${x.toFixed(2)},${y.toFixed(2)}`).join('');
-          paths[key].push(path);
+        // Slope coloring requires a DIFFERENT resolution than the neutral
+        // route outline: a geometrically straight climb may have a flat,
+        // medium, then hard slope while RDP keeps only its two endpoints.
+        // Keep class transitions by sampling the real cumulative trail
+        // independently from the shape simplification (bounded ~450 pieces).
+        const colorStride=Math.max(1,Math.ceil((screen.length-1)/450));
+        for(let start=0;start<screen.length-1;start+=colorStride){
+          const end=Math.min(screen.length-1,start+colorStride);
+          const run=cumulative[end]-cumulative[start],substeps=Math.min(4,
+            Math.max(1,Math.ceil(run/Math.max(40,total/240))));
+          for(let j=0;j<substeps;j++){
+            const t0=j/substeps,t1=(j+1)/substeps;
+            const mid=cumulative[start]+run*(t0+t1)/2;
+            const grade=grader.gradeAtDistance({samples},mid);
+            // Flat sections retain the normal base route line.
+            if(!Number.isFinite(grade)||Math.abs(grade)<3)continue;
+            const key=grader.slopeClass(grade).key;
+            if(!paths[key])continue;
+            const from=screen[start],to=screen[end],x0=from[0]+(to[0]-from[0])*t0,
+              y0=from[1]+(to[1]-from[1])*t0,x1=from[0]+(to[0]-from[0])*t1,
+              y1=from[1]+(to[1]-from[1])*t1;
+            paths[key].push(`M${x0.toFixed(2)},${y0.toFixed(2)}L${x1.toFixed(2)},${y1.toFixed(2)}`);
+          }
         }
         gradedPaths=['easy','medium','hard'].filter(key=>paths[key].length).map(key=>
           `<path class="ws-route-slope ws-route-slope-${key}" d="${paths[key].join('')}"/>`).join('');
