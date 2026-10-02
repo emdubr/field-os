@@ -356,6 +356,10 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("setFieldBase(state,useOffline?'offline':onlineKind,pack)"));
  assert.ok(appJs.includes("if(action==='location'||action==='location-toggle')return engine?.toggleLiveLocation?.()"));
  assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
+ assert.ok(mapEngineJs.includes('offlineOwnsMap()')&&mapEngineJs.includes('if(!isVisible(st))continue'));
+ assert.ok(mapEngineJs.includes('Math.abs(tile.z-tileZoom)<=3')&&mapEngineJs.includes('st.retryCounts.clear()'));
+ assert.ok(appJs.includes('FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled},false)'));
+ assert.ok(appJs.includes("const configs=activeView==='home'"));
  assert.ok(mapEngineJs.includes("function isVisible(st)"));
  assert.ok(mapEngineJs.includes("fieldos:mapstatechange"));
  assert.ok(appJs.includes("['osm','topo','satellite','offline']"));
@@ -436,7 +440,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- assert.ok(swJs.includes("field-os-v3-84"));
+ assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
@@ -459,7 +463,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.84');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.85');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.ok(runtimeJs.includes('(id*37)%Math.max(17,interval)'));console.log('PASS runtime scheduler staggers recurring work instead of aligning timer bursts');
  assert.ok((html.match(/<script defer src=/g)||[]).length>=11);assert.ok(html.indexOf('map-engine.js?v='+release)<html.indexOf('route-planner.js?v='+release));console.log('PASS startup scripts fetch in parallel while preserving dependency order');
@@ -771,7 +775,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.84</b>')&&workstationJs.includes('<em>v3.84</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.85</b>')&&workstationJs.includes('<em>v3.85</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
@@ -841,7 +845,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-84-safety1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-safety1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
@@ -898,5 +902,4 @@ assert.ok(fieldIntelJs.includes("['comms','lorachat'].includes(e.detail?.view)")
 assert.ok(fieldIntelJs.includes("['comms','loramap'].includes(e.detail?.view)"));
 assert.ok(workstationCss.includes('v3.81 LORA WORKSPACE SPLIT'));
 console.log('PASS LoRa chat/map split has independent navigation, shared mesh state, and phone-safe styling');
-
 console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
