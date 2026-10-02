@@ -73,7 +73,11 @@
   }
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const text=(id,value)=>{const el=document.getElementById(id);if(el&&el.textContent!==value)el.textContent=value};
-  function isLivePosition(p,now=Date.now()){const age=now-Number(p?.timestamp);return valid(p)&&p.timestamp!=null&&age>=0&&age<=120000&&!/DEMO|FALLBACK|LAST|ESTIMAT/i.test(p.source||'')&&!!p.source&&!(Number.isFinite(p.accuracy)&&p.accuracy>100)}
+  function isLivePosition(p,now=Date.now()){
+    const age=now-Number(p?.timestamp),accuracy=p?.accuracy;
+    const accuracyUsable=accuracy==null||accuracy===''||(Number.isFinite(Number(accuracy))&&Number(accuracy)>=0&&Number(accuracy)<=100);
+    return valid(p)&&p.timestamp!=null&&Number.isFinite(age)&&age>=0&&age<=120000&&!/DEMO|FALLBACK|LAST|ESTIMAT/i.test(p.source||'')&&!!p.source&&accuracyUsable;
+  }
   let routeInfo=null;
   function invalidateRoute(){routeInfo=null;projectionCache=new WeakMap()}
   function render(){
