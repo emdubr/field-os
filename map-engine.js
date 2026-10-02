@@ -601,11 +601,11 @@
       const st=states.get(id);if(!st)continue;
       // GPS fixes commonly wander a few metres while stationary. Re-centering
       // and rebuilding the tile frame for every fix makes the map visibly pulse.
-      const drift=metersBetween(st.center,next)??Infinity;
+      const drift=metersBetween(st.center,next)??Infinity,visible=isVisible(st);
       if(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65)){
         st.center={...next};
-        if(isVisible(st)){st.rendered=true;render(st)}
-      }else{const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
+        if(visible){st.rendered=true;render(st)}
+      }else if(visible){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
     }
     updateLocationLabels();
     if(typeof window.applyFieldGeolocation==='function')window.applyFieldGeolocation(p,'PHONE GNSS');
