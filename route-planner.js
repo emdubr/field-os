@@ -349,9 +349,26 @@
     indices.push(pts.length-1);
     return indices.slice(1).map((end,j)=>{
       const start=indices[j];
-      return {a:pts[start],b:pts[end],startM:cumulative[start],endM:cumulative[end],
+      return {a:pts[start],b:pts[end],start,end,startM:cumulative[start],endM:cumulative[end],
         midM:(cumulative[start]+cumulative[end])/2};
     });
+  }
+  // Leaflet moves the map multiple times during one fractional zoom. Route
+  // mileage + nine-point DEM fits are geographic data, not camera data: reuse
+  // them while only screen projection changes, and invalidate for new geometry
+  // or a replacement elevation sample array. Always project CURRENT points,
+  // not the coordinates retained by a cached classification.
+  let slopeRenderCache=null;
+  function routeSlopeSegments(pts){
+    const samples=activeElevationProfile?.samples;
+    if(!samples?.length||pts.length<2)return [];
+    const geometryKey=routeGeometryKey(pts);
+    if(slopeRenderCache?.key===geometryKey&&slopeRenderCache.samples===samples)
+      return slopeRenderCache.segments;
+    const segments=routeSlopeDisplayPieces(pts,600).map(({start,end,midM})=>
+      ({start,end,key:slopeClass(gradeAtDistance(activeElevationProfile,midM)).key}));
+    slopeRenderCache={key:geometryKey,samples,segments};
+    return segments;
   }
   function drawRouteSlopeOverlay(svg,pts){
     const g=svg?.querySelector('.route-dom-slope-segments');
@@ -366,11 +383,11 @@
     // The DEM profile is capped at 140 samples, so drawing thousands of tiny
     // OSM vertices cannot add useful slope detail. Cap the display geometry
     // while keeping the full route for navigation/export.
-    const pieces=routeSlopeDisplayPieces(pts,600);
-    for(const {a,b,midM} of pieces){
-      const cls=slopeClass(gradeAtDistance(activeElevationProfile,midM));
+    const pieces=routeSlopeSegments(pts);
+    for(const {start,end,key} of pieces){
+      const a=pts[start],b=pts[end];
       const qa=plannerMap.latLngToContainerPoint([a.lat,a.lon]),qb=plannerMap.latLngToContainerPoint([b.lat,b.lon]);
-      paths[cls.key].push(`M${qa.x.toFixed(1)},${qa.y.toFixed(1)}L${qb.x.toFixed(1)},${qb.y.toFixed(1)}`);
+      paths[key].push(`M${qa.x.toFixed(1)},${qa.y.toFixed(1)}L${qb.x.toFixed(1)},${qb.y.toFixed(1)}`);
     }
     for(const key of ['easy','medium','hard']){
       if(!paths[key].length)continue;
