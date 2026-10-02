@@ -625,7 +625,7 @@ if('serviceWorker' in navigator){
  window.addEventListener('load',async()=>{
   try{
    const reg=await navigator.serviceWorker.register('./sw.js?v='+FIELD_APP_BUILD,{updateViaCache:'none'});
-   let approved=false,activationTimer=0;
+   let approved=false,activationTimer=0,hadController=!!navigator.serviceWorker.controller;
    const status=(message)=>{
      if(fieldReleaseStatus)fieldReleaseStatus.textContent=message;
      const state=document.getElementById('browserSwHealth');
@@ -714,7 +714,8 @@ if('serviceWorker' in navigator){
    navigator.serviceWorker.addEventListener('controllerchange',()=>{
      clearTimeout(activationTimer);
      if(approved){approved=false;location.reload();return}
-     showUpdate(true);
+     const replacingExisting=hadController;hadController=true;
+     if(replacingExisting)showUpdate(true);
      void verifyCache();
      document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
    });
