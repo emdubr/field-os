@@ -3,7 +3,8 @@ const documentEvents={};const ctx={window:{addEventListener(){}},document:{query
 for(const file of ['route-guidance.js','map-readiness.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 const g=ctx.window.FIELD_GUIDANCE,r=ctx.window.FIELD_MAP_READINESS;
 assert.equal(g.isLivePosition({lat:44,lon:-73,source:'PHONE GNSS',timestamp:Date.now(),accuracy:10}),true);
-for(const p of [{source:'DEMO GNSS',timestamp:Date.now()},{source:'PHONE GNSS',timestamp:Date.now()-180000},{source:'PHONE GNSS',timestamp:Date.now(),accuracy:500}])assert.equal(g.isLivePosition({lat:44,lon:-73,...p}),false);
+for(const p of [{source:'DEMO GNSS',timestamp:Date.now()},{source:'PHONE GNSS',timestamp:Date.now()-180000},{source:'PHONE GNSS',timestamp:Date.now(),accuracy:500},{source:'PHONE GNSS',timestamp:Date.now(),accuracy:'500'},{source:'PHONE GNSS',timestamp:Date.now(),accuracy:-1},{source:'PHONE GNSS',timestamp:Date.now(),accuracy:'invalid'}])assert.equal(g.isLivePosition({lat:44,lon:-73,...p}),false);
+assert.equal(g.isLivePosition({lat:44,lon:-73,source:'PHONE GNSS',timestamp:Date.now(),accuracy:'10'}),true);
 const sections=[{name:'Long Trail',surface:'dirt',distanceM:100},{name:' long  trail ',surface:'rock',distanceM:200},{label:'UNNAMED OSM PATH',distanceM:25},{name:'Long Trail',distanceM:100},{name:'Side Trail',distanceM:300},{distanceM:150},{name:'Side Trail',distanceM:100}];
 const groups=g.continuity(sections);assert.equal(groups.length,4);assert.equal(groups[0].distanceM,425);assert.equal(groups[0].connectorM,25);assert.equal(groups[0].sectionCount,4);assert.equal(groups[1].startM,425);assert.equal(groups[2].name,null);assert.equal(groups[3].startM,875);
 assert.equal(g.continuity([{name:'A',distanceM:100},{distanceM:20},{name:'B',distanceM:100}]).length,3);
