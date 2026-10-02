@@ -133,7 +133,7 @@
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,pending:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
-      geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
+      geoOverlay:null,tapHandler:null,followGPS:liveEnabled,manualCamera:false,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
       settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map()
     };
     const readLayout=()=>{
@@ -212,6 +212,8 @@
         st.pointerDownOrigin={x:e.clientX,y:e.clientY};
         st.el.classList.add('native-map-dragging');
       }else if(st.pointers.size===2){
+        // A manual pinch disengages GPS camera following; the location dot stays live.
+        st.followGPS=false;st.manualCamera=true;
         const p=[...st.pointers.values()];
         const midX=(p[0].x+p[1].x)/2,midY=(p[0].y+p[1].y)/2;
         const baseDx=st.dragStart?p[0].x-st.dragStart.x:0,baseDy=st.dragStart?p[0].y-st.dragStart.y:0;
@@ -223,6 +225,7 @@
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
       if(st.pointers.size===1&&st.dragStart){
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
+        if(Math.hypot(dx,dy)>6){st.followGPS=false;st.manualCamera=true;}
         queueGesture(dx,dy,1);
       }else if(st.pointers.size===2&&st.pinchStart){
         const p=[...st.pointers.values()],dist=Math.hypot(p[1].x-p[0].x,p[1].y-p[0].y);
@@ -262,6 +265,7 @@
         return;
       }
       if(st.dragStart&&!wasTap){
+        st.followGPS=false;st.manualCamera=true;
         const dx=e.clientX-st.dragStart.x,dy=e.clientY-st.dragStart.y;
         const c=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
         st.center=unworld(c.x-dx,c.y-dy,st.zoom);
@@ -279,17 +283,20 @@
       // otherwise render() restores the old camera and the map snaps backward.
       const points=[...st.pointers.values()];
       if(st.pinchStart&&points.length>=2){
+        st.followGPS=false;st.manualCamera=true;
         const pinch=st.pinchStart,dist=Math.hypot(points[1].x-points[0].x,points[1].y-points[0].y);
         const ratio=dist/Math.max(1,pinch.dist);
         const visualZoom=pinch.visualZoom??Math.max(2,Math.min(maxZoom(),pinch.zoom+Math.log2(Math.max(.5,Math.min(2,ratio)))));
         preserveAnchor(pinch.anchor,pinch.lastMidX??pinch.midX,pinch.lastMidY??pinch.midY,visualZoom);
         st.zoom=visualZoom;
       }else if(st.deferredPinch){
+        st.followGPS=false;st.manualCamera=true;
         const pinch=st.deferredPinch;
         preserveAnchor(pinch.anchor,pinch.midX,pinch.midY,pinch.visualZoom);
         st.zoom=pinch.visualZoom;
       }else if(st.dragStart&&points.length===1){
         const point=points[0],dx=point.x-st.dragStart.x,dy=point.y-st.dragStart.y;
+        if(Math.hypot(dx,dy)>6){st.followGPS=false;st.manualCamera=true;}
         const center=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
         st.center=unworld(center.x-dx,center.y-dy,st.zoom);
       }
@@ -319,6 +326,7 @@
     };
     st.onWheel=e=>{
       if(e.ctrlKey)return;
+      st.followGPS=false;st.manualCamera=true;
       e.preventDefault();
       st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
       if(!st.wheelAnchor)st.wheelAnchor={point:screenToLatLon(st,e.clientX,e.clientY),x:e.clientX,y:e.clientY};
@@ -335,6 +343,7 @@
       },120);
     };
     st.onDbl=e=>{
+      st.followGPS=false;st.manualCamera=true;
       e.preventDefault();
       const anchor=screenToLatLon(st,e.clientX,e.clientY),nextZoom=Math.min(maxZoom(),st.zoom+1);
       preserveAnchor(anchor,e.clientX,e.clientY,nextZoom);st.zoom=nextZoom;render(st);
@@ -659,8 +668,8 @@
   function setTrails(on){trails=!!on;localStorage.setItem(STORE_PREFIX+'hiking-routes',trails?'on':'off');invalidateFrames();emitState();refresh(false)}
   function setTerrain(on){terrain=!!on;localStorage.setItem(STORE_PREFIX+'terrain-shade',terrain?'on':'off');invalidateFrames();emitState();refresh(false)}
   function setGrid(on){grid=!!on;localStorage.setItem(STORE_PREFIX+'map-grid',grid?'on':'off');emitState();refresh(false)}
-  function zoom(target,delta){const st=ensure(target)||ensure('realMap');if(!st)return;st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+delta));render(st)}
-  function center(target){const st=ensure(target)||ensure('realMap');if(!st)return;st.center={...centerCandidate()};render(st)}
+  function zoom(target,delta){const st=ensure(target)||ensure('realMap');if(!st)return;st.followGPS=false;st.manualCamera=true;st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom+delta));render(st)}
+  function center(target){const st=ensure(target)||ensure('realMap');if(!st)return;st.manualCamera=false;st.followGPS=liveEnabled;st.center={...centerCandidate()};render(st)}
 
   function metersBetween(a,b){if(!a||!b)return Infinity;const r=Math.PI/180,dLat=(b.lat-a.lat)*r,dLon=(b.lon-a.lon)*r,la1=a.lat*r,la2=b.lat*r;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;return 12742000*Math.asin(Math.min(1,Math.sqrt(h)))}
 
@@ -671,8 +680,10 @@
       const st=states.get(id);if(!st)continue;
       // GPS fixes commonly wander a few metres while stationary. Re-centering
       // and rebuilding the tile frame for every fix makes the map visibly pulse.
-      const drift=metersBetween(st.center,next)??Infinity,visible=isVisible(st);
-      if(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65)){
+      const drift=metersBetween(st.center,next),visible=isVisible(st);
+      // GPS may move the camera only while this map is explicitly following.
+      // A user pan, pinch or zoom must survive subsequent fixes and refreshes.
+      if(st.followGPS&&(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65))){
         st.center={...next};
         if(visible){st.rendered=true;render(st)}
       }else if(visible){const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)}
@@ -688,7 +699,10 @@
       const d=document.getElementById('mapSourceDiag');if(d)d.textContent='GEOLOCATION UNAVAILABLE';
       return;
     }
-    liveEnabled=true;localStorage.setItem(STORE_PREFIX+'live-location','on');emitState();updateLabels();
+    liveEnabled=true;localStorage.setItem(STORE_PREFIX+'live-location','on');
+    // Start following only for maps the user has not manually positioned.
+    states.forEach(st=>{if(!st.manualCamera)st.followGPS=true;});
+    emitState();updateLabels();
     const d=document.getElementById('mapSourceDiag');if(d)d.textContent='STARTING LIVE LOCATION…';
     const onPosition=p=>applyPosition(p);
     const onFailure=e=>{
@@ -704,7 +718,7 @@
 
   function stopLiveLocation(){
     if(watchId!=null){if(window.FIELD_GEO_HUB)window.FIELD_GEO_HUB.unsubscribe(watchId);else navigator.geolocation.clearWatch(watchId);watchId=null}
-    liveEnabled=false;localStorage.setItem(STORE_PREFIX+'live-location','off');emitState();
+    liveEnabled=false;localStorage.setItem(STORE_PREFIX+'live-location','off');states.forEach(st=>{st.followGPS=false;});emitState();
     updateLabels();refresh(false);
   }
 
@@ -716,13 +730,13 @@
   }
   function mount(id,opts={}){
     const st=ensure(id);if(!st)return null;
-    if(opts.center&&Number.isFinite(+opts.center.lat)&&Number.isFinite(+opts.center.lon))st.center={lat:+opts.center.lat,lon:+opts.center.lon};
+    if(opts.center&&Number.isFinite(+opts.center.lat)&&Number.isFinite(+opts.center.lon)){st.center={lat:+opts.center.lat,lon:+opts.center.lon};st.followGPS=false;st.manualCamera=true;}
     if(Number.isFinite(+opts.zoom))st.zoom=Math.max(2,Math.min(maxZoom(),+opts.zoom));
     st.rendered=true;requestAnimationFrame(()=>render(st));return st;
   }
   function setView(id,centerPos,zoomLevel){
     const st=ensure(id);if(!st||!centerPos)return;
-    if(Number.isFinite(+centerPos.lat)&&Number.isFinite(+centerPos.lon))st.center={lat:+centerPos.lat,lon:+centerPos.lon};
+    if(Number.isFinite(+centerPos.lat)&&Number.isFinite(+centerPos.lon)){st.center={lat:+centerPos.lat,lon:+centerPos.lon};st.followGPS=false;st.manualCamera=true;}
     if(Number.isFinite(+zoomLevel))st.zoom=Math.max(2,Math.min(maxZoom(),+zoomLevel));
     st.rendered=true;render(st);
   }
@@ -731,7 +745,7 @@
     const pts=(Array.isArray(points)?points:[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
     if(!pts.length)return;
     const minLat=Math.min(...pts.map(p=>+p.lat)),maxLat=Math.max(...pts.map(p=>+p.lat)),minLon=Math.min(...pts.map(p=>+p.lon)),maxLon=Math.max(...pts.map(p=>+p.lon));
-    st.center={lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2};
+    st.followGPS=false;st.manualCamera=true;st.center={lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2};
     const rect=st.el.getBoundingClientRect(),pad=Math.max(0,Number(opts.padding)||36),availW=Math.max(80,(rect.width||600)-pad*2),availH=Math.max(80,(rect.height||360)-pad*2),cap=Math.min(maxZoom(),Number.isFinite(+opts.maxZoom)?+opts.maxZoom:maxZoom());
     let chosen=2;
     for(let z=2;z<=cap;z++){
@@ -742,7 +756,7 @@
   }
   function setTapHandler(id,handler){const st=ensure(id);if(st)st.tapHandler=typeof handler==='function'?handler:null}
   function setGeoOverlay(id,data){const st=ensure(id);if(!st)return;st.geoOverlay=data||null;const {w,h}=overlaySize(st);drawEditorOverlay(st,w,h)}
-  function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
+  function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom,following:!!st.followGPS}:null}
   function unmount(id){
     const st=states.get(id);if(!st)return false;
     clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);clearTimeout(st.retryTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);
