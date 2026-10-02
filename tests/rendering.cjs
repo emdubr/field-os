@@ -32,7 +32,11 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  const firstShade=[...st.tiles.values()].filter(v=>v.cls==='native-terrain-tile');
  assert.ok(firstShade.length>0,'terrain tiles are requested on initial enable');
  firstShade.forEach(v=>v.img.onload?.());
- const shaded=firstShade[0],shadeKey=[...st.tiles].find(([,v])=>v===shaded)[0];
+ const midpointX=(Math.min(...firstShade.map(v=>v.x))+Math.max(...firstShade.map(v=>v.x)))/2;
+ const midpointY=(Math.min(...firstShade.map(v=>v.y))+Math.max(...firstShade.map(v=>v.y)))/2;
+ // Choose a tile overlapping the camera centre, not the offscreen prefetch margin.
+ const shaded=firstShade.reduce((best,v)=>Math.abs(v.x-midpointX)+Math.abs(v.y-midpointY)<Math.abs(best.x-midpointX)+Math.abs(best.y-midpointY)?v:best);
+ const shadeKey=[...st.tiles].find(([,v])=>v===shaded)[0];
  const tileLeft=shaded.img.style.left,shadeSrc=shaded.img.src,firstTransform=st.terrainTiles.style.transform;
  engine.setView('homeRealMap',{lat:44.4759,lon:-73.21198},14.1);
  assert.equal(st.tiles.get(shadeKey),shaded,'panning retains existing hillshade image nodes');
