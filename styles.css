@@ -773,3 +773,17 @@ body.low-power .signal-ticker,body.emergency-power .signal-ticker{animation:none
 @media(prefers-reduced-motion:reduce){
  .crt-overlay,.noise-overlay,.grid-overlay,.signal-ticker{animation:none!important;transition:none!important;}
 }
+
+/* Safety-state notifications must remain visible without blocking an active map. */
+#fieldActionNotice:not(:empty){
+ position:fixed;z-index:40002;left:max(12px,env(safe-area-inset-left));
+ right:max(12px,env(safe-area-inset-right));bottom:calc(82px + env(safe-area-inset-bottom));
+ max-width:680px;margin:auto;padding:12px 16px;background:#07160d;border:1px solid var(--warn);
+ color:var(--fg);font-size:13px;line-height:1.45;box-shadow:0 8px 28px #000c;
+}
+#fieldActionNotice.urgent:not(:empty){border-color:var(--danger);color:#fff;}
+#trackRecovery:not(:empty),#trackHistoryGap:not([hidden]){
+ padding:12px;margin:8px 0;background:#17130a;color:#ffdf9a;border:1px solid var(--warn);
+}
+#trackRecovery button{min-height:44px;margin:8px;}
+.native-track-trailhead{stroke:#ffd166;stroke-width:3;fill:#19120a;paint-order:stroke;}
