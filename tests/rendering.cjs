@@ -94,6 +94,24 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
  assert.equal(routeReads,2,'route edits must invalidate cached route points');
  console.log('PASS planned route geometry is cached and invalidates after route edits');
+ // Route difficulty shading was previously present only inside Route Planner.
+ // Assert that an existing DEM profile also grades the visible Home/Terrain map.
+ const gradedPoints=[0,1,2,3].map(i=>({lat:44.4759+i*.0009,lon:-73.2121}));
+ const gradeStep=6371000*(.0009*Math.PI/180);
+ const gradedSamples=gradedPoints.map((p,i)=>({...p,distanceM:i*gradeStep,elevationFt:500+i*45}));
+ w.FIELD_ROUTE_SLOPE={
+   gradeAtDistance(_profile,distanceM){return distanceM<90?2:distanceM<200?10:18},
+   slopeClass(grade){return {key:grade>=15?'hard':grade>=8?'medium':'easy'}}
+ };
+ w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:gradedSamples}}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.ok(st.overlay.querySelector('.planned-route-slope-medium'),'medium sustained grade draws orange planned route on main map');
+ assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'hard sustained grade draws red planned route on main map');
+ w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:gradedSamples.map((p,i)=>({...p,distanceM:i*gradeStep*3}))}}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'stale elevation profile must not color a different route');
+ console.log('PASS overview map restores orange/red sustained-grade sections and refuses mismatched DEM data');
+
  // Hidden-map telemetry should not redraw offscreen SVG overlays, but
  // navigation into that view must present the latest track data.
  const hidden=d.getElementById('map');
