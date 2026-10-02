@@ -224,13 +224,16 @@ function drawSensorSeries(canvasId,series,title){
 }
 function sensorSummary(){
   const last=k=>sensorHistory[k].filter(Number.isFinite).at(-1);
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
-  set('sensorGnssNow',`${Math.round(last('gnssSats')||0)} SAT · ±${(last('gnssAcc')||0).toFixed(1)}m`);
-  set('sensorEnvNow',`${(last('temp')||0).toFixed(1)}°F · ${Math.round(last('humidity')||0)}% RH`);
-  set('sensorMeshNow',`${Math.round(last('meshRssi')||0)} dBm · ${(last('meshSnr')||0).toFixed(1)} dB`);
-  set('sensorImuNow',`P ${(last('pitch')||0).toFixed(1)}° · R ${(last('roll')||0).toFixed(1)}°`);
-  set('sensorPowerNow',`${Math.round(last('battery')||0)}%`);
+  const fmt=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):null;
+  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  const sats=last('gnssSats'),acc=last('gnssAcc'),temp=last('temp'),hum=last('humidity'),rssi=last('meshRssi'),snr=last('meshSnr'),pitch=last('pitch'),roll=last('roll'),bat=last('battery');
+  set('sensorGnssNow',Number.isFinite(sats)&&Number.isFinite(acc)?Math.round(sats)+' SAT · ±'+fmt(acc)+'m':'NO GNSS SAMPLE');
+  set('sensorEnvNow',Number.isFinite(temp)&&Number.isFinite(hum)?fmt(temp)+'°F · '+Math.round(hum)+'% RH':'NO ENV SAMPLE');
+  set('sensorMeshNow',Number.isFinite(rssi)&&Number.isFinite(snr)?Math.round(rssi)+' dBm · '+fmt(snr)+' dB':'NO MESH SAMPLE');
+  set('sensorImuNow',Number.isFinite(pitch)&&Number.isFinite(roll)?'P '+fmt(pitch)+'° · R '+fmt(roll)+'°':'NO IMU SAMPLE');
+  set('sensorPowerNow',Number.isFinite(bat)?Math.round(bat)+'%':'NO DEVICE SAMPLE');
 }
+
 function drawAllSensorCharts(){
   if(document.hidden||!document.querySelector('#sensors.active'))return;
   drawSensorSeries('gnssSignalChart',[{label:'SAT',data:sensorHistory.gnssSats,decimals:0},{label:'ACC',data:sensorHistory.gnssAcc,unit:'m'}],'GNSS SIGNAL / FIX');
@@ -243,7 +246,7 @@ function drawAllSensorCharts(){
 let sensorChartResizeTimer=0;
 window.addEventListener('resize',()=>{clearTimeout(sensorChartResizeTimer);sensorChartResizeTimer=setTimeout(()=>{if(document.querySelector('#sensors.active'))drawAllSensorCharts()},120)},{passive:true});
 document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='sensors')requestAnimationFrame(drawAllSensorCharts)});
-document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);if(document.querySelector('#sensors.active'))window.FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)});
+document.addEventListener('fieldos:telemetry',e=>{const t=e.detail||{};pushSensorHistory('gnssSats',t.gnss?.satellites??t.satellites);pushSensorHistory('gnssAcc',t.gnss?.accuracy??t.accuracy);pushSensorHistory('meshRssi',t.mesh?.rssi??t.rssi);pushSensorHistory('meshSnr',t.mesh?.snr??t.snr);pushSensorHistory('meshNodes',t.mesh?.nodes??t.nodes);pushSensorHistory('temp',t.env?.tempF??t.tempF);pushSensorHistory('humidity',t.env?.humidity??t.humidity);pushSensorHistory('pitch',t.imu?.pitch??t.pitch);pushSensorHistory('roll',t.imu?.roll??t.roll);pushSensorHistory('battery',t.battery?.percent??t.battery);const p=Number(t.env?.pressureHpa??t.env?.baroHpa??t.pressureHpa);if(Number.isFinite(p)&&p>200&&p<1200){pressureHistory.push(p);if(pressureHistory.length>60)pressureHistory.shift();if(document.querySelector('#home.active,#sensors.active'))window.FIELD_RUNTIME.frame('real-pressure',drawPressureChart);}if(document.querySelector('#sensors.active'))window.FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)});
 function headingCardinal(deg){
   const dirs = ['N','NE','E','SE','S','SW','W','NW'];
   return dirs[Math.round(deg / 45) % 8];
