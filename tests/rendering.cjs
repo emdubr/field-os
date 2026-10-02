@@ -299,6 +299,60 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  }
  assert.ok(Date.now()-longRoutePaintStart<2000,'small map pans over a long offscreen segment must remain bounded');
  console.log('PASS long offscreen routes clip direction markers without altering on-screen spacing or blocking high-zoom pans');
+ // The desktop map sits far down a scrolling dashboard. Mouse-wheel zoom
+ // MUST read its latest screen position after an element/page scroll, even
+ // when map width/height stayed exactly the same.
+ let mapTop=0,mapLeft=0,layoutReads=0;
+ const layoutBeforeScroll=st.readLayout();
+ const oldBounds=st.el.getBoundingClientRect;
+ st.el.getBoundingClientRect=()=>{
+   layoutReads++;
+   return {left:mapLeft,top:mapTop,width:390,height:360,right:mapLeft+390,bottom:mapTop+360};
+ };
+ mapTop=420;mapLeft=240;
+ w.dispatchEvent(new w.Event('scroll'));
+ assert.equal(st.layoutRect,null,'captured desktop page scroll invalidates the map coordinate cache');
+ assert.equal(st.readLayout().top,420,'next coordinate read uses actual scrolled map position');
+ const readsAfterScroll=layoutReads;
+ st.readLayout();
+ assert.equal(layoutReads,readsAfterScroll,'repeated reads within a gesture remain cached');
+ engine.setView('homeRealMap',{lat:44.477,lon:-73.211},14);
+ st.wheelAnchor=null;
+ const centerBeforeWheel=engine.getView('homeRealMap').center;
+ mapTop=510;mapLeft=290;
+ st.onWheel({ctrlKey:false,deltaY:-88,clientX:mapLeft+195,clientY:mapTop+180,preventDefault(){}});
+ await new Promise(resolve=>setTimeout(resolve,185));
+ const centerAfterWheel=engine.getView('homeRealMap').center;
+ assert.ok(Math.abs(centerAfterWheel.lat-centerBeforeWheel.lat)<.00001&&
+   Math.abs(centerAfterWheel.lon-centerBeforeWheel.lon)<.00001,
+   'a wheel at the physically moved map center must not pan the viewport');
+ assert.ok(layoutReads>readsAfterScroll,'fresh mouse burst reads updated bounds after the map moves');
+ st.el.getBoundingClientRect=oldBounds;mapTop=0;mapLeft=0;
+ st.invalidateLayout();
+
+ // Repeated topographic-provider failures must fail open to the reliable
+ // OSM basemap instead of downloading another broken topo layer every zoom.
+ engine.setMode('osm');engine.setMode('topo');
+ engine.setView('homeRealMap',{lat:44.477,lon:-73.211},15.3);
+ const topoPending=[...st.tiles.values()].filter(t=>t.cls==='native-topo-tile'&&t.status==='pending');
+ assert.ok(topoPending.length>=3,'test has real pending optional topo requests');
+ [...st.tiles.values()].filter(t=>t.cls==='native-osm-base'&&t.status==='pending').forEach(t=>t.img.onload?.());
+ topoPending.slice(0,3).forEach(t=>t.img.onerror?.());
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
+ assert.match(st.el.querySelector('.native-map-corner').textContent,/TOPO OFFLINE/,'after 3 topo failures use OSM and report the fallback');
+ assert.equal([...st.tiles.values()].filter(t=>t.cls==='native-topo-tile'&&t.status==='pending').length,0,
+   'fallback aborts unnecessary failed or pending topo layer downloads');
+ engine.setView('homeRealMap',{lat:44.477,lon:-73.211},15.5);
+ assert.equal([...st.tiles.values()].filter(t=>t.cls==='native-topo-tile'&&t.status==='pending').length,0,
+   'future fractional wheel steps do not refetch a suspended topo provider');
+ assert.ok([...st.tiles.values()].some(t=>t.cls==='native-osm-base'&&t.status==='loaded'),
+   'topographic failure leaves the loaded OSM basemap visible');
+ engine.setMode('osm');engine.setMode('topo');
+ assert.ok([...st.tiles.values()].some(t=>t.cls==='native-topo-tile'),
+   'explicit topo reselection allows a retry after the provider recovers');
+ engine.setMode('osm');
+ console.log('PASS desktop scroll-safe wheel anchors and topo provider auto-fallback without dropping OSM imagery');
+
  const tiles=[...st.tiles.values()];engine.unmount('homeRealMap');
  assert.equal(st.tiles.size,0);assert.ok(tiles.every(t=>t.img.onload===null&&t.img.onerror===null));assert.equal(d.getElementById('homeRealMap').childElementCount,0);
  assert.equal(d.getElementById('realMap').childElementCount,0,'Hidden Terrain map should not load duplicate tiles');
