@@ -259,7 +259,7 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  engine.setView('homeRealMap',longRoute[0],17);
  let arrows=[...st.overlay.querySelectorAll('.planned-route-arrow')];
  assert.equal(arrows.length,2,'only the two on-screen direction markers should be created for an extremely long eastbound leg');
- const arrowXs=arrows.map(el=>Number(el.getAttribute('transform').match(/translate\\(([-.\\d]+)/)?.[1]));
+ const arrowXs=arrows.map(el=>Number(el.getAttribute('transform').match(/translate\(([-.\d]+)/)?.[1]));
  assert.ok(Math.abs(arrowXs[0]-285)<1&&Math.abs(arrowXs[1]-375)<1,'clipped arrows preserve original 90px spacing from route start');
  const longRoutePaintStart=Date.now();
  for(let i=0;i<12;i++){
