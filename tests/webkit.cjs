@@ -79,10 +79,12 @@ const server=http.createServer((req,res)=>{
   // Route elevation must remain responsive even with the optional external
   // Leaflet map library blocked: the chart is useful from saved offline data.
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(()=>openView('route'));await page.waitForTimeout(150);
+  await page.evaluate(()=>openView('route'));
+  await page.locator('#routeProfile').scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
   const horizontal=await page.locator('#routeProfile').evaluate(c=>({actual:c.getBoundingClientRect().width,prepared:Number(c.dataset.fieldCssWidth)||0,height:c.getBoundingClientRect().height,owner:!!window.FIELD_ROUTE_PLANNER?.ownsElevationProfile}));
   assert.ok(horizontal.owner,'native horizontal elevation renderer loads without external map library');
-  assert.ok(horizontal.actual>180&&Math.abs(horizontal.actual-horizontal.prepared)<4,'offline WebKit route overview uses its actual phone width');
+  assert.ok(horizontal.actual>180&&Math.abs(horizontal.actual-horizontal.prepared)<4,'offline WebKit route overview uses its actual phone width: '+JSON.stringify(horizontal));
   assert.ok(horizontal.height>=185&&horizontal.height<=195,'offline WebKit route overview preserves usable fixed chart height');
   console.log('PASS Safari-class horizontal elevation overview renders without external Leaflet');
   assert.deepEqual(fatal,[],fatal.join('\n'));
