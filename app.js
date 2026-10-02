@@ -562,9 +562,9 @@ document.getElementById('checkinNow')?.addEventListener('click',()=>{
 let fieldLog=loadJSON('fieldlog',[]); if(!Array.isArray(fieldLog)) fieldLog=[];
 function renderLog(){
   const el=document.getElementById('logList'); if(!el) return;
-  el.innerHTML=fieldLog.slice().reverse().map(e=>`<div class="log-entry"><b>${e.time} // ${e.type}</b><p>${escapeHTML(e.text)}</p></div>`).join('') || '<p class="muted">No log entries yet.</p>';
+  el.innerHTML=fieldLog.slice().reverse().map(e=>`<div class="log-entry"><b>${escapeHTML(e.time)} // ${escapeHTML(e.type)}</b><p>${escapeHTML(e.text)}</p></div>`).join('') || '<p class="muted">No log entries yet.</p>';
 }
-function escapeHTML(s=''){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function escapeHTML(s=''){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function addLog(text,type='NOTE'){fieldLog.push({time:new Date().toLocaleString(),type,text});if(fieldLog.length>250)fieldLog.shift();saveJSON('fieldlog',fieldLog);renderLog()}
 document.getElementById('saveLog')?.addEventListener('click',()=>{const el=document.getElementById('logInput');if(!el.value.trim())return;addLog(el.value.trim());el.value='';navigator.vibrate?.(25)});
 document.getElementById('markLog')?.addEventListener('click',()=>addLog(`POSITION MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)} // ALT ${Math.round(currentNavPosition.alt??demo.alt)} ft // HDG ${Math.round(demo.heading)}°`,'POSITION'));
@@ -799,7 +799,7 @@ function waypointSymbol(type){return ({BASE:'⌂',CAMP:'△',WATER:'≈',HAZARD:
 function notifyWaypointsChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:waypointschange',{detail:{count:waypoints.length,...detail}}))}
 function renderWaypoints(){
   const list=document.getElementById('waypointList'); if(!list)return;
-  list.innerHTML=waypoints.map(w=>`<div class="waypoint-row"><div class="waypoint-symbol">${waypointSymbol(w.type)}</div><div class="waypoint-main"><b>${escapeHTML(w.name)} ${w.id===activeWaypointId?'[NAV]':''}</b><small>${w.type} // ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}${w.notes?` // ${escapeHTML(w.notes)}`:''}</small></div><div class="waypoint-actions"><button class="micro-btn" data-wp-nav="${w.id}">NAV</button><button class="micro-btn" data-wp-copy="${w.id}">COPY</button><button class="micro-btn danger" data-wp-delete="${w.id}">DEL</button></div></div>`).join('')||'<p class="muted">No waypoints saved yet.</p>';
+  list.innerHTML=waypoints.map(w=>`<div class="waypoint-row"><div class="waypoint-symbol">${waypointSymbol(w.type)}</div><div class="waypoint-main"><b>${escapeHTML(w.name)} ${w.id===activeWaypointId?'[NAV]':''}</b><small>${escapeHTML(w.type)} // ${w.lat.toFixed(5)}, ${w.lon.toFixed(5)}${w.notes?` // ${escapeHTML(w.notes)}`:''}</small></div><div class="waypoint-actions"><button class="micro-btn" data-wp-nav="${escapeHTML(w.id)}">NAV</button><button class="micro-btn" data-wp-copy="${escapeHTML(w.id)}">COPY</button><button class="micro-btn danger" data-wp-delete="${escapeHTML(w.id)}">DEL</button></div></div>`).join('')||'<p class="muted">No waypoints saved yet.</p>';
   updateWaypointNav();
 }
 function saveWaypointCurrent(forceBase=false){
