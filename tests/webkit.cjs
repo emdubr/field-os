@@ -59,7 +59,7 @@ const server=http.createServer((req,res)=>{
         visibility:panel?getComputedStyle(panel).contentVisibility:null,
         overflow:document.documentElement.scrollWidth-innerWidth};
     });
-    assert.ok(Math.abs(layout.titleTop-layout.headerBottom)<=13,'map title must not leave a phantom top-bar gap');
+    assert.ok(Math.abs(layout.titleTop-layout.headerBottom)<=13,'map title must not leave a phantom top-bar gap: '+JSON.stringify(layout));
     assert.equal(layout.visibility,'visible','active map panels must not reserve blank offscreen placeholders');
     assert.ok(layout.overflow<=1,'map screen must fit mobile width');
     await page.evaluate(()=>openView('route'));await page.waitForTimeout(35);
