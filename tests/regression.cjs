@@ -356,6 +356,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes("setFieldBase(state,useOffline?'offline':onlineKind,pack)"));
  assert.ok(appJs.includes("if(action==='location'||action==='location-toggle')return engine?.toggleLiveLocation?.()"));
  assert.ok(mapEngineJs.includes("const STORE_PREFIX='fieldos-v12-'"));
+ assert.ok(mapEngineJs.includes('offlineOwnsMap()')&&mapEngineJs.includes('if(!isVisible(st))continue'));
+ assert.ok(mapEngineJs.includes('Math.abs(tile.z-tileZoom)<=3')&&mapEngineJs.includes('st.retryCounts.clear()'));
+ assert.ok(appJs.includes('FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled},false)'));
  assert.ok(mapEngineJs.includes("function isVisible(st)"));
  assert.ok(mapEngineJs.includes("fieldos:mapstatechange"));
  assert.ok(appJs.includes("['osm','topo','satellite','offline']"));
@@ -459,7 +462,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.84');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.85');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.ok(runtimeJs.includes('(id*37)%Math.max(17,interval)'));console.log('PASS runtime scheduler staggers recurring work instead of aligning timer bursts');
  assert.ok((html.match(/<script defer src=/g)||[]).length>=11);assert.ok(html.indexOf('map-engine.js?v='+release)<html.indexOf('route-planner.js?v='+release));console.log('PASS startup scripts fetch in parallel while preserving dependency order');
@@ -771,7 +774,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.84</b>')&&workstationJs.includes('<em>v3.84</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.85</b>')&&workstationJs.includes('<em>v3.85</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
