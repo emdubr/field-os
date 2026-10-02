@@ -10,7 +10,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','runtime.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll('.route-dom-slope')].map(p=>p.getAttribute('class'));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -580,6 +580,17 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  ]};
  assert.equal(r.slopeClass(r.gradeAtDistance(sustainedSteep,50)).key,'hard');
  console.log('PASS flat/noisy DEM route segment remains easy, not red');
+ assert.ok(w.FIELD_ROUTE_SLOPE,'main map shares the live route planner sustained-grade classifier');
+ assert.equal(w.FIELD_ROUTE_SLOPE.slopeClass(w.FIELD_ROUTE_SLOPE.gradeAtDistance(sustainedSteep,50)).key,'hard');
+ const gradedRoute=Array.from({length:6},(_,i)=>({lat:44+i*.0009,lon:-73}));
+ const segmentMeters=6371000*(.0009*Math.PI/180);
+ const gradedProfile={samples:gradedRoute.map((p,i)=>({...p,distanceM:i*segmentMeters,elevationFt:[500,500,530,570,640,710][i]}))};
+ w.FIELD_ROUTE_PLANNER.activate();
+ const classes=r.debugSlopeRender(gradedProfile,gradedRoute);
+ assert.ok(classes.some(c=>c.includes('route-dom-slope-medium')),'route planner must draw orange medium-grade overlay');
+ assert.ok(classes.some(c=>c.includes('route-dom-slope-hard')),'route planner must draw red hard-grade overlay');
+ assert.match(workstationCss,/Desktop wheel zoom must not fade[\s\S]*?route-zooming[\s\S]*?opacity:1!important/);
+ console.log('PASS route planner grade colors remain present and do not fade during desktop zoom');
  const css=workstationCss;
  assert.ok(css.includes('#map .module-grid'));
  assert.ok(css.includes('body #map .module-grid{\n    display:flex!important')||css.includes('#map .module-grid{\n    display:flex!important'));
