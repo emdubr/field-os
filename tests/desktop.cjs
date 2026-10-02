@@ -119,9 +119,16 @@ const server=http.createServer((req,res)=>{
         const box=s=>document.querySelector(s).getBoundingClientRect();
         const coords=box('#home .nav-toprow'),compass=box('#home .home-compass-cluster');
         const title=box('#home .detailed-nav .terminal-title');
-        const chart=box('#home .detailed-sensors .mini-chart'),axis=box('#home .detailed-sensors .chart-axis');
-        const label=box('#home .detailed-sensors .mini-chart-title');
-        return {coordsClear:coords.bottom<=compass.top,titleVisible:title.height>0,labelAbove:label.bottom<=chart.top,axisBelow:axis.top>=chart.bottom};
+        // A synthetic pressure graph was removed: either a real graph is shown
+        // with its label/axis correctly positioned, or an honest no-data notice.
+        const chart=document.querySelector('#home .detailed-sensors .mini-chart');
+        const label=document.querySelector('#home .detailed-sensors .mini-chart-title');
+        const axis=document.querySelector('#home .detailed-sensors .chart-axis');
+        if(!chart||!label||!axis)return {coordsClear:coords.bottom<=compass.top,titleVisible:title.height>0,
+          honestPressure:document.querySelector('#home .detailed-sensors').textContent.includes('LIVE PRESSURE TREND UNAVAILABLE')};
+        const chartBox=chart.getBoundingClientRect(),labelBox=label.getBoundingClientRect(),axisBox=axis.getBoundingClientRect();
+        return {coordsClear:coords.bottom<=compass.top,titleVisible:title.height>0,
+          labelAbove:labelBox.bottom<=chartBox.top,axisBelow:axisBox.top>=chartBox.bottom};
       });
       for(const [name,ok] of Object.entries(instruments))assert.ok(ok,`${name} at ${width}px`);
       await page.locator('#home .mesh-table').scrollIntoViewIfNeeded();
