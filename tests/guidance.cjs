@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
-const ctx={window:{addEventListener(){}},document:{querySelector(){return null},getElementById(){return null},addEventListener(){}},requestAnimationFrame(){},setInterval(){},navigator:{},console};vm.createContext(ctx);
+const documentEvents={};const ctx={window:{addEventListener(){}},document:{querySelector(){return null},getElementById(){return null},addEventListener(event,fn){(documentEvents[event]??=[]).push(fn)}},requestAnimationFrame(){},setInterval(){},navigator:{},console};vm.createContext(ctx);
 for(const file of ['route-guidance.js','map-readiness.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),ctx,{filename:file});
 const g=ctx.window.FIELD_GUIDANCE,r=ctx.window.FIELD_MAP_READINESS;
 assert.equal(g.isLivePosition({lat:44,lon:-73,source:'PHONE GNSS',timestamp:Date.now(),accuracy:10}),true);
@@ -18,6 +18,36 @@ const plan={points:[a,c],junctions:js};const close=g.next(plan,{lat:44.0005,lon:
 const first={points:[a,b],junctions:g.junctionsForPath(graph,[a,b],[{name:'Long Trail'}])};const second={points:[b,d],junctions:g.junctionsForPath(graph,[b,d],[{name:'Side Trail'}])};const joined=g.combine([{result:first},{result:second}]);assert.equal(joined.length,1);assert.equal(joined[0].previousId,'a');assert.equal(joined[0].nextId,'d');assert.equal(joined[0].alternatives.length,1);assert.equal(joined[0].alternatives[0].nodeId,'c');
 const reversed=g.reverseLeg({...first,trailSections:sections,startSnap:a,endSnap:b});assert.equal(reversed.points[0].id,'b');assert.equal(reversed.junctions[0].distanceM,0);assert.equal(reversed.junctions[0].nextId,'a');assert.equal(reversed.junctions[0].outgoing,'Long Trail');
 console.log('PASS actual graph junctions, duplicate-edge filtering, along-route proximity, off-route suppression, leg-boundary joining and reverse guidance');
+const routePoints=Array.from({length:1001},(_,i)=>({lat:44+i*.00001,lon:-73+.00002*Math.sin(i/20)}));
+const position={lat:44.0053,lon:-73+.00002*Math.sin(530/20)+.00003};
+let referenceOffset=Infinity,referenceProgress=0,cumulative=0;
+for(let i=1;i<routePoints.length;i++){
+ const a=routePoints[i-1],b=routePoints[i],scale=Math.cos(position.lat*Math.PI/180),x=(b.lon-a.lon)*scale,y=b.lat-a.lat;
+ const t=Math.max(0,Math.min(1,((position.lon-a.lon)*scale*x+(position.lat-a.lat)*y)/(x*x+y*y||1)));
+ const off=g.length([position,{lat:a.lat+t*(b.lat-a.lat),lon:a.lon+t*(b.lon-a.lon)}]),distance=g.length([a,b]);
+ if(off<referenceOffset){referenceOffset=off;referenceProgress=cumulative+t*distance}
+ cumulative+=distance;
+}
+const projected=g.project(routePoints,position);assert.ok(Math.abs(projected.offsetM-referenceOffset)<1e-7);assert.ok(Math.abs(projected.progressM-referenceProgress)<1e-7);
+const projectedAgain=g.project(routePoints,{...position,lat:position.lat+.00001});assert.ok(projectedAgain.progressM>0);
+console.log('PASS cached junction route-segments preserve long-route projection results');
+
+const nodes=new Map();
+const node=()=>{let html='',writes=0;return {get innerHTML(){return html},set innerHTML(v){html=v;writes++},get writes(){return writes},textContent:'',classList:{toggle(){}}}};
+for(const id of ['trailContinuityRows','junctionRows','junctionPanel','junctionState','junctionInstruction','junctionDetail'])nodes.set(id,node());
+ctx.document.getElementById=id=>nodes.get(id)||null;
+let livePos={lat:44.0003,lon:-73,source:'PHONE GNSS',timestamp:Date.now(),accuracy:8};
+let activePlan={updatedAt:'stable',points:[a,b,c],junctions:js,trailSections:[{name:'Original Trail',distanceM:220}]};
+ctx.window.FIELD_ROUTE_STATE={getPlan:()=>({...activePlan,points:activePlan.points.map(p=>({...p}))}),current:()=>livePos};
+const firstRender=g.render();assert.ok(firstRender.cue);
+livePos={...livePos,lat:44.0006,timestamp:Date.now()};
+const secondRender=g.render();assert.ok(secondRender.cue.distanceToM<firstRender.cue.distanceToM);
+assert.equal(nodes.get('trailContinuityRows').writes,1);assert.equal(nodes.get('junctionRows').writes,1);
+activePlan={...activePlan,trailSections:[{name:'Updated Trail',distanceM:220}]};
+documentEvents['fieldos:routemetadatachange'][0]();g.render();
+assert.equal(nodes.get('trailContinuityRows').writes,2);assert.match(nodes.get('trailContinuityRows').innerHTML,/Updated Trail/);
+assert.equal(nodes.get('junctionRows').writes,2);
+console.log('PASS live junction distance updates without rewriting static trail/junction DOM; metadata changes invalidate the cache');
 const MB=1048576;assert.equal(r.assess(0).allowed,false);assert.equal(r.assess(-1).allowed,false);assert.equal(r.assess(251*MB).allowed,false);assert.equal(r.assess(20*MB,{quota:100*MB,usage:80*MB}).allowed,false);assert.equal(r.assess(20*MB,{quota:100*MB,usage:60*MB}).allowed,true);assert.equal(r.assess(20*MB,{}).known,false);assert.equal(r.assess(20*MB,{}).allowed,true);assert.equal(r.assess(20*MB,{quota:0,usage:0}).known,false);
 assert.equal(r.age('not a date'),'UNKNOWN');assert.equal(r.age(new Date(Date.now()+86400000).toISOString()),'UNKNOWN');const info=r.packInfo({name:'Map',source:'import',created:'2026-09-28T12:00:00Z',bounds:[-74,43,-72,45]},Date.parse('2026-09-30T12:00:00Z'));assert.equal(info.savedAge,'2 DAYS');assert.equal(info.dataDate,'UNKNOWN');assert.match(info.coverage,/43.000/);
 console.log('PASS capacity/headroom limits, unavailable quota, future dates and separation of saved age from source-data age');
