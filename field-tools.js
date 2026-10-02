@@ -144,9 +144,41 @@
  'use strict';const $=id=>document.getElementById(id),set=(id,v)=>{const e=$(id);if(e)e.textContent=v},P='fieldos-v12-',DK=P+'diagnostic-events',SK=P+'recovery-snapshot';
  function diag(type,detail=''){let a=[];try{a=JSON.parse(localStorage.getItem(DK)||'[]')}catch{}a.unshift({time:new Date().toISOString(),type:String(type).slice(0,40),detail:String(detail).slice(0,180)});try{localStorage.setItem(DK,JSON.stringify(a.slice(0,100)))}catch{}renderDiag()}
  function renderDiag(){let a=[];try{a=JSON.parse(localStorage.getItem(DK)||'[]')}catch{}const e=$('browserDiagLog');if(e)e.innerHTML=a.slice(0,10).map(x=>'<div class="condition-row"><b>'+x.type.replace(/[<>]/g,'')+'</b><span>'+new Date(x.time).toLocaleTimeString()+'</span><em>'+x.detail.replace(/[<>]/g,'')+'</em></div>').join('')||'<p class="muted">No diagnostic events.</p>'}
- function snapshot(){const keys=['routePlan','trip','waypoints','track','mission-pack','weather-cache','environment-intel-cache','map-pack','map-source'],data={created:new Date().toISOString(),items:{}};for(const k of keys)try{data.items[k]=localStorage.getItem(P+k)}catch{}try{localStorage.setItem(SK,JSON.stringify(data));set('recoverySnapshotState','SAVED '+new Date(data.created).toLocaleTimeString());diag('SNAPSHOT','Recovery state saved');return data}catch{set('recoverySnapshotState','SAVE FAILED');return null}}
- function restore(){let s;try{s=JSON.parse(localStorage.getItem(SK)||'null')}catch{}if(!s?.items)return set('recoverySnapshotState','NO SNAPSHOT');for(const [k,v] of Object.entries(s.items))try{if(v==null)localStorage.removeItem(P+k);else localStorage.setItem(P+k,v)}catch{}set('recoverySnapshotState','RESTORED // RELOAD APP');diag('RESTORE','Recovery snapshot restored')}
- async function permissions(){const names=['geolocation','notifications'];const out=[];for(const name of names){try{const r=await navigator.permissions?.query?.({name});out.push(name.toUpperCase()+': '+String(r?.state||'UNKNOWN').toUpperCase())}catch{out.push(name.toUpperCase()+': BROWSER MANAGED')}}set('browserPermissionAudit',out.join(' // '));return out}
+ async function snapshot({includeTrack=true}={}){
+ const keys=['routePlan','trip','waypoints','track','mission-pack','weather-cache','environment-intel-cache','map-pack','map-source'];
+ const data={schema:2,created:new Date().toISOString(),items:{},trackStorage:'legacy'};
+ try{
+  for(const k of keys)data.items[k]=localStorage.getItem(P+k);
+  if(includeTrack&&window.FIELD_TRACK_STORE?.persistent){
+   await window.FIELD_TRACK_STORE.snapshot();data.trackStorage='indexeddb';data.items.track=null;
+  }else if(!includeTrack&&window.FIELD_TRACK_STORE?.persistent){data.trackStorage='unchanged';data.items.track=null;}
+  localStorage.setItem(SK,JSON.stringify(data));
+  set('recoverySnapshotState','SAVED '+new Date(data.created).toLocaleTimeString()+
+   (data.trackStorage==='unchanged'?' (TRACK UNCHANGED)':''));
+  diag('SNAPSHOT','Recovery state saved'+(data.trackStorage==='indexeddb'?' with track backup':''));
+  return data;
+ }catch(error){set('recoverySnapshotState','SAVE FAILED — '+String(error.message||error).slice(0,60));diag('SNAPSHOT FAILED',String(error.message||error));return null;}
+}
+async function restore(){
+ let state;try{state=JSON.parse(localStorage.getItem(SK)||'null')}catch{}
+ if(!state?.items){set('recoverySnapshotState','NO SNAPSHOT');return;}
+ try{
+  if(state.trackStorage==='indexeddb'){
+   const recovered=await window.FIELD_TRACK_STORE?.restore?.();
+   if(!recovered)throw Error('IndexedDB track backup missing; restore cancelled');
+  }else if(state.items.track!=null&&window.FIELD_TRACK_STORE?.persistent){
+   const old=JSON.parse(state.items.track);if(!Array.isArray(old))throw Error('Invalid legacy track backup');
+   await window.FIELD_TRACK_STORE.replace(old);
+  }
+  for(const [k,v] of Object.entries(state.items)){
+   if(k==='track'&&window.FIELD_TRACK_STORE?.persistent)continue;
+   if(state.trackStorage==='unchanged'&&k==='track')continue;
+   if(v==null)localStorage.removeItem(P+k);else localStorage.setItem(P+k,v);
+  }
+  set('recoverySnapshotState','RESTORED — RELOAD REQUIRED');diag('RESTORE','Recovery snapshot restored; reload to synchronize active memory');
+ }catch(error){set('recoverySnapshotState','RESTORE FAILED — '+String(error.message||error).slice(0,50));diag('RESTORE FAILED',String(error.message||error));}
+}
+async function permissions(){const names=['geolocation','notifications'];const out=[];for(const name of names){try{const r=await navigator.permissions?.query?.({name});out.push(name.toUpperCase()+': '+String(r?.state||'UNKNOWN').toUpperCase())}catch{out.push(name.toUpperCase()+': BROWSER MANAGED')}}set('browserPermissionAudit',out.join(' // '));return out}
  async function swHealth(){let state='UNAVAILABLE';try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();state=reg?(navigator.serviceWorker.controller?'CONTROLLED':'REGISTERED / RELOAD NEEDED'):'NOT REGISTERED'}}catch{state='ERROR'}set('browserSwHealth',state);return state}
  let cacheScan=null;
  function cacheHealth(){
@@ -159,15 +191,26 @@
    return cacheScan;
  }
  function stale(){const rows=[];for(const [key,label,maxH] of [['weather-cache','WEATHER',12],['environment-intel-cache','ENVIRONMENT',24]]){let d=null;try{d=JSON.parse(localStorage.getItem(P+key)||'null')}catch{}const t=Date.parse(d?.downloadedAt||d?.fetchedAt||'');const h=Number.isFinite(t)?(Date.now()-t)/3600000:Infinity;rows.push(label+': '+(h<=maxH?'FRESH':h<Infinity?Math.floor(h)+'H OLD':'MISSING'))}set('browserStaleData',rows.join(' // '));return rows}
- async function launch(){const results=[];results.push(['ONLINE',navigator.onLine]);results.push(['SERVICE WORKER',(await swHealth())!=='UNAVAILABLE']);results.push(['ROUTE',!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length]);results.push(['POSITION',!!window.FIELD_ROUTE_STATE?.current?.()]);results.push(['OFFLINE MAP',!!localStorage.getItem(P+'map-pack')]);results.push(['WEATHER',!!localStorage.getItem(P+'weather-cache')]);results.push(['ENVIRONMENT',!!localStorage.getItem(P+'environment-intel-cache')]);const ok=results.filter(x=>x[1]).length;set('browserLaunchCheck',ok+'/'+results.length+' READY // '+(ok>=6?'GO':ok>=4?'PARTIAL':'PREP'));const e=$('browserLaunchList');if(e)e.innerHTML=results.map(x=>'<div class="condition-row"><b>'+x[0]+'</b><span>'+(x[1]?'READY':'MISSING')+'</span></div>').join('');diag('PREFLIGHT',ok+'/'+results.length+' ready');return results}
+ async function launch(){const results=[];results.push(['ONLINE',navigator.onLine]);results.push(['SERVICE WORKER',(await swHealth())!=='UNAVAILABLE']);results.push(['ROUTE',!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length]);results.push(['POSITION',window.FIELD_SAFETY?.position?.().trusted===true]);results.push(['OFFLINE MAP',!!localStorage.getItem(P+'map-pack')]);results.push(['WEATHER',!!localStorage.getItem(P+'weather-cache')]);results.push(['ENVIRONMENT',!!localStorage.getItem(P+'environment-intel-cache')]);const ok=results.filter(x=>x[1]).length;set('browserLaunchCheck',ok+'/'+results.length+' READY // '+(ok>=6?'GO':ok>=4?'PARTIAL':'PREP'));const e=$('browserLaunchList');if(e)e.innerHTML=results.map(x=>'<div class="condition-row"><b>'+x[0]+'</b><span>'+(x[1]?'READY':'MISSING')+'</span></div>').join('');diag('PREFLIGHT',ok+'/'+results.length+' ready');return results}
  function softReset(){for(const k of ['touch-glove','touch-onehand'])try{localStorage.removeItem(P+k)}catch{}document.body.classList.remove('field-glove','field-onehand');set('browserRecoveryState','UI FIELD MODES RESET');diag('SAFE UI RESET','Touch modes reset only')}
- $('recoverySnapshot')?.addEventListener('click',snapshot);$('recoveryRestore')?.addEventListener('click',restore);$('browserRunAudit')?.addEventListener('click',async()=>{await permissions();await swHealth();await cacheHealth();stale();diag('AUDIT','Browser health audit complete')});$('browserLaunchPreflight')?.addEventListener('click',launch);$('browserSoftReset')?.addEventListener('click',softReset);
+ $('recoverySnapshot')?.addEventListener('click',()=>{void snapshot()});$('recoveryRestore')?.addEventListener('click',()=>{void restore()});$('browserRunAudit')?.addEventListener('click',async()=>{await permissions();await swHealth();await cacheHealth();stale();diag('AUDIT','Browser health audit complete')});$('browserLaunchPreflight')?.addEventListener('click',launch);$('browserSoftReset')?.addEventListener('click',softReset);
  window.addEventListener('error',e=>diag('JS ERROR',e.message||'Unknown error'));window.addEventListener('unhandledrejection',e=>diag('PROMISE ERROR',String(e.reason?.message||e.reason||'Unknown rejection')));
  renderDiag();permissions();swHealth();stale();
  let cacheChecked=false;
  const inspectCacheWhenVisible=()=>{if(!cacheChecked&&!document.hidden&&document.querySelector('#system.active')){cacheChecked=true;cacheHealth();}};
  document.addEventListener('fieldos:viewchange',inspectCacheWhenVisible);
  document.addEventListener('visibilitychange',inspectCacheWhenVisible);
- inspectCacheWhenVisible();setTimeout(()=>{if(window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)snapshot()},1500);
- window.FIELD_BROWSER_RESILIENCE={diag,snapshot,restore,permissions,swHealth,cacheHealth,stale,launch};
+ inspectCacheWhenVisible();setTimeout(()=>{let hasBackup=false;try{hasBackup=!!localStorage.getItem(SK)}catch{}if(!hasBackup&&window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length)void snapshot({includeTrack:false})},1500);
+ 
+ async function copyDiagnosticReport(){
+  let events=[];try{events=JSON.parse(localStorage.getItem(DK)||'[]')}catch{}
+  const report=['FIELD/OS LOCAL DIAGNOSTIC REPORT',new Date().toISOString(),
+   'App version: '+(document.querySelector('.version')?.textContent||'unknown'),
+   'Browser: '+navigator.userAgent,'Review for locations/private details before sharing.',
+   ...events.slice(0,50).map(x=>[x.time,x.type,x.detail].join(' // '))].join('\n');
+  try{await navigator.clipboard.writeText(report);diag('REPORT','Diagnostic report copied locally');}
+  catch{set('browserRecoveryState','COPY FAILED — check clipboard permission');}
+ }
+ $('browserCopyDiagnostic')?.addEventListener('click',()=>{void copyDiagnosticReport()});
+window.FIELD_BROWSER_RESILIENCE={diag,snapshot,restore,permissions,swHealth,cacheHealth,stale,launch,copyDiagnosticReport};
 })();
