@@ -649,6 +649,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(routePlannerJs.includes("marker.on('click'"));
  assert.ok(routePlannerJs.includes('if(moveEditPoint({lat:ll.lat,lon:ll.lng}))return'));
  console.log('PASS mobile route editor has deterministic tap-to-move mode in addition to marker drag');
+ assert.doesNotMatch(appJs,/if\(fieldViewActive\('home','map'\)\)updateFieldMaps\(true\)/,'GPS-driven offline map refresh must not force camera recenter');
+ console.log('PASS passive GPS updates do not force offline map camera recenter');
 
  // Route-state sanitization under malformed and oversized point updates.
  for(let i=0;i<100;i++){
