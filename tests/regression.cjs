@@ -115,11 +115,11 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  d.getElementById('mobileFixState').textContent='3D / ±4m';w.FIELD_DR.update();assert.equal(w.FIELD_DR.state.active,false);w.FIELD_DR.reset();
  console.log('PASS feature 07 Dead Reckoning keeps a separately labeled estimate with growing uncertainty and returns authority to GNSS');
  d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';w.FIELD_DR.reset();
- let conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'trusted');assert.ok(conf.score>=90);assert.match(d.getElementById('posConfidenceLabel').textContent,/TRUSTED/);
+ const originalTestPosition=w.FIELD_ROUTE_STATE.current;assert.equal(w.FIELD_POSITION_CONFIDENCE.compute().mode,'stale','demo coordinates must never be trusted');w.FIELD_ROUTE_STATE.current=()=>({...originalTestPosition(),source:'PHONE GNSS'});let conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'trusted');assert.ok(conf.score>=90);assert.match(d.getElementById('posConfidenceLabel').textContent,/TRUSTED/);
  d.getElementById('navAccuracy').textContent='±35 m';conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'degraded');assert.ok(conf.score<90);
  d.getElementById('mobileFixState').textContent='STALE';w.FIELD_DR.arm();w.FIELD_DR.state.active=true;w.FIELD_DR.state.uncertaintyM=420;conf=w.FIELD_POSITION_CONFIDENCE.render();assert.equal(conf.mode,'estimated');assert.equal(conf.authority,'DEAD RECKONING');assert.ok(conf.score<70);
  w.FIELD_DR.reset();d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';
- console.log('PASS feature 08 Position Confidence distinguishes trusted, degraded, stale, and DR-estimated authority with uncertainty visualization');
+ w.FIELD_ROUTE_STATE.current=originalTestPosition;console.log('PASS feature 08 Position Confidence distinguishes trusted, degraded, stale, and DR-estimated authority with uncertainty visualization');
  const nowMesh=Date.now();w.FIELD_MESH.ingest([
    {id:'ridge-1',name:'RIDGE-1',role:'ROUTER',lat:44.48,lon:-73.21,rssi:-78,snr:9,battery:81,hops:1,lastHeard:nowMesh},
    {id:'valley-2',name:'VALLEY-2',role:'CLIENT',lat:44.46,lon:-73.23,rssi:-104,snr:-1,battery:52,hops:2,lastHeard:nowMesh-120000,via:'ridge-1'}
@@ -476,13 +476,13 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes(`sw.js?v=${release}`));
  assert.ok(!appJs.slice(appJs.indexOf("if(\'serviceWorker\' in navigator)"),appJs.indexOf("const bootLines=")).includes("location.reload()"));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
- assert.ok(manifest.includes(`index.html?v=${release}`));
+ assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS release cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS versioned JS/CSS caches plus stable installed-PWA launch URL');
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
  assert.ok(workstationJs.includes(`FIELD / OS <b>${release}</b>`)&&workstationJs.includes(`<em>v${release}</em>`)&&workstationJs.includes(`FIELD/OS ${release}`));
  assert.ok(routePlannerJs.includes(`'BUILD: v${release}'`));
- assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
+ assert.ok(appJs.includes('FIELD/OS FIELD CONSOLE v'+release));
  assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
 
@@ -822,7 +822,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-84'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-84-safety1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));

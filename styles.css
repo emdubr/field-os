@@ -721,3 +721,35 @@ body[data-theme="red"]{
   #system .field-tools-panel .button-row{grid-template-columns:1fr}
   #system .field-tools-panel .button-row>button{min-height:48px}
 }
+/* Safety/accessibility hotfix: do not constrain mobile inputs or hide emergency controls. */
+.sos-panel dd,.integrity-grid span,.home-field-compass,.map-meta,.readouts dd { font-variant-numeric:tabular-nums; }
+.sos-panel [aria-live],.status-stale { overflow-wrap:anywhere; }
+#emergencyRegion { min-width:160px; width:100%; max-width:320px; }
+#emergencyDial[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
+#sos .button-row { flex-wrap:wrap; gap:12px; }
+#homeWaypointRows { min-height:36px; overflow-wrap:anywhere; }
+#homeEventRows { min-height:36px; overflow-wrap:anywhere; }
+#homeMeshRows { min-height:36px; overflow-wrap:anywhere; }
+#tabSheet { z-index:20000; }
+#tabSheetBackdrop { z-index:19999; }
+.crt-overlay,.noise-overlay,.grid-overlay { pointer-events:none; }
+@media(max-width:800px){
+  input, select, textarea, .terminal-input, .terminal-area { font-size:max(16px,1rem); }
+  .rail.left-rail,.rail.right-rail { display:none; }
+  .screen { padding-bottom:calc(95px + env(safe-area-inset-bottom,0px)); }
+  .tabbar { padding-bottom:max(8px,env(safe-area-inset-bottom,0px)); }
+  .tab-sheet { max-height:calc(100dvh - 20px); overflow-y:auto; }
+  .field-real-map { touch-action:none; overscroll-behavior:contain; }
+  .map-meta,.nav-readout,.sensor-lines { overflow-wrap:anywhere; min-width:0; }
+  .micro-btn,.tiny-button,.sheet-tab,.tab-btn { min-height:44px; }
+}
+@media (max-width:380px) {
+ .topbar { min-width:0; }
+ .brand-line,.status-strip { flex-wrap:wrap; }
+ .status-chip { min-width:0; }
+ .nav-stats,.sensor-lines { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (prefers-reduced-motion:reduce) {
+ .crt-overlay,.noise-overlay,.grid-overlay,.signal-ticker { animation:none!important; transition:none!important; }
+}
+body[data-theme="red"] .field-real-map img { filter:brightness(.45) sepia(1) saturate(2) hue-rotate(310deg); }

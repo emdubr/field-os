@@ -716,7 +716,7 @@
     const drActive=!!window.FIELD_DR?.state?.active,drUncertainty=Number(window.FIELD_DR?.state?.uncertaintyM);
     let mode='trusted',authority='GNSS',uncertainty=statedAcc,score=100;
     if(drActive){mode='estimated';authority='DEAD RECKONING';uncertainty=Number.isFinite(drUncertainty)?drUncertainty:Math.max(50,statedAcc);score=58}
-    else if(/STALE|NO FIX|AWAITING|UNAVAILABLE/i.test(fix)||ageSec>180){mode='stale';authority='LAST TRUSTED FIX';score=20;uncertainty=Math.max(statedAcc,100)}
+    else if(/DEMO|SIMULATED/i.test(source)||/STALE|NO FIX|AWAITING|UNAVAILABLE/i.test(fix)||ageSec>60){mode='stale';authority='LAST TRUSTED FIX';score=20;uncertainty=Math.max(statedAcc,100)}
     else{
       score-=Math.min(45,Math.max(0,statedAcc-3)*2.2);
       score-=Math.min(35,ageSec/4);
