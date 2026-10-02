@@ -248,6 +248,36 @@ const server=http.createServer((req,res)=>{
     assert.ok(pinchSource.ok);
     console.log('PASS first-finger pinch release stays compositor-only until final pointer');
 
+
+    // Real Chromium desktop regression: a map moves on the page without a
+    // ResizeObserver notification. A wheel event at its visual center must
+    // zoom in place, never jump based on its previously cached DOM position.
+    await page.setViewportSize({width:1440,height:900});
+    await page.evaluate(()=>openView('map'));await page.waitForTimeout(60);
+    const desktopWheel=await page.evaluate(async()=>{
+      const engine=window.FIELD_MAP_ENGINE,map=document.getElementById('realMap');
+      const origin={lat:44.4759,lon:-73.2121};
+      engine.setView('realMap',origin,14.2);
+      await new Promise(r=>requestAnimationFrame(r));
+      const initial=map.getBoundingClientRect();
+      map.style.transform='translateY(85px)';
+      const moved=map.getBoundingClientRect();
+      const x=moved.left+moved.width/2,y=moved.top+moved.height/2;
+      const event=new WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:-95,clientX:x,clientY:y});
+      map.dispatchEvent(event);
+      await new Promise(r=>setTimeout(r,180));
+      const now=engine.getView('realMap');
+      map.style.transform='';
+      return {zoom:now.zoom,original:origin,center:now.center,cancelled:event.defaultPrevented,
+        movement:moved.top-initial.top};
+    });
+    assert.ok(desktopWheel.movement>80,'test must move desktop map without changing dimensions');
+    assert.ok(desktopWheel.cancelled&&desktopWheel.zoom>14.28,'mouse-wheel zoom remains active after moving the map');
+    assert.ok(Math.abs(desktopWheel.center.lat-desktopWheel.original.lat)<.00002&&
+      Math.abs(desktopWheel.center.lon-desktopWheel.original.lon)<.00002,
+      'desktop mouse-wheel zoom follows the CURRENT map position after scrolling: '+JSON.stringify(desktopWheel));
+    console.log('PASS real Chromium desktop wheel zoom stays anchored after map moves in page layout');
+    await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>{openView('route');FIELD_ROUTE_PLANNER.activate()});
     await page.waitForTimeout(120);
     const routeTap=await page.evaluate(async()=>{
