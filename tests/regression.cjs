@@ -484,8 +484,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationJs.includes("e.target instanceof Element&&e.target.matches"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
- assert.ok(appJs.includes(`sw.js?v=${release}`));
- assert.ok(appJs.includes('if(approved){location.reload();return;}'),'reload requires explicit update approval');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
+ assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
+ assert.ok(appJs.includes('if(approved){approved=false;location.reload();return}'),'reload requires explicit update approval');
+ assert.ok(appJs.includes('await window.FIELD_TRACK_STORE?.flush?.()'),'update must persist track before activation');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));assert.ok(swJs.includes('track-store.js?v=3.85-opt2'));assert.ok(swJs.includes('geo-hub.js?v=3.85-opt2'));
  assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
