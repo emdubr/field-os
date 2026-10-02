@@ -2139,7 +2139,10 @@
   }
 
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
-  document.addEventListener('fieldos:routechange',()=>{if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}});
+  document.addEventListener('fieldos:routechange',()=>{
+    if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}
+    else if(window.FIELD_ROUTE_PLANNER?.ownsElevationProfile)restoreHorizontalProfile();
+  });
   document.addEventListener('fieldos:themechange',()=>{if(initialized){overlay();redrawHorizontalProfile();}});
   document.addEventListener('click',e=>{
     if(e.target.closest?.('[data-open="route"]'))setTimeout(kickPlanner,60);
@@ -2166,5 +2169,29 @@
   // Share sustained DEM grade classes with the Home/Terrain overview.
   window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
   window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
+
+  // The horizontal elevation overview must work even when the optional
+  // Leaflet/CDN route map has not finished loading (or cannot load offline).
+  // Its listeners and responsive size cannot depend on map initialization.
+  function restoreHorizontalProfile(){
+    const pts=state()?.getPoints?.()||[],plan=state()?.getPlan?.()||{};
+    const samples=validElevationSamples(plan.elevationProfile);
+    const total=routeDistanceMiles(pts)*1609.344,profileDist=samples.at(-1)?.distanceM;
+    const endpointsMatch=samples.length>1&&pts.length>1&&
+      (!valid(samples[0])||meters(samples[0],pts[0])<60)&&
+      (!valid(samples.at(-1))||meters(samples.at(-1),pts.at(-1))<60);
+    if(endpointsMatch&&total>10&&Number.isFinite(profileDist)&&Math.abs(profileDist-total)/total<.06){
+      activeElevationProfile={samples,gainFt:Number(plan.elevationGainFt)||0,lossFt:Number(plan.elevationLossFt)||0,
+        minFt:Number(plan.elevationMinFt)||0,maxFt:Number(plan.elevationMaxFt)||0,maxGrade:Number(plan.elevationMaxGrade)||0};
+      activeElevationState='ready';
+    }else{
+      activeElevationProfile=null;
+      activeElevationState=pts.length>1?'unavailable':'empty';
+    }
+    redrawHorizontalProfile();
+  }
+  bindElevationProfileHover();
+  restoreHorizontalProfile();
+  document.addEventListener('fieldos:routemetadatachange',()=>{if(!initialized)restoreHorizontalProfile()});
 })();
 
