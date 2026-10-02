@@ -31,7 +31,7 @@
   let plannerRouteRedrawFrame=0;
   let plannerHoverFrame=0,pendingHoverPoint=null;
   let plannerZooming=false;
-  let activeElevationProfile=null;
+  let activeElevationProfile=null,activeElevationState='empty';
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -777,7 +777,7 @@
     };
     const update=e=>{
       const profile=activeElevationProfile,samples=profile?.samples||[];
-      if(samples.length<2||!tip)return;
+      if(samples.length<2||!tip){clear();return;}
 
       const rect=canvas.getBoundingClientRect();
       const cssW=Number(canvas.dataset.fieldCssWidth)||canvas.width;
@@ -790,18 +790,16 @@
       const totalM=samples.at(-1)?.distanceM||0;
       const target=ratio*totalM;
 
-      let idx=0,best=Infinity;
-      for(let n=0;n<samples.length;n++){
-        const d=Math.abs((samples[n].distanceM||0)-target);
-        if(d<best){best=d;idx=n}
-      }
-      const p=samples[idx];
-      const gradeValue=gradeAtDistance(profile,p.distanceM||target);
+      // Use the exact cursor distance rather than jumping to whichever
+      // coarse DEM sample happens to be nearest. Elevation is interpolated;
+      // grade uses the same sustained-fit estimate as the colored route.
+      const elevationFt=profileElevationAt(samples,target);
+      const gradeValue=gradeAtDistance(profile,target);
       const cls=slopeClass(gradeValue);
-      const done=(p.distanceM||0)/1609.344;
-      const remaining=Math.max(0,(totalM-(p.distanceM||0))/1609.344);
+      const done=target/1609.344;
+      const remaining=Math.max(0,(totalM-target)/1609.344);
 
-      tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(p.elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
+      tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
       tip.className=`route-profile-hover slope-${cls.key} active`;
       if(rect.width<=760){
         const tipW=Math.min(260,Math.max(150,rect.width-12));
@@ -816,6 +814,25 @@
     canvas.addEventListener('pointerup',()=>setTimeout(clear,900),{passive:true});
     canvas.addEventListener('pointerleave',clear);
     canvas.addEventListener('pointercancel',clear);
+    // Redraw after the horizontal overview changes width (responsive sidebar,
+    // phone rotation, reopened Route tab). Otherwise its old canvas bitmap
+    // simply stretches and the cursor no longer aligns with the grade line.
+    let resizeFrame=0,lastSize='';
+    const resize=()=>{
+      if(resizeFrame)return;
+      resizeFrame=requestAnimationFrame(()=>{
+        resizeFrame=0;
+        const box=canvas.getBoundingClientRect();
+        if(box.width<40||box.height<40)return;
+        const key=`${Math.round(box.width)}:${Math.round(box.height)}`;
+        if(key===lastSize)return;
+        lastSize=key;
+        redrawHorizontalProfile();
+      });
+    };
+    if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(canvas.parentElement||canvas);
+    window.addEventListener('resize',resize,{passive:true});
+    resize();
   }
 
   function bindControls(){
@@ -1861,17 +1878,37 @@
     </tr>`).join('');
   }
 
+  // The profile canvas has one authoritative renderer. In particular, clear
+  // obsolete elevation geometry as soon as a new route is requested.
+  function drawEmptyHorizontalProfile(state='empty'){
+    const c=$('routeProfile');if(!c)return;
+    const ctx=c.getContext('2d');if(!ctx)return;
+    const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Route elevation unavailable until a current route profile loads')||{w:c.width,h:c.height};
+    ctx.clearRect(0,0,w,h);
+    const color=getComputedStyle(document.body).getPropertyValue('--dim').trim()||'#a6adab';
+    ctx.fillStyle=color;ctx.font=`${Math.min(14,Math.max(11,Math.round(w/27)))}px monospace`;
+    const message=state==='loading'?'LOADING ELEVATION FOR CURRENT ROUTE…':
+      state==='unavailable'?'ELEVATION UNAVAILABLE — ROUTE STILL VISIBLE':'PLOT A ROUTE TO VIEW ELEVATION';
+    ctx.fillText(message,Math.max(10,Math.min(24,w*.04)),Math.max(24,h/2),Math.max(10,w-20));
+    $('routeProfileHover')?.classList.remove('active');
+    $('routeProfileHoverLine')?.classList.remove('active');
+  }
+  function redrawHorizontalProfile(){
+    if(activeElevationProfile?.samples?.length>1)
+      drawElevationProfile(activeElevationProfile,routeDistanceMiles(state()?.getPoints?.()||[]));
+    else drawEmptyHorizontalProfile(activeElevationState);
+  }
   function drawElevationProfile(profile,distMi){
     const c=$('routeProfile');if(!c||!profile?.samples?.length)return;
     const ctx=c.getContext('2d');if(!ctx)return;
     const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Trail elevation profile; hover for distance and grade')||{w:c.width,h:c.height},st=getComputedStyle(document.body);
     const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',warn=st.getPropertyValue('--warn').trim()||'#ffd166';
     ctx.clearRect(0,0,w,h);
-    const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),span=Math.max(40,max-min);
+    const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),topElev=Math.max(max,min+40),span=topElev-min;
     const left=52,right=14,top=34,bottom=28,plotW=w-left-right,plotH=h-top-bottom;
     ctx.strokeStyle=line;ctx.lineWidth=1;ctx.fillStyle=fg;ctx.font='13px monospace';
     for(let i=0;i<=4;i++){
-      const y=top+plotH*i/4,e=max-span*i/4;
+      const y=top+plotH*i/4,e=topElev-span*i/4;
       ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
       ctx.fillText(`${Math.round(e)}`,4,y+4);
     }
@@ -1912,7 +1949,7 @@
     set('routeDistance',distText);set('plannerRouteDistance',distText);
     set('routePointCount',String(pts.length));set('plannerRoutePoints',String(pts.length));
     if(profile){
-      activeElevationProfile=profile;
+      activeElevationProfile=profile;activeElevationState='ready';
       const gain=Math.round(profile.gainFt),loss=Math.round(profile.lossFt),min=Math.round(profile.minFt),max=Math.round(profile.maxFt);
       const gainText=`${gain.toLocaleString()} ft`,lossText=`${loss.toLocaleString()} ft`,rangeText=`${min.toLocaleString()}–${max.toLocaleString()} ft`;
       set('routeGainOut',gainText);set('plannerRouteGain',gainText);
@@ -1928,7 +1965,7 @@
       drawElevationProfile(profile,dist);
       refreshDomRouteLayer();
     }else{
-      activeElevationProfile=null;
+      activeElevationProfile=null;activeElevationState=elevationState;
       const hasRoute=pts.length>1;
       const loading=elevationState==='loading'&&hasRoute;
       const unavailable=elevationState==='unavailable'&&hasRoute;
@@ -1938,6 +1975,8 @@
       set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
       set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
       renderElevationBreakdown(null,dist);
+      redrawHorizontalProfile();
+      refreshDomRouteLayer();
     }
     return dist;
   }
@@ -2097,7 +2136,7 @@
 
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
   document.addEventListener('fieldos:routechange',()=>{if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}});
-  document.addEventListener('fieldos:themechange',()=>{if(initialized)overlay()});
+  document.addEventListener('fieldos:themechange',()=>{if(initialized){overlay();redrawHorizontalProfile();}});
   document.addEventListener('click',e=>{
     if(e.target.closest?.('[data-open="route"]'))setTimeout(kickPlanner,60);
   },true);
@@ -2122,6 +2161,6 @@
 
   // Share sustained DEM grade classes with the Home/Terrain overview.
   window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
-  window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
+  window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 })();
 
