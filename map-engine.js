@@ -5,6 +5,8 @@
   const DEFAULT_CENTER={lat:44.4759,lon:-73.2121};
   const TILE=256;
   const states=new Map();
+  // The offline PMTiles/Leaflet renderer must remain sole owner of map DOM.
+  const offlineOwnsMap=()=>localStorage.getItem(STORE_PREFIX+'map-source')==='offline';
 
   const savedSource=localStorage.getItem(STORE_PREFIX+'map-source');
   let mode=['osm','topo','satellite'].includes(savedSource)?savedSource:'topo';
@@ -130,9 +132,9 @@
       overlay:el.querySelector('.native-map-overlay'),
       editor:el.querySelector('.native-map-editor-overlay'),
       center:{...centerCandidate()},zoom:14,
-      loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
+      loaded:0,errors:0,pending:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map()
     };
     const readLayout=()=>{
       if(st.layoutRect)return st.layoutRect;
@@ -461,23 +463,36 @@
         if(tile.status==='loaded')loaded++;else if(tile.status==='error')errors++;else pending++;
         if(tile.layer===st.base&&tile.status!=='loaded')baseReady=false;
       }
-      st.loaded=loaded;st.errors=errors;
+      st.loaded=loaded;st.errors=errors;st.pending=pending;
       const diag=st.el.querySelector('.native-map-diag');
       if(diag)diag.textContent=`TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
       if(baseReady)for(const [key,tile] of st.tiles)if(!needed.has(key))remove(key,tile);
       st.el.classList.toggle('standalone-map-error',!loaded&&!pending&&errors>0);
     }
     st.updateTileDiagnostics=diagnostics;
+    // Back off on transient failures instead of hammering map providers.
+    function scheduleRetry(){
+      if(st.retryTimer||navigator.onLine===false||offlineOwnsMap())return;
+      st.retryTimer=setTimeout(()=>{
+        st.retryTimer=0;
+        if(states.get(st.id)!==st||!isVisible(st)||offlineOwnsMap())return;
+        st.lastRenderKey='';render(st);
+      },9000);
+    }
     function use(src,cls,layer,x,y){
       if(!src)return;
       const key=[cls,tileZoom,x,y].join('/');needed.add(key);
       let tile=st.tiles.get(key);
-      if(tile?.status==='error'&&(force||Date.now()-tile.failedAt>10000)){remove(key,tile);tile=null;}
+      if(tile?.status==='error'&&(st.retryCounts.get(key)||0)<3&&(force||Date.now()-tile.failedAt>=8000)){remove(key,tile);tile=null;}
       if(!tile){
         const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
         tile={img,cls,layer,x,y,z:tileZoom,status:'pending',revision};st.tiles.set(key,tile);
-        img.onload=()=>{tile.status='loaded';st.updateTileDiagnostics?.();};
-        img.onerror=()=>{tile.status='error';tile.failedAt=Date.now();st.updateTileDiagnostics?.();};
+        img.onload=()=>{tile.status='loaded';st.retryCounts.delete(key);st.updateTileDiagnostics?.();};
+        img.onerror=()=>{
+          tile.status='error';tile.failedAt=Date.now();
+          const failed=(st.retryCounts.get(key)||0)+1;st.retryCounts.set(key,failed);
+          st.updateTileDiagnostics?.();if(failed<3)scheduleRetry();
+        };
         layer.appendChild(img);img.src=src;
       }
       tile.revision=revision;place(tile);
@@ -491,9 +506,11 @@
     }
     for(const [key,tile] of st.tiles){
       if(needed.has(key))continue;
-      // Keep at most one loaded fallback zoom; never keep pending obsolete
-      // requests attached, or let a long pan grow the DOM without bound.
-      if(!activeClasses.has(tile.cls)||tile.status!=='loaded'||Math.abs(tile.z-tileZoom)>1||tile.z===tileZoom){remove(key,tile);continue;}
+      // Preserve loaded base imagery through multi-level zoom and source
+      // switches. Pending obsolete requests and stale overlays are pruned.
+      const oldSource=tile.layer===st.base&&!activeClasses.has(tile.cls);
+      const fallback=tile.layer===st.base&&tile.status==='loaded'&&Math.abs(tile.z-tileZoom)<=3&&(tile.z!==tileZoom||oldSource);
+      if(!fallback){remove(key,tile);continue;}
       place(tile);
       const left=parseFloat(tile.img.style.left),top=parseFloat(tile.img.style.top),size=parseFloat(tile.img.style.width);
       if(left+size<0||top+size<0||left>w||top>h)remove(key,tile);
@@ -505,15 +522,19 @@
     const corner=st.el.querySelector('.native-map-corner');
     if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom.toFixed(1)}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
     clearTimeout(st.failureTimer);
-    st.failureTimer=setTimeout(()=>{if(states.get(st.id)===st&&st.loaded===0){const diag=st.el.querySelector('.native-map-diag');if(diag)diag.textContent='MAP TILES UNAVAILABLE — CHECK CONNECTION / OFFLINE PACK';}},3500);
+    st.failureTimer=setTimeout(()=>{if(states.get(st.id)===st&&st.loaded===0&&st.pending===0&&st.errors>0){const diag=st.el.querySelector('.native-map-diag');if(diag)diag.textContent='MAP TILES UNAVAILABLE — CHECK CONNECTION / OFFLINE PACK';}},3500);
   }
 
   function refresh(recenter=false){
+    if(offlineOwnsMap())return;
     updateLabels();
-    ['homeRealMap','realMap'].forEach(id=>ensure(id));
+    // Defer hidden maps so they do not create duplicate network loads.
+    for(const id of ['homeRealMap','realMap']){
+      const el=document.getElementById(id),view=el?.closest('.view');
+      if(el&&(!view||view.classList.contains('active')))ensure(id);
+    }
     for(const st of states.values()){
-      const visible=isVisible(st);
-      if(!visible&&!recenter)continue;
+      if(!isVisible(st))continue;
       if((st.id==='homeRealMap'||st.id==='realMap')&&(recenter||!st.rendered)){
         if(plannedRoute().length>1&&!liveEnabled)st.routeFitted=false;
         else st.center={...centerCandidate()};
@@ -554,8 +575,7 @@
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     for(const [key,value] of [['hiking-routes',trails],['terrain-shade',terrain],['map-grid',grid]])localStorage.setItem(STORE_PREFIX+key,value?'on':'off');
     const changed=before!==`${mode}|${trails}|${terrain}|${grid}`;
-    if(changed)invalidateFrames();
-    emitState();
+    if(changed){invalidateFrames();emitState();}
     if(changed||recenter)refresh(recenter);else updateLabels();
     return changed;
   }
@@ -654,7 +674,7 @@
   function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom}:null}
   function unmount(id){
     const st=states.get(id);if(!st)return false;
-    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);
+    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);clearTimeout(st.retryTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);
     st.resizeObserver?.disconnect?.();
     if(st.onResize)window.removeEventListener('resize',st.onResize);
     st.el.removeEventListener('pointerdown',st.onPointerDown);
@@ -664,7 +684,7 @@
     st.el.removeEventListener('wheel',st.onWheel);
     st.el.removeEventListener('dblclick',st.onDbl);
     for(const tile of st.tiles.values())tile.img.onload=tile.img.onerror=null;
-    st.tiles.clear();st.updateTileDiagnostics=null;st.el.innerHTML='';states.delete(id);return true;
+    st.tiles.clear();st.retryCounts.clear();st.updateTileDiagnostics=null;st.el.innerHTML='';states.delete(id);return true;
   }
 
   function handleAction(btn){
@@ -692,21 +712,32 @@
 
   document.addEventListener('click',e=>{
     const btn=e.target.closest?.('[data-map-action]');
-    if(!btn)return;
+    if(!btn||offlineOwnsMap())return;
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();handleAction(btn);
   },true);
 
   document.addEventListener('change',e=>{
     const input=e.target.closest?.('[data-map-layer]');
-    if(!input)return;
+    if(!input||offlineOwnsMap())return;
     e.stopPropagation();handleLayerInput(input);
   },true);
 
   const locationUiVisible=()=>!!document.querySelector('#home.active,#map.active');
   window.FIELD_RUNTIME.every(()=>{if(!document.hidden&&locationUiVisible())updateLocationLabels()},1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(locationUiVisible())updateLocationLabels();refresh(false)}});
+  window.addEventListener('online',()=>{
+    if(offlineOwnsMap())return;
+    states.forEach(st=>{
+      clearTimeout(st.retryTimer);st.retryTimer=0;st.retryCounts.clear();
+      for(const [key,tile] of st.tiles)if(tile.status==='error'){
+        tile.img.onload=tile.img.onerror=null;tile.img.remove();st.tiles.delete(key);
+      }
+      st.lastRenderKey='';if(isVisible(st))render(st,true);
+    });
+  });
 
   document.addEventListener('fieldos:viewchange',e=>{
+    if(offlineOwnsMap())return;
     const id=e.detail?.view==='map'?'realMap':e.detail?.view==='home'?'homeRealMap':null;
     if(!id)return;
     updateLocationLabels();
