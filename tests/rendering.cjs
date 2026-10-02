@@ -41,6 +41,23 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  [...st.tiles.values()].forEach(t=>t.img.onload?.());
  for(let i=0;i<40;i++)engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120+i*.004},16);
  assert.ok(st.tiles.size<smallPanCount*3,'Repeated panning has bounded tile DOM');
+ // Hidden-map telemetry should not redraw offscreen SVG overlays, but
+ // navigation into that view must present the latest track data.
+ const hidden=d.getElementById('map');
+ const inactive=engine.mount('realMap',{center:{lat:44.4759,lon:-73.2121},zoom:14});
+ engine.setView('realMap',{lat:44.4759,lon:-73.2121},14);
+ const tracked=[{lat:44.4759,lon:-73.2121},{lat:44.4761,lon:-73.2119}];
+ w.FIELD_MAP_DATA={track:()=>tracked,waypoints:()=>[]};
+ const oldOverlay=inactive.overlay.innerHTML;
+ d.dispatchEvent(new w.CustomEvent('fieldos:trackchange'));
+ assert.equal(inactive.overlay.innerHTML,oldOverlay,'offscreen map does not rebuild for background track events');
+ assert.match(st.overlay.innerHTML,/native-track-line/,'visible Home overlay receives track updates');
+ d.getElementById('home').classList.remove('active');hidden.classList.add('active');
+ d.dispatchEvent(new w.CustomEvent('fieldos:viewchange',{detail:{view:'map'}}));
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
+ assert.match(inactive.overlay.innerHTML,/native-track-line/,'opening hidden map renders latest track data');
+ engine.unmount('realMap');hidden.classList.remove('active');d.getElementById('home').classList.add('active');
+ console.log('PASS hidden overlays pause on telemetry and catch up on view activation');
  const tiles=[...st.tiles.values()];engine.unmount('homeRealMap');
  assert.equal(st.tiles.size,0);assert.ok(tiles.every(t=>t.img.onload===null&&t.img.onerror===null));assert.equal(d.getElementById('homeRealMap').childElementCount,0);
  assert.equal(d.getElementById('realMap').childElementCount,0,'Hidden Terrain map should not load duplicate tiles');
