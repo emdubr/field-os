@@ -305,24 +305,32 @@
       st.lastRenderKey='';
       requestAnimationFrame(()=>{if(states.get(st.id)===st)render(st)});
     };
+    // On a busy/low-frame-rate mobile browser the 120ms wheel settle timer
+    // can fire before requestAnimationFrame. Flush the pending delta there as
+    // well, or a late frame applies an uncommitted preview and zoom snaps back.
+    const flushWheel=()=>{
+      if(st.renderFrame){cancelAnimationFrame(st.renderFrame);st.renderFrame=0}
+      const delta=st.wheelDelta;st.wheelDelta=0;
+      if(!delta)return;
+      // Keep modest per-frame zoom increments so dense trackpad bursts do not
+      // oscillate across tile zoom boundaries.
+      st.wheelZoom=Math.max(-.75,Math.min(.75,st.wheelZoom-delta/560));
+      const anchor=st.wheelAnchor;
+      previewZoom(Math.pow(2,st.wheelZoom),anchor?.x??0,anchor?.y??0);
+    };
     st.onWheel=e=>{
       if(e.ctrlKey)return;
       e.preventDefault();
       st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
-      const rect=readLayout(),anchorX=e.clientX,anchorY=e.clientY;
-      st.wheelAnchor={point:screenToLatLon(st,anchorX,anchorY),x:anchorX,y:anchorY};
-      if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{
-        st.renderFrame=0;
-        const delta=st.wheelDelta;st.wheelDelta=0;
-        // Trackpads can deliver very dense wheel bursts. A slightly lower gain
-        // avoids oscillating across integer tile zoom boundaries every frame.
-        st.wheelZoom=Math.max(-.75,Math.min(.75,st.wheelZoom-delta/560));
-        const previewAnchor=st.wheelAnchor;
-        previewZoom(Math.pow(2,st.wheelZoom),previewAnchor?.x??anchorX,previewAnchor?.y??anchorY);
-      });
+      if(!st.wheelAnchor)st.wheelAnchor={point:screenToLatLon(st,e.clientX,e.clientY),x:e.clientX,y:e.clientY};
+      if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{st.renderFrame=0;flushWheel()});
       clearTimeout(st.wheelTimer);
       st.wheelTimer=setTimeout(()=>{
-        const fractional=st.wheelZoom,anchor=st.wheelAnchor;st.wheelZoom=0;st.wheelAnchor=null;
+        // Guaranteed commit even if rAF was throttled during browser chrome
+        // changes. Cancelling its old request prevents a delayed extra zoom.
+        flushWheel();
+        const fractional=st.wheelZoom,anchor=st.wheelAnchor;
+        st.wheelTimer=0;st.wheelZoom=0;st.wheelAnchor=null;
         if(Math.abs(fractional)<.04){applyRestingCamera();return}
         settleFractionalZoom(Math.max(2,Math.min(maxZoom(),st.zoom+fractional)),anchor?.x??0,anchor?.y??0,anchor?.point);
       },120);
