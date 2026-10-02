@@ -101,6 +101,47 @@ const server=http.createServer((req,res)=>{
     const text=await page.locator('#route .ws-route-plot').getAttribute('aria-label');
     assert.match(text,/uniform map scale/,'schematic describes projection limits');
     console.log('PASS horizontal route schematic matches map bearing and aspect, not stretched independent axes');
+    // The compact top-down route overview must use the SAME sustained DEM
+    // color bands as the larger route map and elevation graph. Arrival of
+    // elevation metadata recolors an existing route without rebuilding it.
+    await page.evaluate(()=>{
+      FIELD_ROUTE_STATE.setMeta({elevationProfile:null});
+      FIELD_ROUTE_STATE.setPoints(Array.from({length:9},(_,i)=>({lat:44+i*.0009,lon:-73+i*.0001})));
+    });await page.waitForTimeout(90);
+    assert.equal(await page.locator('#route .ws-route-slope').count(),0,'new route must begin neutral with no stale slope overlay');
+    const originalSchematic=await page.locator('#route .ws-route-plot polyline').getAttribute('points');
+    await page.evaluate(()=>{
+      const pts=FIELD_ROUTE_STATE.getPoints(),old=FIELD_ROUTE_SLOPE;
+      window.__originalSlopeForOverviewTest=old;
+      const miles=(a,b)=>{
+        const rad=Math.PI/180,dlat=(b.lat-a.lat)*rad,dlon=(b.lon-a.lon)*rad;
+        const h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlon/2)**2;
+        return 2*6371000*Math.asin(Math.sqrt(h));
+      };
+      let distance=0;
+      const samples=pts.map((p,i)=>{
+        if(i)distance+=miles(pts[i-1],p);
+        return {...p,distanceM:distance,elevationFt:500+i*18};
+      });
+      window.__overviewProfileFixture=samples;
+      FIELD_ROUTE_SLOPE={
+        gradeAtDistance:(_profile,d)=>d<distance/3?2:d<distance*2/3?12:20,
+        slopeClass:old.slopeClass
+      };
+      FIELD_ROUTE_STATE.setMeta({elevationProfile:samples});
+    });await page.waitForTimeout(110);
+    assert.equal(await page.locator('#route .ws-route-plot polyline').getAttribute('points'),originalSchematic,'elevation arrivals must not distort or replace route geometry');
+    assert.ok(await page.locator('#route .ws-route-slope-medium').count(),'matching profile restores orange medium-grade segments on compact horizontal route schematic');
+    assert.ok(await page.locator('#route .ws-route-slope-hard').count(),'matching profile restores red steep sections on compact horizontal route schematic');
+    await page.evaluate(()=>FIELD_ROUTE_STATE.setMeta({elevationProfile:window.__overviewProfileFixture.map(p=>({...p,lat:p.lat+2}))}));await page.waitForTimeout(100);
+    assert.equal(await page.locator('#route .ws-route-slope').count(),0,'unrelated elevation data cannot color a new route or give misleading grade warnings');
+    await page.evaluate(()=>{
+      window.FIELD_ROUTE_SLOPE=window.__originalSlopeForOverviewTest;
+      FIELD_ROUTE_STATE.setMeta({elevationProfile:null});
+      delete window.__originalSlopeForOverviewTest;delete window.__overviewProfileFixture;
+    });
+    console.log('PASS horizontal schematic colors only matching DEM, and recolors on metadata without changing geometry');
+
     await page.evaluate(()=>{
       FIELD_ROUTE_STATE.setPoints(Array.from({length:1000},(_,i)=>({lat:44+i/100000+(i===501?.006:0),lon:-73+i/100000})));
     });await page.waitForTimeout(100);
