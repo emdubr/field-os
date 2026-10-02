@@ -18,7 +18,7 @@
     const time=Number.isFinite(Date.parse(p.time))?new Date(p.time).toISOString():new Date().toISOString();
     const lat=Number(p.lat),lon=Number(p.lon),alt=p.alt==null?null:Number(p.alt);
     return {id:time+'|'+lat.toFixed(7)+'|'+lon.toFixed(7),time,lat,lon,
-      alt:Number.isFinite(alt)?alt:null,accuracy:p.accuracy==null?null:Number(p.accuracy),totalMiles:Number.isFinite(Number(p.totalMiles))&&p.totalMiles!=null?Number(p.totalMiles):null};
+      alt:Number.isFinite(alt)?alt:null,accuracy:p.accuracy==null?null:Number(p.accuracy),totalMiles:Number.isFinite(Number(p.totalMiles))&&p.totalMiles!=null?Number(p.totalMiles):null,seq:Number.isFinite(Number(p.seq))&&p.seq!=null?Number(p.seq):null};
   }
   function legacy(){
     try{const rows=JSON.parse(localStorage.getItem(LEGACY)||'[]');return Array.isArray(rows)?rows.map(normalize).filter(Boolean):[];}
