@@ -43,15 +43,26 @@
   function combine(legs=[]){let offset=0;const out=[];for(const leg of legs){for(const j of leg.result?.junctions||[]){const item={...j,distanceM:offset+j.distanceM},last=out.at(-1);if(last&&last.id===item.id&&Math.abs(last.distanceM-item.distanceM)<1){last.nextId=item.nextId;last.outgoing=item.outgoing;last.outgoingBearing=item.outgoingBearing;last.alternatives=(last.branches||[]).filter(b=>b.nodeId!==last.previousId&&b.nodeId!==last.nextId)}else out.push(item)}offset+=length(leg.result?.points)}return out}
   function reverseJunctions(junctions=[],total=0){return junctions.map(j=>({...j,distanceM:Math.max(0,total-j.distanceM),incoming:j.outgoing,outgoing:j.incoming,previousId:j.nextId,nextId:j.previousId,incomingBearing:j.outgoingBearing,outgoingBearing:j.incomingBearing})).sort((a,b)=>a.distanceM-b.distanceM)}
   function reverseLeg(result){const points=[...(result.points||[])].reverse();return {...result,points,trailSections:[...(result.trailSections||[])].reverse(),junctions:reverseJunctions(result.junctions||[],length(points)),startSnap:result.endSnap,endSnap:result.startSnap}}
-  function project(points,position){
-    if(!valid(position)||points.length<2)return null;
-    let best={offsetM:Infinity,progressM:0},distanceM=0;
+  let projectionCache=new WeakMap();
+  function routeSegments(points){
+    const cached=projectionCache.get(points);if(cached)return cached;
+    const out=[];let distanceM=0;
     for(let i=1;i<points.length;i++){
       const a=points[i-1],b=points[i];if(!valid(a)||!valid(b))continue;
-      const scale=Math.cos(rad(position.lat)),x=(b.lon-a.lon)*scale,y=b.lat-a.lat;
-      const t=Math.max(0,Math.min(1,((position.lon-a.lon)*scale*x+(position.lat-a.lat)*y)/(x*x+y*y||1)));
-      const offsetM=meters(position,{lat:a.lat+t*(b.lat-a.lat),lon:a.lon+t*(b.lon-a.lon)}),segment=meters(a,b);
-      if(offsetM<best.offsetM)best={offsetM,progressM:distanceM+t*segment};distanceM+=segment;
+      const dLat=b.lat-a.lat,dLon=b.lon-a.lon,segmentM=meters(a,b);
+      out.push({a,dLat,dLon,distanceM,segmentM});distanceM+=segmentM;
+    }
+    projectionCache.set(points,out);return out;
+  }
+  function project(points,position){
+    if(!valid(position)||!Array.isArray(points)||points.length<2)return null;
+    let best={offsetM:Infinity,progressM:0};
+    const scale=Math.cos(rad(position.lat));
+    for(const s of routeSegments(points)){
+      const x=s.dLon*scale,y=s.dLat,dx=(position.lon-s.a.lon)*scale,dy=position.lat-s.a.lat;
+      const t=Math.max(0,Math.min(1,(dx*x+dy*y)/(x*x+y*y||1)));
+      const offsetM=meters(position,{lat:s.a.lat+t*s.dLat,lon:s.a.lon+t*s.dLon});
+      if(offsetM<best.offsetM)best={offsetM,progressM:s.distanceM+t*s.segmentM};
     }
     return best;
   }
