@@ -14,7 +14,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  const ctx={
    URL,Promise,setTimeout,clearTimeout,Response:{error:()=>({error:true})},
    self:{location,addEventListener:(name,fn)=>handlers[name]=fn,clients:{claim:async()=>{}},skipWaiting:()=>{}},
-   caches:{open:async()=>cache,match:(req,opts)=>cache.match(req,opts),keys:async()=>['field-os-v3-84-safety1','field-os-map-pack-northeast','field-os-v3-85-fieldfix1'],delete:async key=>{deleted.push(key);return true}},
+   caches:{open:async()=>cache,match:(req,opts)=>cache.match(req,opts),keys:async()=>['field-os-v3-84-safety1','field-os-map-pack-northeast','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2','field-os-v3-85-mobile1'],delete:async key=>{deleted.push(key);return true}},
    fetch:async()=>{network++;if(hang)return new Promise(()=>{});if(offline)throw Error('Offline');return {ok:true,network:true,clone(){return this}}}
  };
  const swText=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8'),html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
@@ -22,10 +22,10 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  let installation;handlers.install({waitUntil:p=>installation=p});await installation;
  assert.ok(added.some(u=>u.includes('app.js')),'critical application assets precached');
  let activation;handlers.activate({waitUntil:p=>activation=p});await activation;
- assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1'],'activation must remove only old app shells, never map packs');
+ assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2'],'activation must remove only old app shells, never map packs');
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
  let activeCache=null;handlers.message({data:{type:'GET_BUILD'},ports:[{postMessage:msg=>activeCache=msg.build}]});
- assert.equal(activeCache,'field-os-v3-85-wheel2','worker reports actual installed shell cache');
+ assert.equal(activeCache,'field-os-v3-85-mobile1','worker reports actual installed shell cache');
  assert.match(html,/id="fieldBuildLabel"/,'page exposes loaded client build');
  assert.ok(swText.includes('app.js?v=3.85-optcanvas2'),'new worker caches updated application logic');
  assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
