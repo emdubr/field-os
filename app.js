@@ -602,9 +602,13 @@ async function copyText(text){try{await navigator.clipboard.writeText(text);retu
 document.getElementById('copySos')?.addEventListener('click',async()=>{const notes=emergencyNotes?.value.trim()||'None entered',trusted=hasTrustedMapPosition();const packet=`FIELD/OS SOS\nTIME: ${new Date().toISOString()}\nPOSITION: ${trusted?currentNavPosition.lat.toFixed(5)+', '+currentNavPosition.lon.toFixed(5):'NO TRUSTED FIX — OBTAIN/STATE LOCATION MANUALLY'}\nALT: ${trusted&&Number.isFinite(currentNavPosition.alt)?Math.round(currentNavPosition.alt)+' ft':'UNKNOWN'}\nPOSITION SOURCE: ${trusted?(currentNavPosition.source||'LIVE FIX'):'UNVERIFIED'}\nNOTES: ${notes}`;await copyText(packet);alert('SOS packet copied. Prototype only — use 911 or certified satellite SOS for real emergencies when available.')});
 
 // Data export / wipe
-function collectState(){return {version:'0.5.1',release:'3.84',exported:new Date().toISOString(),trip:loadJSON('trip',{}),essentials:loadJSON('essentials',{}),fieldLog:loadJSON('fieldlog',[]),emergencyNotes:storageGet(STORE_PREFIX+'emergency-notes')||'',theme:document.body.dataset.theme,powerMode:storageGet(STORE_PREFIX+'power')||'normal',routePlan:loadJSON('routePlan',{}),offlineRoutePack:loadJSON('offlineRoutePack',{}),waypoints:loadJSON('waypoints',[]),track:loadJSON('track',[]),checkin:loadJSON('checkin',{})}}
-document.getElementById('exportState')?.addEventListener('click',()=>downloadJSON('fieldos-state.json',collectState()));
-document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('Erase FIELD/OS v1.2 local trip plans, logs, checklists and emergency notes?')){storageKeys().filter(k=>k.startsWith(STORE_PREFIX)).forEach(storageRemove);location.reload()}});
+async function collectState(){await trackHydration;return {version:'0.5.1',release:'3.84',exported:new Date().toISOString(),trip:loadJSON('trip',{}),essentials:loadJSON('essentials',{}),fieldLog:loadJSON('fieldlog',[]),emergencyNotes:storageGet(STORE_PREFIX+'emergency-notes')||'',theme:document.body.dataset.theme,powerMode:storageGet(STORE_PREFIX+'power')||'normal',routePlan:loadJSON('routePlan',{}),offlineRoutePack:loadJSON('offlineRoutePack',{}),waypoints:loadJSON('waypoints',[]),track:trackStore?await trackStore.all():recordedTrack,checkin:loadJSON('checkin',{})}}
+document.getElementById('exportState')?.addEventListener('click',async()=>{try{downloadJSON('fieldos-state.json',await collectState())}catch(err){alert('Export could not read the complete track: '+String(err.message||err))}});
+document.getElementById('wipeLocal')?.addEventListener('click',async()=>{if(!confirm('Erase ALL local FIELD/OS trip plans, tracks, logs, checklists and emergency notes?'))return;
+  try{await trackHydration;if(trackStore)await trackStore.clear();}
+  catch(err){alert('Track deletion failed; local data was not wiped. '+String(err.message||err));return;}
+  storageKeys().filter(k=>k.startsWith(STORE_PREFIX)).forEach(storageRemove);location.reload();
+});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
@@ -834,19 +838,41 @@ document.addEventListener('fieldos:addwaypoint',e=>{
 });
 
 // Breadcrumb track recorder
-let recordedTrack=loadJSON('track',[]);if(!Array.isArray(recordedTrack))recordedTrack=[];recordedTrack=recordedTrack.filter(validLatLon).slice(-5000);let trackWatchId=null, trackStartedAt=Number(storageGet(STORE_PREFIX+'track-start')||0), trackStoppedAt=Number(storageGet(STORE_PREFIX+'track-stop')||0);
+let recordedTrack=loadJSON('track',[]);if(!Array.isArray(recordedTrack))recordedTrack=[];recordedTrack=recordedTrack.filter(validLatLon).slice(-5000);
+const trackStore=window.FIELD_TRACK_STORE;
+let trackHydration=Promise.resolve();
+if(trackStore){
+  trackHydration=trackStore.hydrate().then(async result=>{
+    const persisted=new Set((result.points||[]).map(p=>String(p.time)+'|'+Number(p.lat).toFixed(7)+'|'+Number(p.lon).toFixed(7)));
+    const unsaved=recordedTrack.filter(p=>!persisted.has(String(p.time)+'|'+Number(p.lat).toFixed(7)+'|'+Number(p.lon).toFixed(7)));
+    for(const point of unsaved)trackStore.append(point);
+    recordedTrack=[...new Map([...(result.points||[]),...recordedTrack].filter(validLatLon).map(p=>[String(p.time)+'|'+Number(p.lat).toFixed(7)+'|'+Number(p.lon).toFixed(7),p])).values()]
+      .sort((a,b)=>String(a.time).localeCompare(String(b.time))).slice(-5000);
+    if(result.persistent){await trackStore.flush();}
+    updateTrackUI();notifyTrackChange({hydrated:true});
+  }).catch(err=>{console.warn('FIELD/OS track hydration failed; retaining legacy state',err)});
+}
+let trackWatchId=null, trackStartedAt=Number(storageGet(STORE_PREFIX+'track-start')||0), trackStoppedAt=Number(storageGet(STORE_PREFIX+'track-stop')||0);
 function trackDistanceMiles(){let d=0;for(let i=1;i<recordedTrack.length;i++)d+=haversineMiles(recordedTrack[i-1],recordedTrack[i]);return d}
 function updateTrackUI(){
   const d=document.getElementById('trackDistance'),p=document.getElementById('trackPoints'),line=document.getElementById('trackLine');if(d)d.textContent=trackDistanceMiles().toFixed(2);if(p)p.textContent=recordedTrack.length;
   if(line){if(recordedTrack.length<2)line.setAttribute('points','');else{const lats=recordedTrack.map(x=>x.lat),lons=recordedTrack.map(x=>x.lon),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),latR=Math.max(maxLat-minLat,.00001),lonR=Math.max(maxLon-minLon,.00001);line.setAttribute('points',recordedTrack.map(x=>`${40+920*(x.lon-minLon)/lonR},${20+360*(maxLat-x.lat)/latR}`).join(' '));}}
 }
 function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:trackchange',{detail:{count:recordedTrack.length,...detail}}))}
-function addTrackPoint(pos,accuracy=null){if(accuracy!=null&&(!Number.isFinite(accuracy)||accuracy>100))return;const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};recordedTrack.push(point);if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({added:point})}
+function addTrackPoint(pos,accuracy=null){if(!validLatLon(pos))return;if(accuracy!=null&&(!Number.isFinite(accuracy)||accuracy>100))return;const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};recordedTrack.push(point);if(recordedTrack.length>5000)recordedTrack.shift();if(trackStore){trackStore.append(point);if(!trackStore.persistent)saveJSON('track',recordedTrack);}else saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({added:point})}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 window.FIELD_TRACK_STATUS=()=>({active:trackWatchId!=null,points:recordedTrack.length,distanceMiles:trackDistanceMiles()});
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.84" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
-document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({cleared:true})}});
+document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',async()=>{
+  if(!confirm('Clear recorded breadcrumb track?'))return;
+  stopTrack();
+  try{await trackHydration;if(trackStore)await trackStore.clear();else saveJSON('track',[])}
+  catch(err){alert('Could not erase saved track. Data retained; export before retrying. '+String(err.message||err));return;}
+  recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;
+  storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');
+  storageRemove(STORE_PREFIX+'track');updateTrackUI();notifyTrackChange({cleared:true});
+});
 window.FIELD_MAP_DATA={
   waypoints:()=>waypoints.map(w=>({...w})),
   track:()=>recordedTrack.map(p=>({...p})),
