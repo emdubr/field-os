@@ -823,6 +823,10 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
  click('addDemoTrackPoint');
  const trackSnapshot=w.FIELD_MAP_DATA.track();
  assert.equal(trackSnapshot.length,2);
+ const mapPreview=w.FIELD_MAP_DATA.trackPreview(2);
+ assert.equal(mapPreview.length,2);assert.equal(mapPreview[0].lat,trackSnapshot[0].lat);assert.equal(mapPreview.at(-1).lat,trackSnapshot.at(-1).lat);
+ assert.ok(appJs.includes('trackPreview:mapTrackPreview'));
+ assert.ok(mapEngineJs.includes('source?.trackPreview?.(1500)'));
  assert.ok(w.FIELD_TRACK_STATUS().distanceMiles>.06&&w.FIELD_TRACK_STATUS().distanceMiles<.08,'incremental breadcrumb mileage should reflect two GPS fixes');
  assert.equal(trackLine.getAttribute('points')||'',hiddenLine,'hidden Track view must not redraw full chart on GPS fixes');
  w.FIELD_OPEN_VIEW('track',{history:false});
