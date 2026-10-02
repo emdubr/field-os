@@ -347,8 +347,13 @@
   function bridgeWaypoints(){return (window.FIELD_MAP_DATA?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
   function bridgeTrack(){return (window.FIELD_MAP_DATA?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
 
+  let cachedRoute=null,routeBridge=null;
   function plannedRoute(){
-    return (window.FIELD_ROUTE_STATE?.getPoints?.()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+    const currentBridge=window.FIELD_ROUTE_STATE;
+    if(currentBridge!==routeBridge){routeBridge=currentBridge;cachedRoute=null}
+    if(cachedRoute)return cachedRoute;
+    if(!currentBridge?.getPoints)return [];
+    return cachedRoute=(currentBridge.getPoints()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
   }
   function drawOverlay(st,w,h){
     const c=world(st.center.lat,st.center.lon,st.zoom),parts=[];
@@ -538,6 +543,7 @@
   document.addEventListener('fieldos:positionchange',()=>{if(!liveEnabled)redrawDataOverlay()});
 
   document.addEventListener('fieldos:routechange',()=>{
+    cachedRoute=null;
     states.forEach(st=>{
       st.routeFitted=false;
       if(!isVisible(st)){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
