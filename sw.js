@@ -21,7 +21,7 @@ const FALLBACK_ASSETS=[
 const EXTERNAL_ALLOWED=new Set([...EXTERNAL_ASSETS,...FALLBACK_ASSETS]);
 const CRITICAL=ASSETS.filter(path=>!['./','./manifest.webmanifest','./icon.svg'].includes(path));
 const OFFLINE_TIMEOUT_MS=3500;
-const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile)[A-Za-z0-9_-]+)?$/.test(k);
+const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile|horizon|gradeview|arrow|gcache)[A-Za-z0-9_-]+)?$/.test(k);
 const offlineResponse=()=>typeof Response==='function'
   ?new Response('FIELD/OS resource unavailable offline',{status:503,statusText:'Offline',headers:{'Content-Type':'text/plain; charset=utf-8'}})
   :Response.error();
