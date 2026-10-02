@@ -153,6 +153,9 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
  engine.setTapHandler('homeRealMap',null);
  console.log('PASS interrupted mobile drag/pinch preserves camera without phantom taps');
+ // Make the older wheel timing test independent of the GPS/manual camera
+ // sequence above (which can leave Topo almost at its maximum zoom).
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2121},14);
  // A throttled rAF must not leave an uncommitted wheel preview on screen.
  const nativeRAF=w.requestAnimationFrame.bind(w),nativeCAF=w.cancelAnimationFrame.bind(w);
  const heldFrames=new Map();let nextFrame=80000;
