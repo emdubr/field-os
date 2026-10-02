@@ -818,16 +818,13 @@
     // Redraw after the horizontal overview changes width (responsive sidebar,
     // phone rotation, reopened Route tab). Otherwise its old canvas bitmap
     // simply stretches and the cursor no longer aligns with the grade line.
-    let resizeFrame=0,lastSize='';
+    let resizeFrame=0;
     const resize=()=>{
       if(resizeFrame)return;
       resizeFrame=requestAnimationFrame(()=>{
         resizeFrame=0;
         const box=canvas.getBoundingClientRect();
         if(box.width<40||box.height<40)return;
-        const key=`${Math.round(box.width)}:${Math.round(box.height)}`;
-        if(key===lastSize)return;
-        lastSize=key;
         redrawHorizontalProfile();
       });
     };
@@ -2129,6 +2126,9 @@
       if(initialized&&plannerMap){
         plannerMap.invalidateSize(false);
         overlay(state()?.getPoints?.()||[]);
+        // Reopening Route after a layout or orientation change can restore a
+        // previously hidden canvas. Refresh its actual CSS-size backing then.
+        redrawHorizontalProfile();
         return;
       }
       const ok=activate();
