@@ -73,17 +73,24 @@
   }
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const text=(id,value)=>{const el=document.getElementById(id);if(el&&el.textContent!==value)el.textContent=value};
-  function isLivePosition(p,now=Date.now()){const age=now-Number(p?.timestamp);return valid(p)&&p.timestamp!=null&&age>=0&&age<=120000&&!/DEMO|FALLBACK|LAST|ESTIMAT/i.test(p.source||'')&&!!p.source&&!(Number.isFinite(p.accuracy)&&p.accuracy>100)}
+  function isLivePosition(p,now=Date.now()){
+    const age=now-Number(p?.timestamp),accuracy=p?.accuracy;
+    const accuracyUsable=accuracy==null||accuracy===''||(Number.isFinite(Number(accuracy))&&Number(accuracy)>=0&&Number(accuracy)<=100);
+    return valid(p)&&p.timestamp!=null&&Number.isFinite(age)&&age>=0&&age<=120000&&!/DEMO|FALLBACK|LAST|ESTIMAT/i.test(p.source||'')&&!!p.source&&accuracyUsable;
+  }
   let routeInfo=null;
   function invalidateRoute(){routeInfo=null;projectionCache=new WeakMap()}
-  function render(){
-    const plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},raw=window.FIELD_ROUTE_STATE?.current?.(),live=isLivePosition(raw);
-    const key=[plan.updatedAt||'',plan.points?.length||0,plan.trailSections?.length||0,plan.junctions?.length||0].join('|');
-    if(!routeInfo||routeInfo.key!==key){
+  function render(fromPositionTick=false){
+    const state=window.FIELD_ROUTE_STATE,plan=fromPositionTick&&routeInfo?null:(state?.getPlan?.()||{});
+    const raw=state?.current?.(),live=isLivePosition(raw);
+    if(plan){
+      const key=[plan.updatedAt||'',plan.points?.length||0,plan.trailSections?.length||0,plan.junctions?.length||0].join('|');
+      if(!routeInfo||routeInfo.key!==key){
       const groups=continuity(plan.trailSections),junctions=Array.isArray(plan.junctions)?plan.junctions:[];
       routeInfo={key,groups,junctions,points:Array.isArray(plan.points)?plan.points:[],hasTopology:Array.isArray(plan.junctions),rowsEl:null,listEl:null,
         continuityHtml:groups.length?groups.map(g=>`<div class="guidance-row"><b>${esc(g.label)}</b><span>${(g.startM/1609.344).toFixed(2)}–${(g.endM/1609.344).toFixed(2)} mi</span>${g.connectorM?`<small>Includes ${Math.round(g.connectorM)} m of unnamed connectors between matching named sections.</small>`:''}</div>`).join(''):'<p class="muted">Trail names appear after a snapped route is built. Direct and imported geometry may have no names.</p>',
         junctionHtml:junctions.slice(0,50).map(j=>`<div class="guidance-row"><b>${(j.distanceM/1609.344).toFixed(2)} mi · ${j.degree}-way junction</b><span>${j.nextId==null?'Arrive at route end':'Follow '+esc(j.outgoing||'plotted route')}</span><small>Other mapped branches: ${(j.alternatives||[]).map(a=>esc(a.name)).join(', ')}</small></div>`).join('')};
+      }
     }
     const {groups,junctions}=routeInfo,rows=document.getElementById('trailContinuityRows'),list=document.getElementById('junctionRows');
     if(rows&&routeInfo.rowsEl!==rows){rows.innerHTML=routeInfo.continuityHtml;routeInfo.rowsEl=rows}
@@ -97,7 +104,7 @@
   }
   window.FIELD_GUIDANCE={isLivePosition,continuity,junctionsForPath,combine,reverseJunctions,reverseLeg,length,project,next,render};
   let pending=false;
-  function schedule(){if(pending||document.hidden||!document.querySelector('#nav.active,#route.active'))return;pending=true;requestAnimationFrame(()=>{pending=false;render()})}
+  function schedule(){if(pending||document.hidden||!document.querySelector('#nav.active,#route.active'))return;pending=true;requestAnimationFrame(()=>{pending=false;render(true)})}
   for(const event of ['fieldos:routechange','fieldos:routemetadatachange'])document.addEventListener(event,()=>{invalidateRoute();schedule()});
   document.addEventListener('fieldos:positionchange',schedule);
   document.addEventListener('fieldos:viewchange',e=>{if(['nav','route'].includes(e.detail?.view))render()});
