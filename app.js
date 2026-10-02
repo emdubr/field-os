@@ -554,7 +554,7 @@ document.getElementById('saveTrip')?.addEventListener('click',()=>{
 document.getElementById('checkinNow')?.addEventListener('click',()=>{
   const message=hasTrustedMapPosition()?`CHECK-IN — position ${currentNavPosition.lat.toFixed(4)}, ${currentNavPosition.lon.toFixed(4)}; source ${currentNavPosition.source}; status OK.`:'CHECK-IN — NO VERIFIED LOCATION. State your position manually if transmitting.';
   addLog(message,'CHECK-IN');
-  document.dispatchEvent(new CustomEvent('fieldos:checkin',{detail:{text:message,position:{lat:currentNavPosition.lat,lon:currentNavPosition.lon},source:currentNavPosition.source||'POSITION',createdAt:Date.now()}}));
+  document.dispatchEvent(new CustomEvent('fieldos:checkin',{detail:{text:message,position:hasTrustedMapPosition()?{lat:currentNavPosition.lat,lon:currentNavPosition.lon}:null,source:hasTrustedMapPosition()?currentNavPosition.source:'UNVERIFIED',createdAt:Date.now()}}));
   alert('Local check-in recorded. It will enter the FIELD/OS communications timeline; transmission requires a connected transport.');
 });
 
@@ -567,7 +567,7 @@ function renderLog(){
 function escapeHTML(s=''){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function addLog(text,type='NOTE'){fieldLog.push({time:new Date().toLocaleString(),type,text});if(fieldLog.length>250)fieldLog.shift();saveJSON('fieldlog',fieldLog);renderLog()}
 document.getElementById('saveLog')?.addEventListener('click',()=>{const el=document.getElementById('logInput');if(!el.value.trim())return;addLog(el.value.trim());el.value='';navigator.vibrate?.(25)});
-document.getElementById('markLog')?.addEventListener('click',()=>addLog(`POSITION MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)} // ALT ${Math.round(currentNavPosition.alt??demo.alt)} ft // HDG ${Math.round(demo.heading)}°`,'POSITION'));
+document.getElementById('markLog')?.addEventListener('click',()=>{if(!hasTrustedMapPosition())return alert('No trusted current position. Obtain a fresh accurate fix before marking location.');addLog(`POSITION MARK — ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)} // ALT ${Number.isFinite(currentNavPosition.alt)?Math.round(currentNavPosition.alt)+' ft':'UNKNOWN'}`,'POSITION');});
 renderLog();
 
 function downloadJSON(filename,data){
@@ -906,7 +906,25 @@ function updateTrackUI(){
 }
 function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:trackchange',{detail:{count:recordedTrack.length,...detail}}))}
 function addTrackPoint(pos,accuracy=null){if(!validLatLon(pos))return;if(accuracy!=null&&(!Number.isFinite(accuracy)||accuracy>100))return;const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};recordedTrack.push(point);if(recordedTrack.length>5000)recordedTrack.shift();if(trackStore){trackStore.append(point);if(!trackStore.persistent)saveJSON('track',recordedTrack);}else saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({added:point})}
-function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=(window.FIELD_GEO_HUB?window.FIELD_GEO_HUB.subscribe(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{role:'track'}):navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000}));}
+function startTrack(){
+ if(!navigator.geolocation)return alert('Phone geolocation unavailable.');
+ if(trackWatchId!=null)return;
+ trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');
+ const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';
+ const onFix=p=>{
+  if(!window.FIELD_GEO_HUB||!window.FIELD_MAP_ENGINE?.live)applyFieldGeolocation(p,'PHONE TRACK');
+  // Record the raw fix rather than a coalesced screen update.
+  addTrackPoint({lat:p.coords.latitude,lon:p.coords.longitude,
+   alt:Number.isFinite(p.coords.altitude)?p.coords.altitude*3.28084:null},p.coords.accuracy);
+  const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=
+   Number.isFinite(p.coords.accuracy)?'±'+Math.round(p.coords.accuracy)+'m':'UNKNOWN';
+  if(fieldViewActive('home','nav','track'))updateLiveNavigationUI();
+ };
+ const onFail=err=>{stopTrack();alert('Track recorder stopped: '+String(err.message||err))};
+ trackWatchId=window.FIELD_GEO_HUB?
+  window.FIELD_GEO_HUB.subscribe(onFix,onFail,{role:'track'}):
+  navigator.geolocation.watchPosition(onFix,onFail,{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
+}
 window.FIELD_TRACK_STATUS=()=>({active:trackWatchId!=null,points:recordedTrack.length,distanceMiles:trackDistanceMiles()});
 function stopTrack(){if(trackWatchId!=null){if(window.FIELD_GEO_HUB)window.FIELD_GEO_HUB.unsubscribe(trackWatchId);else navigator.geolocation?.clearWatch(trackWatchId);}if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.84" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
@@ -1680,6 +1698,7 @@ function refreshPositionDrivenView(view=document.querySelector('.view.active')?.
   if(view==='home'||view==='nav')updateLiveNavigationUI();
   if(view==='home'||view==='map')updateFieldMaps(false);
 }
+let lastHeavyLocationPaint=0;
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:Number.isFinite(p.coords.altitude)?p.coords.altitude*3.28084:null,source,timestamp:Number.isFinite(p.timestamp)?p.timestamp:Date.now(),accuracy:p.coords.accuracy??null};
   window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null};
@@ -1688,6 +1707,10 @@ function applyFieldGeolocation(p,source='PHONE GNSS'){
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
   fieldLiveHeading=Number.isFinite(p.coords.heading)?p.coords.heading:null;
   lastFixAt=Number.isFinite(p.timestamp)?p.timestamp:Date.now();fixAge=0;refreshFixAge();
+  // Keep every raw fix for the recorder but coalesce UI and shared-model work.
+  const sampleAt=Date.now(),interval=document.body.classList.contains('low-power')||document.body.classList.contains('emergency-power')?5000:1000;
+  if(window.FIELD_GEO_HUB&&sampleAt-lastHeavyLocationPaint<interval)return;
+  lastHeavyLocationPaint=sampleAt;
   document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   updatePositionDisplays();
   if(fieldViewActive('home','nav','trailreturn'))updateReturnGuidance();
