@@ -20,6 +20,10 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  const swText=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8'),html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
  vm.runInNewContext(swText,ctx);
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
+ let activeCache=null;handlers.message({data:{type:'GET_BUILD'},ports:[{postMessage:msg=>activeCache=msg.build}]});
+ assert.equal(activeCache,'field-os-v3-85-gpsfix4','active worker reports its actual offline cache build');
+ assert.match(html,/id="fieldBuildLabel"/,'the page exposes its actual loaded build');
+ assert.ok(swText.includes('app.js?v=3.85-gpsfix4'),'the new worker caches the new app script');
  assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
  assert.ok(swText.includes('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'));
  assert.ok(swText.includes('https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'));
