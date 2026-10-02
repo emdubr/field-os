@@ -240,6 +240,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const projectedEta=w.FIELD_ADAPTIVE_ETA.compute(projectionPlan,projectionPosition);
  assert.ok(Math.abs(projectedEta.progress-referenceAlong/projectedCum.at(-1))<1e-8,'cached projection should preserve reference nearest-segment progress');
  console.log('PASS precomputed route-segment projection preserves GPS progress on a long route');
+ const sameStamp='2026-10-01T00:00:00.000Z',firstPlan={updatedAt:sameStamp,points:[{lat:44,lon:-73},{lat:44.01,lon:-73}]},changedPlan={updatedAt:sameStamp,points:[{lat:44,lon:-73},{lat:44.02,lon:-73}]},fixedPos={lat:44.005,lon:-73};
+ const firstProgress=w.FIELD_ADAPTIVE_ETA.compute(firstPlan,fixedPos).progress;
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange',{detail:{points:changedPlan.points}}));
+ const changedProgress=w.FIELD_ADAPTIVE_ETA.compute(changedPlan,fixedPos).progress;
+ assert.ok(firstProgress>.49&&firstProgress<.51&&changedProgress>.24&&changedProgress<.26,'route change must invalidate cached projection even with identical update timestamp');
+ console.log('PASS GPS progress cache invalidates when route geometry changes');
  assert.ok(fieldOpsJs.includes('let routeGeometryCacheKey'));assert.ok(fieldOpsJs.includes('routeGeometryCacheKey===key&&routeGeometryCache'));assert.ok(!fieldOpsJs.includes('function routeCumulative('));console.log('PASS ETA and turn navigation reuse cached route geometry and cumulative distance');
  assert.ok(!fieldOpsJs.includes('routeDistanceM('));assert.ok(fieldOpsJs.includes('function computeFatigue')&&fieldOpsJs.includes('geometry.total/1609.344'));console.log('PASS fatigue model also reuses cached route distance');
 
