@@ -135,7 +135,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,pending:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,followGPS:liveEnabled,manualCamera:false,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map(),terrainAnchor:null
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map(),terrainAnchor:null,retireFrame:0
     };
     const readLayout=()=>{
       if(st.layoutRect)return st.layoutRect;
@@ -147,7 +147,7 @@
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
     const applyRestingCamera=()=>{
       const scale=rasterScaleFor(st.zoom);
-      for(const layer of rasterLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=Math.abs(scale-1)<.001?'':`scale(${scale})`}
+      for(const layer of rasterLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=`scale(${scale})`}
       for(const layer of vectorLayers){layer.style.transition='';layer.style.transformOrigin='50% 50%';layer.style.transform=''}
     };
     st.applyRestingCamera=applyRestingCamera;
@@ -416,6 +416,44 @@
       const line=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
       if(pts.length>1){
         parts.push(`<polyline points="${line}" class="planned-route-outline"/><polyline points="${line}" class="planned-route-line"/>`);
+        // Use the SAME sustained-grade classifier as Route Planner rather than
+        // a noisy elevation delta between individual DEM samples. Show colors
+        // only when the saved profile matches this exact route's endpoints and
+        // approximate length; otherwise keep the route neutral, not misleading.
+        const samples=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile;
+        const grading=window.FIELD_ROUTE_SLOPE;
+        if(grading&&Array.isArray(samples)&&samples.length>1){
+          const cumulative=[0];
+          for(let j=1;j<route.length;j++)cumulative.push(cumulative[j-1]+metersBetween(route[j-1],route[j]));
+          const total=cumulative.at(-1);
+          const sampleTotal=Number(samples.at(-1)?.distanceM);
+          const match=Number.isFinite(sampleTotal)&&total>10&&Math.abs(sampleTotal-total)/total<.06
+            &&metersBetween(samples[0],route[0])<60&&metersBetween(samples.at(-1),route.at(-1))<60;
+          if(match){
+            const overlayPaths={easy:[],medium:[],hard:[]};
+            const step=Math.max(1,Math.ceil((route.length-1)/450));
+            for(let j=step;j<route.length;j+=step){
+              const end=Math.min(j,route.length-1),start=end-step;
+              const mid=(cumulative[start]+cumulative[end])/2;
+              const grade=grading.gradeAtDistance({samples},mid),cls=grading.slopeClass(grade).key;
+              // FLAT (<3%) remains the normal route color, not a warning.
+              if(Math.abs(grade)<3)continue;
+              const segment=pts.slice(start,end+1).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+              overlayPaths[cls]?.push(segment);
+            }
+            // Include the final segment when decimation skipped the last point.
+            const last=Math.floor((route.length-1)/step)*step;
+            if(last<route.length-1){
+              const grade=grading.gradeAtDistance({samples},(cumulative[last]+total)/2),cls=grading.slopeClass(grade).key;
+              if(Math.abs(grade)>=3){
+                const segment=pts.slice(last).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+                overlayPaths[cls]?.push(segment);
+              }
+            }
+            for(const cls of ['easy','medium','hard'])if(overlayPaths[cls].length)
+              parts.push(`<path class="planned-route-slope planned-route-slope-${cls}" d="${overlayPaths[cls].join('')}"/>`);
+          }
+        }
         let distance=0;
         for(let i=1;i<pts.length;i++){
           const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
@@ -529,6 +567,7 @@
     const renderKey=[mode,trails,terrain,grid,st.zoom,c.x,c.y,w,h].join('|');
     if(!force&&st.lastRenderKey===renderKey){drawOverlay(st,w,h);drawEditorOverlay(st,w,h);return;}
     st.lastRenderKey=renderKey;
+    if(st.retireFrame){cancelAnimationFrame(st.retireFrame);st.retireFrame=0;}
     const revision=++st.tileRevision,needed=new Set();
     const coverW=w/renderScale,coverH=h/renderScale;
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
@@ -572,10 +611,26 @@
       st.loaded=loaded;st.errors=errors;st.pending=pending;
       const diag=st.el.querySelector('.native-map-diag');
       if(diag)diag.textContent=`TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
-      for(const [key,tile] of st.tiles)if(!needed.has(key)){
-        if(tile.layer===st.terrainTiles?terrainReady:baseReady)remove(key,tile);
+      // Image.onload means bytes decoded, not necessarily painted. Keep the
+      // outgoing tiles through two compositor frames before retiring them.
+      // A new wheel event invalidates this retirement and retains the old view.
+      if((baseReady||terrainReady)&&!st.retireFrame&&[...st.tiles.keys()].some(key=>!needed.has(key))){
+        st.retireFrame=requestAnimationFrame(()=>{
+          st.retireFrame=requestAnimationFrame(()=>{
+            st.retireFrame=0;
+            if(states.get(st.id)!==st||st.tileRevision!==revision)return;
+            const ready=layer=>[...needed].every(key=>{
+              const t=st.tiles.get(key);
+              return t?.layer!==layer||t.status==='loaded';
+            });
+            const basePainted=ready(st.base),terrainPainted=ready(st.terrainTiles);
+            for(const [key,tile] of st.tiles)if(!needed.has(key)&&
+              (tile.layer===st.terrainTiles?terrainPainted:basePainted))remove(key,tile);
+          });
+        });
       }
-      st.el.classList.toggle('standalone-map-error',!loaded&&!pending&&errors>0);
+      const hasBackdrop=[...st.tiles.values()].some(t=>t.layer===st.base&&t.status==='loaded');
+      st.el.classList.toggle('standalone-map-error',!hasBackdrop&&!loaded&&!pending&&errors>0);
     }
     st.updateTileDiagnostics=diagnostics;
     // Back off on transient failures instead of hammering map providers.
@@ -671,6 +726,16 @@
     states.forEach(st=>{if(!isVisible(st))return;const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)});
   });
 
+  // A DEM profile is stored after route geometry is already published.
+  // Repaint the overlay when that profile arrives, without refitting the
+  // camera or triggering another raster tile render.
+  let lastElevationProfile=null;
+  document.addEventListener('fieldos:routebootstrapchange',()=>{
+    const profile=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile??null;
+    if(profile===lastElevationProfile)return;
+    lastElevationProfile=profile;
+    redrawDataOverlay();
+  });
   document.addEventListener('fieldos:routechange',()=>{
     cachedRoute=null;
     states.forEach(st=>{
@@ -794,7 +859,7 @@
   function getView(id){const st=states.get(id);return st?{center:{...st.center},zoom:st.zoom,following:!!st.followGPS}:null}
   function unmount(id){
     const st=states.get(id);if(!st)return false;
-    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);clearTimeout(st.retryTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);
+    clearTimeout(st.wheelTimer);clearTimeout(st.failureTimer);clearTimeout(st.settleTimer);clearTimeout(st.retryTimer);cancelAnimationFrame(st.renderFrame);cancelAnimationFrame(st.gestureFrame);cancelAnimationFrame(st.retireFrame);
     st.resizeObserver?.disconnect?.();
     if(st.onResize)window.removeEventListener('resize',st.onResize);
     st.el.removeEventListener('pointerdown',st.onPointerDown);
