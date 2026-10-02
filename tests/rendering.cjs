@@ -41,6 +41,17 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  [...st.tiles.values()].forEach(t=>t.img.onload?.());
  for(let i=0;i<40;i++)engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120+i*.004},16);
  assert.ok(st.tiles.size<smallPanCount*3,'Repeated panning has bounded tile DOM');
+ // Camera and GPS redraws should reuse planned route data until edited.
+ let routeReads=0,activeRoute=[{lat:44.4759,lon:-73.2121},{lat:44.4761,lon:-73.2119}];
+ w.FIELD_ROUTE_STATE={getPoints(){routeReads++;return activeRoute.map(p=>({...p}))}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2121},14);
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120},14);
+ assert.equal(routeReads,1,'map redraws should reuse cached route points');
+ activeRoute=[{lat:44.4759,lon:-73.2121},{lat:44.4765,lon:-73.2119}];
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(routeReads,2,'route edits must invalidate cached route points');
+ console.log('PASS planned route geometry is cached and invalidates after route edits');
  // Hidden-map telemetry should not redraw offscreen SVG overlays, but
  // navigation into that view must present the latest track data.
  const hidden=d.getElementById('map');
