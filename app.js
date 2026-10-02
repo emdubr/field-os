@@ -917,7 +917,7 @@ document.addEventListener('fieldos:addwaypoint',e=>{
 });
 
 // Breadcrumb track recorder
-let recordedTrack=loadJSON('track',[]);if(!Array.isArray(recordedTrack))recordedTrack=[];recordedTrack=recordedTrack.filter(validLatLon).slice(-5000);
+let recordedTrack=loadJSON('track',[]);if(!Array.isArray(recordedTrack))recordedTrack=[];recordedTrack=recordedTrack.filter(validLatLon);recordedTrack=recordedTrack.length>5000?[recordedTrack[0],...recordedTrack.slice(-4999)]:recordedTrack;
 const trackStore=window.FIELD_TRACK_STORE;
 let trackHydration=Promise.resolve();
 if(trackStore){
@@ -926,7 +926,8 @@ if(trackStore){
     const unsaved=recordedTrack.filter(p=>!persisted.has(String(p.time)+'|'+Number(p.lat).toFixed(7)+'|'+Number(p.lon).toFixed(7)));
     for(const point of unsaved)trackStore.append(point);
     recordedTrack=[...new Map([...(result.points||[]),...recordedTrack].filter(validLatLon).map(p=>[String(p.time)+'|'+Number(p.lat).toFixed(7)+'|'+Number(p.lon).toFixed(7),p])).values()]
-      .sort((a,b)=>String(a.time).localeCompare(String(b.time))).slice(-5000);
+      .sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+    if(recordedTrack.length>5000)recordedTrack=[recordedTrack[0],...recordedTrack.slice(-4999)];
     if(result.persistent){await trackStore.flush();}
     trackDistanceCache=null;updateTrackUI();notifyTrackChange({hydrated:true});
   }).catch(err=>{console.warn('FIELD/OS track hydration failed; retaining legacy state',err)});
@@ -934,19 +935,25 @@ if(trackStore){
 let trackDistanceCache=null;let trackWatchId=null, trackStartedAt=Number(storageGet(STORE_PREFIX+'track-start')||0), trackStoppedAt=Number(storageGet(STORE_PREFIX+'track-stop')||0);
 function trackDistanceMiles(){
  if(trackDistanceCache!==null)return trackDistanceCache;
+ const first=recordedTrack[0],last=recordedTrack.at(-1);
+ if(first&&last&&Number.isFinite(last.totalMiles))return trackDistanceCache=Math.max(0,last.totalMiles-(Number.isFinite(first.totalMiles)?first.totalMiles:0));
  let d=0;for(let i=1;i<recordedTrack.length;i++)d+=haversineMiles(recordedTrack[i-1],recordedTrack[i]);
  return trackDistanceCache=d;
 }
 function updateTrackUI(){
   const d=document.getElementById('trackDistance'),p=document.getElementById('trackPoints'),line=document.getElementById('trackLine');if(d)d.textContent=trackDistanceMiles().toFixed(2);if(p)p.textContent=recordedTrack.length;
-  if(line){if(recordedTrack.length<2)line.setAttribute('points','');else{const lats=recordedTrack.map(x=>x.lat),lons=recordedTrack.map(x=>x.lon),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),latR=Math.max(maxLat-minLat,.00001),lonR=Math.max(maxLon-minLon,.00001);line.setAttribute('points',recordedTrack.map(x=>`${40+920*(x.lon-minLon)/lonR},${20+360*(maxLat-x.lat)/latR}`).join(' '));}}
+  if(line){if(recordedTrack.length<2)line.setAttribute('points','');else{const lats=recordedTrack.map(x=>x.lat),lons=recordedTrack.map(x=>x.lon),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),latR=Math.max(maxLat-minLat,.00001),lonR=Math.max(maxLon-minLon,.00001);const first=recordedTrack[0],second=recordedTrack[1],
+  gap=Number.isFinite(first?.seq)&&Number.isFinite(second?.seq)&&second.seq>first.seq+1;
+  line.setAttribute('points',(gap?recordedTrack.slice(1):recordedTrack).map(x=>`${40+920*(x.lon-minLon)/lonR},${20+360*(maxLat-x.lat)/latR}`).join(' '));}}
 }
 function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fieldos:trackchange',{detail:{count:recordedTrack.length,...detail}}))}
 function addTrackPoint(pos,accuracy=null){
  if(!validLatLon(pos)||accuracy!=null&&(!Number.isFinite(accuracy)||accuracy>100))return;
  const prev=recordedTrack.at(-1),leg=prev?haversineMiles(prev,pos):0;
  if(prev&&leg*1609.344<Math.max(5,Number.isFinite(Number(accuracy))?Number(accuracy)*.5:5,Number.isFinite(Number(prev.accuracy))?Number(prev.accuracy)*.5:5))return;
- const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};
+ const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy,
+   seq:prev?(Number.isFinite(prev.seq)?prev.seq+1:recordedTrack.length):0,
+   totalMiles:(prev?(Number.isFinite(prev.totalMiles)?prev.totalMiles:trackDistanceMiles()):0)+leg};
  recordedTrack.push(point);
  if(trackDistanceCache!==null)trackDistanceCache+=leg;
  if(recordedTrack.length>5000){
@@ -1019,6 +1026,7 @@ function mapTrackPreview(maxPoints=1500){
  if(count===1)return [{...recordedTrack[0]}];
  const end=recordedTrack.length-1,preview=[];
  for(let i=0;i<count;i++)preview.push({...recordedTrack[Math.round(i*end/(count-1))]});
+ if(recordedTrack.length>1&&Number.isFinite(recordedTrack[0].seq)&&Number.isFinite(recordedTrack[1].seq)&&recordedTrack[1].seq>recordedTrack[0].seq+1)preview[1].gapBefore=true;
  return preview;
 }
 window.FIELD_MAP_DATA={
