@@ -249,6 +249,25 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  assert.ok(clipped&&clipped.getAttribute('points').trim().split(/\s+/).length===2,
   'do not join retained trailhead to missing interior breadcrumb history');
  console.log('PASS track rendering never draws across a missing breadcrumb gap');
+ // With a long offscreen leg at high zoom, direction markers must remain
+ // spaced along the REAL whole line but only the markers near the viewport
+ // should be generated. Otherwise the old loop walked millions of offscreen
+ // pixels on every tiny pan, making the map feel locked or jittery.
+ const longRoute=[{lat:44.477,lon:-73.211},{lat:44.477,lon:-5.211}];
+ w.FIELD_ROUTE_STATE={getPoints(){return longRoute},getPlan(){return {elevationProfile:null}}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ engine.setView('homeRealMap',longRoute[0],17);
+ let arrows=[...st.overlay.querySelectorAll('.planned-route-arrow')];
+ assert.equal(arrows.length,2,'only the two on-screen direction markers should be created for an extremely long eastbound leg');
+ const arrowXs=arrows.map(el=>Number(el.getAttribute('transform').match(/translate\\(([-.\\d]+)/)?.[1]));
+ assert.ok(Math.abs(arrowXs[0]-285)<1&&Math.abs(arrowXs[1]-375)<1,'clipped arrows preserve original 90px spacing from route start');
+ const longRoutePaintStart=Date.now();
+ for(let i=0;i<12;i++){
+   engine.setView('homeRealMap',{lat:44.477,lon:-73.211+i*.000001},17);
+   assert.ok(st.overlay.querySelectorAll('.planned-route-arrow').length<=6,'offscreen long legs cannot generate unbounded SVG direction nodes');
+ }
+ assert.ok(Date.now()-longRoutePaintStart<2000,'small map pans over a long offscreen segment must remain bounded');
+ console.log('PASS long offscreen routes clip direction markers without altering on-screen spacing or blocking high-zoom pans');
  const tiles=[...st.tiles.values()];engine.unmount('homeRealMap');
  assert.equal(st.tiles.size,0);assert.ok(tiles.every(t=>t.img.onload===null&&t.img.onerror===null));assert.equal(d.getElementById('homeRealMap').childElementCount,0);
  assert.equal(d.getElementById('realMap').childElementCount,0,'Hidden Terrain map should not load duplicate tiles');
