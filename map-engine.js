@@ -531,7 +531,7 @@
     return {w:Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h:Math.max(220,Math.round(rect.height||st.el.clientHeight||360))};
   };
   const redrawDataOverlay=()=>{
-    states.forEach(st=>{const {w,h}=overlaySize(st);drawOverlay(st,w,h)});
+    states.forEach(st=>{if(!isVisible(st))return;const {w,h}=overlaySize(st);drawOverlay(st,w,h)});
   };
   document.addEventListener('fieldos:waypointschange',redrawDataOverlay);
   document.addEventListener('fieldos:trackchange',redrawDataOverlay);
