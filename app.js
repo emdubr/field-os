@@ -1748,7 +1748,9 @@ function applyFieldGeolocation(p,source='PHONE GNSS'){
   if(fieldViewActive('home','nav','trailreturn'))updateReturnGuidance();
   if(fieldViewActive('waypoints'))updateWaypointNav();
   if(fieldViewActive('home','nav'))updateLiveNavigationUI();
-  if(fieldViewActive('home','map'))updateFieldMaps(true);
+  // A GPS refresh updates the position marker, never recenters an offline map.
+  // Only the explicit CENTER control should call updateFieldMaps(true).
+  if(fieldViewActive('home','map'))updateFieldMaps(false);
 }
 document.addEventListener('fieldos:viewchange',e=>refreshPositionDrivenView(e.detail?.view));
 function requestFieldLiveLocation({quiet=false}={}){
