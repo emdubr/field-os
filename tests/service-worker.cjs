@@ -26,9 +26,9 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  for(const asset of ['styles.css','workstation.css','route-state.js','runtime.js','app.js','workstation.js','map-engine.js','route-planner.js','field-intel.js','field-ops.js','route-guidance.js','map-readiness.js','field-tools.js'])assert.ok(swText.includes(`${asset}?v=${version}`),`service worker version drift: ${asset}`);
  const request=async(path,mode='same-origin')=>{let promise;handlers.fetch({request:{method:'GET',mode,url:new URL(path,location.href).href},respondWith:p=>promise=p,waitUntil(){}});return await promise};
 
- const fresh=await request(`./field-tools.js?v=${version}-opt2`);assert.equal(fresh.network,true);assert.equal(network,1);
+ const fresh=await request(`./field-tools.js?v=${version}-opt3`);assert.equal(fresh.network,true);assert.equal(network,1);
  exactShell=false;offline=true;
- assert.equal(await request(`./field-tools.js?v=${version}-opt2`),cached,'versioned shell should recover via ignoreSearch cache match');assert.equal(network,2);
+ assert.equal(await request(`./field-tools.js?v=${version}-opt3`),cached,'versioned shell should recover via ignoreSearch cache match');assert.equal(network,2);
  offline=false;
  const page=await request('./','navigate');assert.equal(page.network,true);assert.equal(network,3);
  offline=true;assert.equal(await request('./','navigate'),cached);
