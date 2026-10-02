@@ -862,6 +862,9 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(routePlannerJs.includes("suppressPlannerClickUntil=Date.now()+600"));
  console.log('PASS route planner uses copy-on-write adjacency and draggable mobile control points');
  assert.ok(mapEngineJs.includes("const tileZoom=tileZoomFor(st.zoom)"));
+ assert.ok(mapEngineJs.includes("st.terrainTiles.style.transform=move"));
+ assert.ok(mapEngineJs.includes("tile.terrainFrame===st.terrainAnchor?.serial"));
+ assert.ok(workstationCss.includes(".native-map-terrain-tiles{position:absolute"));
  assert.ok(mapEngineJs.includes("st.center=unworld(c.x-dx,c.y-dy,st.zoom)"));
  assert.ok(!mapEngineJs.includes("st.base.replaceChildren"));
  assert.ok(!mapEngineJs.includes("residualScale"));
