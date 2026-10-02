@@ -25,9 +25,9 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2'],'activation must remove only old app shells, never map packs');
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
  let activeCache=null;handlers.message({data:{type:'GET_BUILD'},ports:[{postMessage:msg=>activeCache=msg.build}]});
- assert.equal(activeCache,'field-os-v3-85-mobile1','worker reports actual installed shell cache');
+ assert.equal(activeCache,'field-os-v3-85-horizon1','worker reports actual installed shell cache');
  assert.match(html,/id="fieldBuildLabel"/,'page exposes loaded client build');
- assert.ok(swText.includes('app.js?v=3.85-mobile1'),'new worker caches updated application logic');
+ assert.ok(swText.includes('app.js?v=3.85-horizon1'),'new worker caches updated application logic');
  assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
  assert.ok(swText.includes('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'));
  assert.ok(swText.includes('https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'));
