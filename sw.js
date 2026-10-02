@@ -1,6 +1,6 @@
 /* FIELD/OS installed-app cache. User data/maps live outside this disposable shell cache. */
-const CACHE='field-os-v3-85-optcanvas2';
-const ASSETS=['./','./index.html','./styles.css?v=3.85-fieldfix1','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-optcanvas2','./workstation.css?v=3.85','./workstation.js?v=3.85','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-fieldfix1','./route-planner.js?v=3.85-optcanvas2','./field-intel.js?v=3.85-fieldfix1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-opt3','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-85-wheel2';
+const ASSETS=['./','./index.html','./styles.css?v=3.85-fieldfix1','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-optcanvas2','./workstation.css?v=3.85-wheel2','./workstation.js?v=3.85','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-wheel2','./route-planner.js?v=3.85-wheel2','./field-intel.js?v=3.85-fieldfix1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-opt3','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
