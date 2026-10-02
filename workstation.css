@@ -4408,3 +4408,22 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  body #app.shell>.topbar .clock-wrap #date{display:none!important}
  body #app.shell #home .console-command-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+
+/* The horizontal Route overview has one stable CSS-sized canvas. The native
+   renderer scales the backing store for DPR; auto intrinsic height previously
+   stretched or squashed the chart after rotating/reopening the planner. */
+#route #routeProfile{
+  display:block!important;
+  width:100%!important;
+  height:220px!important;
+  min-height:220px!important;
+  max-height:220px!important;
+}
+@media(max-width:760px){
+  #route #routeProfile{
+    height:190px!important;
+    min-height:190px!important;
+    max-height:190px!important;
+  }
+}
