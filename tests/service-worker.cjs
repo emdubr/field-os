@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 (async()=>{
  const handlers={},cached={shell:true},location={origin:'https://field.test',href:'https://field.test/field-os/sw.js'};
- let network=0,offline=false,exactShell=true;
+ let network=0,offline=false,exactShell=true,hang=false,added=[],deleted=[];
  const cache={
    match:async(req,opts={})=>{
      const href=typeof req==='string'?req:req?.url||'';
@@ -9,16 +9,20 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
      if(href.includes('field-tools.js'))return exactShell||opts.ignoreSearch?cached:null;
      return null;
    },
-   put:async()=>{}
+   put:async()=>{},addAll:async(paths)=>{added.push(...paths)},add:async url=>{if(url.includes('marker-icon.png'))throw Error('Optional CDN unavailable');added.push(url)}
  };
  const ctx={
-   URL,Promise,Response:{error:()=>({error:true})},
-   self:{location,addEventListener:(name,fn)=>handlers[name]=fn},
-   caches:{open:async()=>cache,match:(req,opts)=>cache.match(req,opts)},
-   fetch:async()=>{network++;if(offline)throw Error('Offline');return {ok:true,network:true,clone(){return this}}}
+   URL,Promise,setTimeout,clearTimeout,Response:{error:()=>({error:true})},
+   self:{location,addEventListener:(name,fn)=>handlers[name]=fn,clients:{claim:async()=>{}},skipWaiting:()=>{}},
+   caches:{open:async()=>cache,match:(req,opts)=>cache.match(req,opts),keys:async()=>['field-os-v3-84-safety1','field-os-map-pack-northeast','field-os-v3-85-fieldfix1'],delete:async key=>{deleted.push(key);return true}},
+   fetch:async()=>{network++;if(hang)return new Promise(()=>{});if(offline)throw Error('Offline');return {ok:true,network:true,clone(){return this}}}
  };
  const swText=fs.readFileSync(path.resolve(__dirname,'../sw.js'),'utf8'),html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8');
- vm.runInNewContext(swText,ctx);
+ vm.runInNewContext(swText.replace('const OFFLINE_TIMEOUT_MS=3500;','const OFFLINE_TIMEOUT_MS=30;'),ctx);
+ let installation;handlers.install({waitUntil:p=>installation=p});await installation;
+ assert.ok(added.some(u=>u.includes('app.js')),'critical application assets precached');
+ let activation;handlers.activate({waitUntil:p=>activation=p});await activation;
+ assert.deepEqual(deleted,['field-os-v3-84-safety1'],'activation must not remove regional map cache');
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
  assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
  assert.ok(swText.includes('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'));
@@ -32,5 +36,12 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  offline=false;
  const page=await request('./','navigate');assert.equal(page.network,true);assert.equal(network,3);
  offline=true;assert.equal(await request('./','navigate'),cached);
- console.log('PASS service worker versions match index; shell assets refresh online and fall back to cache offline; navigation refreshes online and falls back offline');
+ hang=true;offline=false;const began=Date.now();
+ const slow=await request(`./field-tools.js?v=${version}-opt3`);
+ assert.equal(slow,cached,'slow mobile network must recover from cached app');
+ assert.ok(Date.now()-began<250,'slow network must not hang startup');
+ hang=false;offline=true;
+ const missing=await request('./unavailable-resource.json');
+ assert.equal(missing.error,true,'unavailable resource must resolve to a real offline error');
+ console.log('PASS optional precache failures, protected map data, bounded weak-network fallback, offline error responses');
 })().catch(e=>{console.error(e);process.exitCode=1});
