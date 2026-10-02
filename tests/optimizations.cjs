@@ -41,6 +41,6 @@ function page(){
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'),app=fs.readFileSync(path.join(root,'app.js'),'utf8');
  assert.match(sw,/addEventListener\('message'[\s\S]*SKIP_WAITING/);
  assert.ok(!sw.includes('}).then(()=>self.skipWaiting())'),'worker installation must not unilaterally activate');
- assert.ok(app.includes('if(approved){location.reload();return;}'),'reload only after approval');
+ assert.ok(app.includes('if(approved){approved=false;location.reload();return}'),'reload only after approval');
  console.log('PASS PWA activation requires an explicit user-approved update');
 })().catch(e=>{console.error(e);process.exitCode=1});

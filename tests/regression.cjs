@@ -449,6 +449,13 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
  assert.ok(swJs.includes("field-os-v3-85"));
+ assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
+ assert.ok(html.includes('id="fieldReleaseDetails"'));
+ assert.ok(html.includes('app.js?v=3.85-fieldfix2'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-fieldfix2'"));
+ assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
+ assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
+ assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
  assert.ok(swJs.includes("cache.match(req,ignoreSearch?{ignoreSearch:true}:undefined)"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
@@ -485,8 +492,9 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationJs.includes("e.target instanceof Element&&e.target.matches"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
- assert.ok(appJs.includes(`sw.js?v=${release}`));
- assert.ok(appJs.includes('if(approved){location.reload();return;}'),'reload requires explicit update approval');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
+ assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
+ assert.ok(appJs.includes('if(approved){approved=false;location.reload();return}'),'reload requires explicit update approval');
+ assert.ok(appJs.includes('await window.FIELD_TRACK_STORE?.flush?.()'),'approval must flush the track before activating the worker');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));assert.ok(swJs.includes('track-store.js?v=3.85-fieldfix1'));assert.ok(swJs.includes('geo-hub.js?v=3.85-opt2'));
  assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
@@ -935,7 +943,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-fieldfix1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-fieldfix2'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
