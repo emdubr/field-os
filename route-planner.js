@@ -116,7 +116,7 @@
   async function copyRouteDiagnostic(){
     const payload=[
       'FIELD/OS ROUTE DIAGNOSTIC',
-      'BUILD: v3.83',
+      'BUILD: v3.84',
       `CODE: ${lastDiagnostic.code}`,
       `STAGE: ${lastDiagnostic.stage}`,
       `DETAIL: ${lastDiagnostic.detail}`,
@@ -850,7 +850,7 @@
     overlay();
     if(anchors.length>=2)recalculate();
     else{
-      state()?.setMeta?.({anchors:[anchors[0]],routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'START'});
+      state()?.setMeta?.({anchors:[anchors[0]],routedAnchors:[],legs:[],trailSections:[],junctions:null,routingMode:routeMode(),routeBuildState:'START'});
       state()?.setPoints?.([anchors[0]]);
       overlay([anchors[0]]);
       status('START SET -- TAP DESTINATION','ready');
@@ -862,7 +862,7 @@
     if(!anchors.length)return;
     aborter?.abort();setBusy(false);
     anchors=anchors.slice(0,-1);snapped=[];
-    state()?.setMeta?.({anchors,routedAnchors:[],legs:[],routingMode:routeMode(),routeBuildState:'EDITING'});
+    state()?.setMeta?.({anchors,routedAnchors:[],legs:[],trailSections:[],junctions:null,routingMode:routeMode(),routeBuildState:'EDITING'});
     if(anchors.length>=2)recalculate();
     else{
       const pts=anchors.length?[anchors[0]]:[];
@@ -886,6 +886,7 @@
     }:null;
     state()?.setPoints?.(points);
     state()?.setMeta?.({...plan,anchors:reversedAnchors,routedAnchors:reversedAnchors,points,legs:[],routeBuildState:'REVERSED',
+      trailSections:[...(plan.trailSections||[])].reverse(),junctions:Array.isArray(plan.junctions)?window.FIELD_GUIDANCE?.reverseJunctions(plan.junctions,routeDistanceMiles(points)*1609.344):null,
       elevationProfile:profile?.samples||null,elevationGainFt:profile?.gainFt??null,elevationLossFt:profile?.lossFt??null,
       gain:profile?.gainFt||0,grade:plan.grade||0});
     // setPoints emits a route event; restore the newly reversed control points.
@@ -898,7 +899,7 @@
   function clearAll(){
     aborter?.abort();setBusy(false);
     anchors=[];snapped=[];lastSuccessfulAnchors=[];
-    state()?.setMeta?.({anchors:[],routedAnchors:[],legs:[],routingMode:routeMode(),routingSource:null,routeBuildState:'EMPTY',routeBuildLeg:0});
+    state()?.setMeta?.({anchors:[],routedAnchors:[],legs:[],routingMode:routeMode(),routingSource:null,trailSections:[],junctions:null,routeBuildState:'EMPTY',routeBuildLeg:0});
     state()?.setPoints?.([]);overlay([]);applyRouteStats([],null,'empty');renderTrailNames([]);renderTrailIntelligence(null);
     status('TAP MAP TO SET START','ready');
   }
@@ -1018,6 +1019,7 @@
       })).filter(leg=>leg.a&&leg.b&&leg.result?.points?.length>1):[],
       routingMode:plan.routingMode||routeMode(),
       routingSource:plan.routingSource||'FIELD/OS',
+      trailSections:plan.trailSections||[],junctions:plan.junctions??null,trailIntelligence:plan.trailIntelligence||null,
       distanceMiles:routeDistanceMiles(points),
       elevationSource:plan.elevationSource||null,
       elevationGainFt:Number(plan.elevationGainFt)||0,
@@ -1047,7 +1049,7 @@
     anchors=sanitizeAnchors(saved.anchors);
     if(!anchors.length)anchors=[points[0],points.at(-1)];
     lastSuccessfulAnchors=anchors.map(p=>({...p}));routingResolvedAnchors=anchors.length;snapped=[];
-    st?.setMeta?.({...saved,anchors,routedAnchors:anchors,legs:Array.isArray(saved.legs)?saved.legs:[]});st?.setPoints?.(points);st?.save?.();
+    st?.setMeta?.({...saved,trailSections:saved.trailSections||[],junctions:saved.junctions??null,anchors,routedAnchors:anchors,legs:Array.isArray(saved.legs)?saved.legs:[]});st?.setPoints?.(points);st?.save?.();
     const profile=Array.isArray(saved.elevationProfile)&&saved.elevationProfile.length>1?{
       samples:saved.elevationProfile,gainFt:Number(saved.elevationGainFt)||0,lossFt:Number(saved.elevationLossFt)||0,
       minFt:Number(saved.elevationMinFt)||0,maxFt:Number(saved.elevationMaxFt)||0,maxGrade:Number(saved.elevationMaxGrade??saved.grade)||0
@@ -1591,7 +1593,7 @@
   async function routeLeg(a,b,signal,retry=false){
     const cached=legCache.get(legKey(a,b));if(cached)return {...cached,cached:true};
     const back=legCache.get(legKey(b,a));
-    if(back)return {...back,points:[...back.points].reverse(),trailSections:[...(back.trailSections||[])].reverse(),junctionWarnings:[...(back.junctionWarnings||[])].reverse(),startSnap:back.endSnap,endSnap:back.startSnap,cached:true};
+    if(back)return {...(window.FIELD_GUIDANCE?.reverseLeg(back)||{...back,points:[...back.points].reverse(),trailSections:[...(back.trailSections||[])].reverse(),startSnap:back.endSnap,endSnap:back.startSnap}),junctionWarnings:[...(back.junctionWarnings||[])].reverse(),cached:true};
     const legMi=miles(a,b);
     if(legMi>35)throw rpError('RP-301','Snapped leg is over 35 miles. Add an intermediate point.',{legMiles:+legMi.toFixed(2)});
 
@@ -1632,6 +1634,7 @@
       points:search.path.map(p=>({lat:p.lat,lon:p.lon})),
       trailSections:trailSectionsForPath(search.path,search.edgeTags||[]),
       junctionWarnings:junctionWarningsForPath(search.path,search.edgeTags||[],graph),
+      junctions:window.FIELD_GUIDANCE?.junctionsForPath(graph,search.path,search.edgeTags||[])||[],
       startSnap:{lat:sa.node.lat,lon:sa.node.lon,d:sa.d},
       endSnap:{lat:sb.node.lat,lon:sb.node.lon,d:sb.d},
       diagnostics:{retry,snapRadius,startSnapM:Math.round(sa.d),endSnapM:Math.round(sb.d),nodes:graph.nodes.size,segments:graph.segments.length,visits:search.visits}
@@ -1976,7 +1979,7 @@
       if(routeMode()==='direct'){
         const direct=anchors.map(p=>({...p}));
         routingResolvedAnchors=anchors.length;
-        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],trailSections:[],routingMode:'direct',routingSource:'DIRECT'});overlay(direct);renderTrailNames([]);renderTrailIntelligence(null);
+        state()?.setPoints?.(direct);state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs:[],trailSections:[],junctions:null,routingMode:'direct',routingSource:'DIRECT'});overlay(direct);renderTrailNames([]);renderTrailIntelligence(null);
         lastSuccessfulAnchors=anchors.map(p=>({...p}));
         fitPlanner(direct,16);setBusy(false);
         const enriched=await enrichRoute(direct,signal,'DIRECT ROUTE');
@@ -2009,6 +2012,7 @@
           anchors:anchors.map(p=>({...p})),
           routedAnchors:anchors.slice(0,i+1).map(p=>({...p})),
           legs:[...legs],
+          trailSections:combinedTrailSections(legs),junctions:window.FIELD_GUIDANCE?.combine(legs)||[],
           routingMode:'trail',
           routingSource:'OPENSTREETMAP / OVERPASS',
           routeBuildState:'PARTIAL',
@@ -2030,7 +2034,7 @@
       const enriched=await enrichRoute(clean,signal,'SNAPPED TO OSM TRAILS');
       if(signal.aborted)return;
       const intelligence=trailIntelligence(legs,enriched.dist,Number(enriched.profile?.gainFt||0));
-      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),junctionWarnings:combinedJunctionWarnings(legs),trailIntelligence:intelligence,estimatedHours:intelligence.estimatedHours,snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
+      state()?.setMeta?.({anchors,routedAnchors:anchors.map(p=>({...p})),legs,routingMode:'trail',routingSource:'OPENSTREETMAP / OVERPASS',trailSections:combinedTrailSections(legs),junctionWarnings:combinedJunctionWarnings(legs),junctions:window.FIELD_GUIDANCE?.combine(legs)||[],trailIntelligence:intelligence,estimatedHours:intelligence.estimatedHours,snapMaxMeters:Math.round(maxSnap),routeBuildState:'COMPLETE',routeBuildLeg:anchors.length-1});
       state()?.save?.();
       renderTrailNames(legs);renderTrailIntelligence(intelligence);
       setBusy(false);

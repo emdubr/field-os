@@ -10,8 +10,8 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <title>FIELD/OS</title>
-  <link rel="stylesheet" href="styles.css?v=3.83" />
-  <link rel="stylesheet" href="workstation.css?v=3.83">
+  <link rel="stylesheet" href="styles.css?v=3.84" />
+  <link rel="stylesheet" href="workstation.css?v=3.84">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body data-theme="green">
@@ -21,7 +21,7 @@
 
   <div id="boot" class="boot-screen" aria-hidden="true">
     <div class="boot-box">
-      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.83</span></div>
+      <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.84</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
       <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
@@ -35,7 +35,7 @@
     <header class="topbar">
       <div>
         <div class="brand-line">
-          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.83</span></div>
+          <div class="brand">TAP V2 // FIELD/OS <span class="version">v3.84</span></div>
           <span class="classification">CLASSIFIED DEMO</span>
         </div>
         <div class="subtitle">RETRO SURVEILLANCE / BACKCOUNTRY OPERATIONS CONSOLE</div>
@@ -58,7 +58,7 @@
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
-            <strong>TAP V2 // FIELD OS <span>v3.83</span></strong>
+            <strong>TAP V2 // FIELD OS <span>v3.84</span></strong>
             <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
           </div>
           <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
@@ -252,6 +252,13 @@
             <div class="button-row"><button id="checkRouteOffline" class="action" type="button">CHECK ROUTE COVERAGE</button><button id="activateRouteOffline" class="action" type="button">USE COVERING PACK</button></div><div><label class="field-label" for="routeCorridorTemplate">PMTILES CORRIDOR PROVIDER TEMPLATE</label><input id="routeCorridorTemplate" class="terminal-input" inputmode="url" placeholder="https://provider.example/route.pmtiles?bbox={bbox}" /><p id="routeCorridorProviderState" class="muted">Use a provider that permits generated PMTiles downloads. Tokens: {bbox}, {west}, {south}, {east}, {north}.</p><div class="button-row"><button id="saveRouteCorridorTemplate" class="action" type="button">SAVE PROVIDER TEMPLATE</button><button id="downloadRouteCorridor" class="action" type="button">DOWNLOAD ROUTE CORRIDOR</button></div></div>
           </div>
           <p class="muted">Checks whether a saved PMTiles archive covers the complete planned route plus the selected safety buffer. It does not bulk-download OpenStreetMap raster tiles.</p>
+        </article>
+        <article class="panel field-tools-panel map-readiness-panel">
+          <div class="panel-title"><span>MAP SOURCE / STORAGE</span><span class="tiny" id="mapNetworkState">CHECKING SOURCE</span></div>
+          <dl class="readouts"><div><dt>DISPLAYED MAP</dt><dd id="mapDisplayedSource">—</dd></div><div><dt>DISPLAYED LAYERS</dt><dd id="mapDisplayedLayers">—</dd></div><div><dt>DATA AGE</dt><dd id="mapDataAge">UNKNOWN</dd></div><div><dt>ESTIMATED FREE SPACE</dt><dd id="mapStorageAvailable">—</dd></div><div><dt>USED BY APP</dt><dd id="mapStorageUsage">—</dd></div><div><dt>STORAGE RETENTION</dt><dd id="mapStoragePersistence">—</dd></div></dl>
+          <label for="mapEstimateMB">PLANNED PACK SIZE (MB)</label><input id="mapEstimateMB" type="number" min="0.1" max="250" step="0.1" value="50" inputmode="decimal" />
+          <div class="button-row"><button class="action" id="mapStorageCheck">CHECK SPACE</button><button class="action" id="mapStoragePersist">REQUEST PERSISTENT STORAGE</button></div><p class="muted" id="mapStorageEstimate" role="status">Imports and downloads check estimated space before saving. Estimates include storage headroom.</p>
+          <details><summary>SELECTED SAVED PACK DETAILS</summary><dl class="readouts"><div><dt>SELECTED PACK</dt><dd id="mapPackInfoName">NONE SELECTED</dd></div><div><dt>SAVED IN THIS BROWSER</dt><dd id="mapPackSavedAge">—</dd></div><div><dt>ORIGIN</dt><dd id="mapPackOrigin">—</dd></div><div><dt>SOURCE DATA DATE</dt><dd id="mapPackDataDate">UNKNOWN</dd></div><div><dt>PACK BOUNDS</dt><dd id="mapPackBounds">—</dd></div></dl><p class="muted">Time saved is not the age of the source map data. A saved pack does not guarantee the displayed map is using it.</p></details>
         </article>
         <article class="panel offline-map-manager" id="offlineMapManager">
           <div class="panel-title"><span>OFFLINE OSM MAP PACKS</span><span class="tiny" id="offlineMapMode">ONLINE OSM</span></div>
@@ -496,6 +503,7 @@
             </div>
           </div>
         </article>
+        <article class="panel guidance-panel" id="junctionPanel"><div class="panel-title"><span>MAPPED JUNCTIONS</span><span class="tiny" id="junctionState">NO TOPOLOGY DATA</span></div><p id="junctionInstruction"></p><p id="junctionDetail" class="muted"></p><details><summary>ROUTE JUNCTION LIST</summary><div id="junctionRows"></div></details></article>
         <article class="panel turn-nav-panel">
           <div class="panel-title"><span>TURN-BY-TURN TRAIL NAV</span><span class="tiny" id="turnNavState">WAITING FOR ROUTE</span></div>
           <div class="turn-nav-hero"><div id="turnNavArrow" class="turn-nav-arrow">↑</div><div><strong id="turnNavInstruction">NO ACTIVE INSTRUCTION</strong><div id="turnNavDistance" class="turn-nav-distance">---</div><small id="turnNavTrail">Plot or load a route to generate trail instructions.</small></div></div>
@@ -552,7 +560,7 @@
             <button class="action route-edit-points-btn" id="routeEditPoints" type="button" aria-pressed="false">EDIT POINTS</button>
             <span class="route-anchor-readout">CONTROL POINTS <b id="routeAnchorCount">0</b></span>
           </div>
-          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.83 // MAP STARTING</div>
+          <div id="routePlannerStatus" role="status" aria-live="polite" class="route-planner-status loading">BUILD v3.84 // MAP STARTING</div>
           <div class="route-diagnostic-strip">
             <b id="routePlannerDiag">RP-000 // READY // NO ERROR</b>
             <button id="copyRouteDiag" class="micro-btn" type="button">COPY DIAGNOSTICS</button>
@@ -570,6 +578,7 @@
             <label class="action file-action">IMPORT GPX<input id="gpxImport" type="file" accept=".gpx,application/gpx+xml" hidden></label>
             <button class="action" type="button" id="saveRouteVisible" data-native-save="1">SAVE ROUTE</button><button id="exportGpx" class="action" type="button">EXPORT GPX</button>
           </div>
+          <article class="panel guidance-panel"><div class="panel-title"><span>TRAIL CONTINUITY</span><span class="tiny">IN ROUTE ORDER</span></div><div id="trailContinuityRows"></div></article>
           <div class="route-trail-name-panel">
             <div class="route-trail-name-head"><b>TRAILS / ROUTES USED</b><span>SECTIONS <strong id="routeTrailNameCount">0</strong></span></div>
             <div id="routeTrailNames" class="route-trail-name-list"><div class="route-trail-empty">TRAIL NAMES // WAITING FOR SNAPPED ROUTE</div></div>
@@ -951,16 +960,18 @@
   </div>
   <script>window.FIELD_MAP_ENGINE_EXTERNAL=true;</script>
   <script defer src="survival-data.js"></script>
-  <script defer src="route-state.js?v=3.83"></script>
-  <script defer src="runtime.js?v=3.83"></script>
-  <script defer src="app.js?v=3.83"></script>
-  <script defer src="workstation.js?v=3.83"></script>
-  <script defer src="map-engine.js?v=3.83"></script>
+  <script defer src="route-state.js?v=3.84"></script>
+  <script defer src="runtime.js?v=3.84"></script>
+  <script defer src="map-readiness.js?v=3.84"></script>
+  <script defer src="app.js?v=3.84"></script>
+  <script defer src="workstation.js?v=3.84"></script>
+  <script defer src="map-engine.js?v=3.84"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="route-planner.js?v=3.83"></script>
-  <script defer src="field-intel.js?v=3.83"></script>
-  <script defer src="field-ops.js?v=3.83"></script>
-  <script defer src="field-tools.js?v=3.83"></script>
+  <script defer src="route-guidance.js?v=3.84"></script>
+  <script defer src="route-planner.js?v=3.84"></script>
+  <script defer src="field-intel.js?v=3.84"></script>
+  <script defer src="field-ops.js?v=3.84"></script>
+  <script defer src="field-tools.js?v=3.84"></script>
 </body>
 </html>
 

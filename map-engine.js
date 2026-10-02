@@ -93,6 +93,7 @@
   }
 
   function updateLabels(){
+    document.dispatchEvent(new CustomEvent('fieldos:maplayerschange'));
     const kind=mode==='satellite'?'SATELLITE':mode==='osm'?'STREET OSM':'HIKING TOPO';
     const suffix=liveEnabled?(livePosition?'LIVE GNSS':'GNSS ACQUIRING'):(livePosition?'LAST FIX':'GNSS OFF');
     const h=document.getElementById('homeMapModeLabel');if(h)h.textContent=`${kind} / ${suffix}`;
@@ -131,7 +132,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0
     };
     const readLayout=()=>{
       if(st.layoutRect)return st.layoutRect;
@@ -425,90 +426,86 @@
     st.editor.innerHTML=parts.join('');
   }
 
-  function setFallback(st,message){
-    st.base.innerHTML='';st.terrain.innerHTML='';st.trail.innerHTML='';
-    const diag=st.el.querySelector('.native-map-diag');if(diag)diag.textContent=message;
-    const corner=st.el.querySelector('.native-map-corner');if(corner)corner.textContent='MAP NETWORK ERROR';
-    st.el.classList.add('standalone-map-error');
-  }
-
+  // Retained tile renderer: camera updates reposition existing images. Only
+  // newly exposed coordinates allocate tiles; older zooms provide a backdrop
+  // until the replacement base layer has actually loaded.
   function render(st,force=false){
-    if(!st)return;
-    st.el.classList.remove('standalone-map-error');
-    const token=++st.token,rect=st.el.getBoundingClientRect();
+    if(!st||states.get(st.id)!==st)return;
+    if(st.pointers.size){st.lastRenderKey='';return;}
+    const rect=st.el.getBoundingClientRect();
     const w=Math.max(250,Math.round(rect.width||st.el.clientWidth||600)),h=Math.max(220,Math.round(rect.height||st.el.clientHeight||360));
     st.renderSize={w,h};
     st.zoom=Math.max(2,Math.min(maxZoom(),st.zoom));
-    const tileZoom=tileZoomFor(st.zoom),renderScale=Math.pow(2,st.zoom-tileZoom),c=world(st.center.lat,st.center.lon,tileZoom);
-    const renderKey=[mode,trails?1:0,terrain?1:0,tileZoom,Math.round(c.x/32),Math.round(c.y/32),Math.round(w/16),Math.round(h/16)].join('|');
-    if(!force&&st.lastRenderKey===renderKey){drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();return}
+    const tileZoom=tileZoomFor(st.zoom),renderScale=rasterScaleFor(st.zoom),c=world(st.center.lat,st.center.lon,tileZoom);
+    // Exact camera coordinates matter: a 32px rounded key left raster tiles
+    // behind the route overlay on small drags.
+    const renderKey=[mode,trails,terrain,grid,st.zoom,c.x,c.y,w,h].join('|');
+    if(!force&&st.lastRenderKey===renderKey){drawOverlay(st,w,h);drawEditorOverlay(st,w,h);return;}
     st.lastRenderKey=renderKey;
-    const coverW=w/Math.max(.5,renderScale),coverH=h/Math.max(.5,renderScale);
+    const revision=++st.tileRevision,needed=new Set();
+    const coverW=w/renderScale,coverH=h/renderScale;
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
-    const tileBoundsKey=[mode,trails?1:0,terrain?1:0,tileZoom,minX,maxX,minY,maxY].join('|');
-    // Panning inside the already buffered tile envelope needs only a transform/
-    // overlay update. Do not fetch and replace the exact same tile set.
-    if(!force&&st.lastTileBounds===tileBoundsKey&&st.base.childElementCount){
-      drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();return;
+    const activeClasses=new Set(['native-osm-base',...(mode==='topo'?['native-topo-tile']:mode==='satellite'?['native-satellite-tile']:[]),...(terrain?['native-terrain-tile']:[]),...(trails?['native-trail-tile']:[])]);
+    function remove(key,tile){tile.img.onload=tile.img.onerror=null;tile.img.remove();st.tiles.delete(key);}
+    function place(tile){
+      const scale=Math.pow(2,tileZoom-tile.z),size=TILE*scale;
+      tile.img.style.left=(tile.x*size-c.x+w/2)+'px';
+      tile.img.style.top=(tile.y*size-c.y+h/2)+'px';
+      tile.img.style.width=size+'px';tile.img.style.height=size+'px';
+      tile.img.style.zIndex=String((tile.cls==='native-osm-base'?0:2)+(tile.revision===revision?1:0));
     }
-    st.lastTileBounds=tileBoundsKey;
-    const bf=document.createDocumentFragment(),hf=document.createDocumentFragment(),tf=document.createDocumentFragment();
-    const hadTiles=st.base.childElementCount>0;let basePending=0,baseSettled=0,baseLoaded=0,committed=false;
-    st.loaded=0;st.errors=0;
-    const diag=st.el.querySelector('.native-map-diag');
-    const updateDiag=()=>{if(token===st.token&&diag)diag.textContent=`TILES ${st.loaded} / ERR ${st.errors}`};
-    const loaded=()=>{if(token!==st.token)return;st.loaded++;updateDiag()};
-    const failed=()=>{if(token!==st.token)return;st.errors++;updateDiag()};
-    const make=(src,cls,frag,left,top)=>{
-      if(!src)return;
-      const isBase=frag===bf;
-      const gatesFrame=isBase&&((mode==='osm'&&cls==='native-osm-base')||(mode==='topo'&&cls==='native-topo-tile')||(mode==='satellite'&&cls==='native-satellite-tile'));
-      if(gatesFrame)basePending++;
-      const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
-      const settle=ok=>{ok?loaded():failed();if(gatesFrame){baseSettled++;if(ok)baseLoaded++;if((baseLoaded>=Math.max(1,Math.ceil(basePending*.55))&&baseSettled>=Math.ceil(basePending*.7))||baseSettled>=basePending)commit()}};
-      img.style.left=left+'px';img.style.top=top+'px';img.onload=()=>settle(true);img.onerror=()=>settle(false);img.src=src;frag.appendChild(img);
-    };
-
-    for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-      const left=x*TILE-c.x+w/2,top=y*TILE-c.y+h/2;
-      if(mode==='satellite'){
-        make(osmUrl(tileZoom,x,y),'native-osm-base',bf,left,top);
-        make(satelliteUrl(tileZoom,x,y),'native-satellite-tile',bf,left,top);
-      }else{
-        make(osmUrl(tileZoom,x,y),'native-osm-base',bf,left,top);
-        if(mode==='topo')make(topoUrl(tileZoom,x,y),'native-topo-tile',bf,left,top);
+    function diagnostics(){
+      if(states.get(st.id)!==st)return;
+      let loaded=0,errors=0,pending=0,baseReady=true;
+      for(const key of needed){const tile=st.tiles.get(key);if(!tile)continue;
+        if(tile.status==='loaded')loaded++;else if(tile.status==='error')errors++;else pending++;
+        if(tile.layer===st.base&&tile.status!=='loaded')baseReady=false;
       }
-      if(terrain)make(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',hf,left,top);
-      if(trails&&tileZoom<=18)make(trailUrl(tileZoom,x,y),'native-trail-tile',tf,left,top);
+      st.loaded=loaded;st.errors=errors;
+      const diag=st.el.querySelector('.native-map-diag');
+      if(diag)diag.textContent=`TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
+      if(baseReady)for(const [key,tile] of st.tiles)if(!needed.has(key))remove(key,tile);
+      st.el.classList.toggle('standalone-map-error',!loaded&&!pending&&errors>0);
     }
-
-    function commit(){
-      if(committed||token!==st.token)return;committed=true;
-      st.base.replaceChildren(bf);st.terrain.replaceChildren(hf);st.trail.replaceChildren(tf);
-      st.grid.classList.toggle('active',grid);drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();
+    st.updateTileDiagnostics=diagnostics;
+    function use(src,cls,layer,x,y){
+      if(!src)return;
+      const key=[cls,tileZoom,x,y].join('/');needed.add(key);
+      let tile=st.tiles.get(key);
+      if(tile?.status==='error'&&(force||Date.now()-tile.failedAt>10000)){remove(key,tile);tile=null;}
+      if(!tile){
+        const img=new Image();img.className='native-map-tile '+cls;img.alt='';img.draggable=false;img.referrerPolicy='strict-origin-when-cross-origin';
+        tile={img,cls,layer,x,y,z:tileZoom,status:'pending',revision};st.tiles.set(key,tile);
+        img.onload=()=>{tile.status='loaded';st.updateTileDiagnostics?.();};
+        img.onerror=()=>{tile.status='error';tile.failedAt=Date.now();st.updateTileDiagnostics?.();};
+        layer.appendChild(img);img.src=src;
+      }
+      tile.revision=revision;place(tile);
     }
-    if(!hadTiles)commit();else if(!basePending)requestAnimationFrame(commit);else setTimeout(commit,260);
-
+    for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+      use(osmUrl(tileZoom,x,y),'native-osm-base',st.base,x,y);
+      if(mode==='topo')use(topoUrl(tileZoom,x,y),'native-topo-tile',st.base,x,y);
+      if(mode==='satellite')use(satelliteUrl(tileZoom,x,y),'native-satellite-tile',st.base,x,y);
+      if(terrain)use(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',st.terrain,x,y);
+      if(trails&&tileZoom<=18)use(trailUrl(tileZoom,x,y),'native-trail-tile',st.trail,x,y);
+    }
+    for(const [key,tile] of st.tiles){
+      if(needed.has(key))continue;
+      // Keep at most one loaded fallback zoom; never keep pending obsolete
+      // requests attached, or let a long pan grow the DOM without bound.
+      if(!activeClasses.has(tile.cls)||tile.status!=='loaded'||Math.abs(tile.z-tileZoom)>1||tile.z===tileZoom){remove(key,tile);continue;}
+      place(tile);
+      const left=parseFloat(tile.img.style.left),top=parseFloat(tile.img.style.top),size=parseFloat(tile.img.style.width);
+      if(left+size<0||top+size<0||left>w||top>h)remove(key,tile);
+    }
+    st.grid.classList.toggle('active',grid);
+    drawOverlay(st,w,h);drawEditorOverlay(st,w,h);st.applyRestingCamera?.();diagnostics();
     const attrib=st.el.querySelector('.native-map-attrib');
-    if(attrib){
-      const parts=['© OpenStreetMap contributors'];
-      if(mode==='topo')parts.push('OpenTopoMap');
-      if(mode==='satellite'||terrain)parts.push('Esri');
-      if(trails)parts.push('Waymarked Trails');
-      attrib.textContent=parts.join(' · ');
-    }
+    if(attrib)attrib.textContent=['© OpenStreetMap contributors',...(mode==='topo'?['OpenTopoMap']:[]),...(mode==='satellite'||terrain?['Esri']:[]),...(trails?['Waymarked Trails']:[])].join(' · ');
     const corner=st.el.querySelector('.native-map-corner');
     if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom.toFixed(1)}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
-    updateDiag();
     clearTimeout(st.failureTimer);
-    st.failureTimer=setTimeout(()=>{
-      if(token!==st.token)return;
-      if(st.loaded===0)setFallback(st,'0 TILES LOADED — CHECK INTERNET / CONTENT BLOCKER');
-      else{
-        const main=document.getElementById('mapSourceDiag');
-        if(main)main.textContent=`${mode.toUpperCase()} — ${st.loaded} TILES / ${st.errors} ERR`;
-      }
-    },3500);
+    st.failureTimer=setTimeout(()=>{if(states.get(st.id)===st&&st.loaded===0){const diag=st.el.querySelector('.native-map-diag');if(diag)diag.textContent='MAP TILES UNAVAILABLE — CHECK CONNECTION / OFFLINE PACK';}},3500);
   }
 
   function refresh(recenter=false){
@@ -591,6 +588,7 @@
       }else{const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
     }
     updateLocationLabels();
+    if(typeof window.applyFieldGeolocation==='function')window.applyFieldGeolocation(p,'PHONE GNSS');
   }
 
   function startLiveLocation(){
@@ -665,7 +663,8 @@
     st.el.removeEventListener('pointercancel',st.onPointerCancel);
     st.el.removeEventListener('wheel',st.onWheel);
     st.el.removeEventListener('dblclick',st.onDbl);
-    st.el.innerHTML='';states.delete(id);return true;
+    for(const tile of st.tiles.values())tile.img.onload=tile.img.onerror=null;
+    st.tiles.clear();st.updateTileDiagnostics=null;st.el.innerHTML='';states.delete(id);return true;
   }
 
   function handleAction(btn){
