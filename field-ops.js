@@ -24,8 +24,13 @@
   function routeGeometry(plan=getPlan()){
     const raw=Array.isArray(plan?.points)?plan.points:[],key=plan?.updatedAt?`${plan.updatedAt}|${raw.length}`:'';
     if(key&&routeGeometryCacheKey===key&&routeGeometryCache)return routeGeometryCache;
-    const pts=cleanPoints(raw),cum=[0];for(let i=1;i<pts.length;i++)cum[i]=cum[i-1]+meters(pts[i-1],pts[i]);
-    const value={pts,cum,total:cum.at(-1)||0};
+    const pts=cleanPoints(raw),cum=[0],segments=[];
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1],b=pts[i],latAngle=rad((a.lat+b.lat)/3);
+      cum.push(cum.at(-1)+meters(a,b));
+      segments.push({lat:a.lat,lon:a.lon,dLat:b.lat-a.lat,dLon:b.lon-a.lon,cosLat:Math.cos(latAngle),sinLat:Math.sin(latAngle)});
+    }
+    const value={pts,cum,segments,total:cum.at(-1)||0};
     if(key){routeGeometryCacheKey=key;routeGeometryCache=value}
     return value;
   }
@@ -34,11 +39,14 @@
   const weatherCache=()=>window.FIELD_WEATHER?.state?.cache||null;
   const nearestRouteIndex=(pts,pos)=>{if(!validPoint(pos)||!pts.length)return 0;let best=Infinity,idx=0;for(let i=0;i<pts.length;i++){const d=meters(pos,pts[i]);if(d<best){best=d;idx=i}}return idx};
   const routeProgressFraction=(plan=getPlan(),pos=getPosition())=>{
-    const {pts,cum,total}=routeGeometry(plan);if(pts.length<2||!validPoint(pos)||!total)return 0;
+    const {pts,cum,segments,total}=routeGeometry(plan);if(pts.length<2||!validPoint(pos)||!total)return 0;
+    // cos((a.lat+b.lat+pos.lat)/3) = cos(segmentAngle + positionAngle).
+    // Cache segment trig once per route; do only two trig calls per GPS fix.
+    const positionAngle=rad(pos.lat/3),cosPos=Math.cos(positionAngle),sinPos=Math.sin(positionAngle),latScale=111320;
     let bestDist=Infinity,bestAlong=0;
-    for(let i=0;i<pts.length-1;i++){
-      const a=pts[i],b=pts[i+1],latScale=111320,lonScale=111320*Math.cos(rad((a.lat+b.lat+pos.lat)/3));
-      const abx=(b.lon-a.lon)*lonScale,aby=(b.lat-a.lat)*latScale,apx=(pos.lon-a.lon)*lonScale,apy=(pos.lat-a.lat)*latScale,len2=abx*abx+aby*aby;
+    for(let i=0;i<segments.length;i++){
+      const seg=segments[i],lonScale=111320*(seg.cosLat*cosPos-seg.sinLat*sinPos);
+      const abx=seg.dLon*lonScale,aby=seg.dLat*latScale,apx=(pos.lon-seg.lon)*lonScale,apy=(pos.lat-seg.lat)*latScale,len2=abx*abx+aby*aby;
       const t=len2?clamp((apx*abx+apy*aby)/len2,0,1):0,dx=apx-t*abx,dy=apy-t*aby,d=Math.hypot(dx,dy);
       if(d<bestDist){bestDist=d;bestAlong=cum[i]+t*(cum[i+1]-cum[i])}
     }
