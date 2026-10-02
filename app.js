@@ -788,6 +788,37 @@ document.getElementById('routeSaveTop')?.addEventListener('click',e=>{if(e.curre
 function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.85" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
+// Curvature-aware simplification keeps bends rather than deleting every Nth fix.
+function simplifyGPXPoints(points,limit=500){
+ if(points.length<=limit)return points;
+ const ref=points.reduce((n,p)=>n+p.lat,0)/points.length*Math.PI/180;
+ const mx=111320*Math.max(.2,Math.cos(ref)),my=110540;
+ const project=p=>({x:p.lon*mx,y:p.lat*my});
+ const projected=points.map(project);
+ const simplify=tolerance=>{
+   const keep=new Set([0,points.length-1]),stack=[[0,points.length-1]],tol2=tolerance*tolerance;
+   while(stack.length){
+     const [start,end]=stack.pop(),a=projected[start],b=projected[end],dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy;
+     let best=tol2,choice=-1;
+     for(let i=start+1;i<end;i++){
+       const p=projected[i],t=den?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/den)):0,
+         ex=p.x-(a.x+t*dx),ey=p.y-(a.y+t*dy),dist2=ex*ex+ey*ey;
+       if(dist2>best){best=dist2;choice=i}
+     }
+     if(choice>=0){keep.add(choice);stack.push([start,choice],[choice,end])}
+   }
+   return [...keep].sort((a,b)=>a-b);
+ };
+ // Elevation changes alone are not a license to discard a sharp map corner.
+ let low=0,high=1,selected=simplify(high);
+ while(selected.length>limit&&high<1e7){low=high;high*=2;selected=simplify(high)}
+ for(let pass=0;pass<12&&selected.length<=limit;pass++){
+   const mid=(low+high)/2,tryIndices=simplify(mid);
+   if(tryIndices.length>limit)low=mid;else{high=mid;selected=tryIndices}
+ }
+ return selected.map(i=>points[i]);
+}
+window.FIELD_GPX_SIMPLIFY=simplifyGPXPoints;
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
   const f=e.target.files?.[0]; if(!f) return;
   if(f.size>10*1024*1024){e.target.value='';return alert('GPX file is too large for the mobile planner. Keep it under 10 MB or simplify it first.');}
@@ -796,14 +827,32 @@ document.getElementById('gpxImport')?.addEventListener('change',async e=>{
   try{
     const xml=new DOMParser().parseFromString(t,'application/xml');
     if(xml.querySelector('parsererror')) throw new Error('Invalid XML');
-    pts=[...xml.querySelectorAll('trkpt,rtept')].map(n=>({lat:n.hasAttribute('lat')?Number(n.getAttribute('lat')):NaN,lon:n.hasAttribute('lon')?Number(n.getAttribute('lon')):NaN})).filter(p=>validLatLon(p));
+    pts=[...xml.querySelectorAll('trkpt,rtept')].map(n=>{
+      const rawEle=n.getElementsByTagNameNS('*','ele')[0]?.textContent ?? n.querySelector('ele')?.textContent;
+      const eleM=rawEle==null||rawEle.trim()===''?null:Number(rawEle);
+      return {lat:n.hasAttribute('lat')?Number(n.getAttribute('lat')):NaN,lon:n.hasAttribute('lon')?Number(n.getAttribute('lon')):NaN,
+        eleFt:Number.isFinite(eleM)?eleM*3.28084:null}
+    }).filter(p=>validLatLon(p));
   }catch(err){ return alert(`Could not parse GPX: ${err.message}`); }
   if(pts.length<2) return alert('No usable GPX track/route points found.');
   // Keep the UI responsive on very dense tracks while retaining endpoints.
-  if(pts.length>500){const step=(pts.length-1)/499;pts=Array.from({length:500},(_,i)=>pts[Math.round(i*step)]);}
+  if(pts.length>500)pts=simplifyGPXPoints(pts,500);
   const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat)),minLon=Math.min(...pts.map(p=>p.lon)),maxLon=Math.max(...pts.map(p=>p.lon)),latRange=Math.max(maxLat-minLat,.0001),lonRange=Math.max(maxLon-minLon,.0001);
   routePoints=pts.map(p=>({...p,x:.08+.84*(p.lon-minLon)/lonRange,y:.08+.84*(maxLat-p.lat)/latRange}));
-  routePlan={...routePlan,anchors:[{lat:pts[0].lat,lon:pts[0].lon},{lat:pts.at(-1).lat,lon:pts.at(-1).lon}],routingMode:'direct',routingSource:'GPX IMPORT',elevationProfile:null,elevationSource:'UNAVAILABLE',gain:0,grade:0};
+  const elevationSamples=[];let cumulativeM=0,gainFt=0,lastElevation=null;
+   for(let i=0;i<pts.length;i++){
+     if(i)cumulativeM+=haversineMiles(pts[i-1],pts[i])*1609.344;
+     if(Number.isFinite(pts[i].eleFt)){
+       if(lastElevation!==null&&pts[i].eleFt>lastElevation)gainFt+=pts[i].eleFt-lastElevation;
+       lastElevation=pts[i].eleFt;
+       elevationSamples.push({lat:pts[i].lat,lon:pts[i].lon,distanceM:cumulativeM,elevationFt:pts[i].eleFt});
+     }
+   }
+   const hasElevation=elevationSamples.length>=2;
+   if(hasElevation){const gainField=document.getElementById('routeGain');if(gainField)gainField.value=Math.round(gainFt);}
+   routePlan={...routePlan,anchors:[{lat:pts[0].lat,lon:pts[0].lon},{lat:pts.at(-1).lat,lon:pts.at(-1).lon}],routingMode:'direct',routingSource:'GPX IMPORT',
+     elevationProfile:hasElevation?elevationSamples:null,elevationGainFt:hasElevation?gainFt:null,
+     elevationSource:hasElevation?'IMPORTED GPX — UNVERIFIED ELEVATION':'UNAVAILABLE',gain:hasElevation?gainFt:0,grade:0};
   window.FIELD_ROUTE_STATE.setPoints(pts);
   document.getElementById('routeName').value=f.name.replace(/\.gpx$/i,''); drawRoute(); saveRoutePlan(); addLog(`GPX IMPORT — ${f.name}; ${pts.length} plotted points.`,'ROUTE');
   e.target.value='';
