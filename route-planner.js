@@ -2118,6 +2118,9 @@
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
+  // Share the exact DEM sustained-grade classifier with the overview map.
+  // This reports slope-based difficulty, not trail exposure or surface hazards.
+  window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
   window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 })();
 
