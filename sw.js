@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-85-safety1';
-const ASSETS=['./','./index.html','./styles.css?v=3.85','./app.js?v=3.85','./workstation.css?v=3.85','./workstation.js?v=3.85','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85','./map-engine.js?v=3.85','./route-planner.js?v=3.85','./field-intel.js?v=3.85','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85','./safety-sync.js?v=3.85-hotfix1','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-86-safety1';
+const ASSETS=['./','./index.html','./styles.css?v=3.86','./app.js?v=3.86','./workstation.css?v=3.86','./workstation.js?v=3.86','./survival-data.js','./route-state.js?v=3.86','./runtime.js?v=3.86','./map-engine.js?v=3.86','./route-planner.js?v=3.86','./field-intel.js?v=3.86','./field-ops.js?v=3.86','./route-guidance.js?v=3.86','./map-readiness.js?v=3.86','./field-tools.js?v=3.86','./safety-sync.js?v=3.86-hotfix1','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',

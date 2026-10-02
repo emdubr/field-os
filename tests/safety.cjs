@@ -8,8 +8,8 @@ const manifest=JSON.parse(fs.readFileSync(path.join(dir,'manifest.webmanifest'),
 const safety=fs.readFileSync(path.join(dir,'safety-sync.js'),'utf8');
 assert.equal(manifest.start_url,'./index.html','installed PWA should have a stable start URL');
 assert.equal(manifest.scope,'./');
-assert.ok(sw.includes('safety-sync.js?v=3.85-hotfix1'),'offline shell must cache the new module');
-assert.ok(html.includes('safety-sync.js?v=3.85-hotfix1'),'safety runtime must load');
+assert.ok(sw.includes('safety-sync.js?v=3.86-hotfix1'),'offline shell must cache the new module');
+assert.ok(html.includes('safety-sync.js?v=3.86-hotfix1'),'safety runtime must load');
 assert.ok(!html.includes('NO EXTERNAL UPLINK'),'do not claim no network requests');
 assert.ok(!html.includes('ENCRYPTED MESH TRAFFIC'),'unverified demo messages are not encrypted live traffic');
 assert.ok(app.includes('Date.now()-lastFixAt<=60000'),'navigation requires a fresh fix');
