@@ -11,7 +11,7 @@
   return recording?{enableHighAccuracy:true,maximumAge:1000,timeout:15000}:
     mode==='low'||mode==='emergency'?
       {enableHighAccuracy:false,maximumAge:15000,timeout:30000}:
-      {enableHighAccuracy:true,maximumAge:1500,timeout:15000};
+      {enableHighAccuracy:true,maximumAge:1000,timeout:15000};
  };
  let lastPosition=null;
  function fanout(position){
