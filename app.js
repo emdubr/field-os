@@ -950,7 +950,8 @@ function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',async()=>{
   if(!confirm('Clear recorded breadcrumb track?'))return;
   stopTrack();
-  try{await trackHydration;if(trackStore)await trackStore.clear();else saveJSON('track',[])}
+  if(!trackStore){saveJSON('track',[])}
+  else try{await trackHydration;await trackStore.clear()}
   catch(err){alert('Could not erase saved track. Data retained; export before retrying. '+String(err.message||err));return;}
   recordedTrack=[];trackDistanceCache=0;trackStartedAt=0;trackStoppedAt=0;
   storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');
