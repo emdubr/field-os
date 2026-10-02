@@ -167,7 +167,7 @@
       return [...selected].sort((a,b)=>a-b);
     };
     let tolerance=.3,indices=simplify(tolerance);
-    while(indices.length>600&&tolerance<8){tolerance*=1.65;indices=simplify(tolerance);}
+    while(indices.length>600&&tolerance<256){tolerance*=1.65;indices=simplify(tolerance);}
     const pts=indices.map(i=>screen[i]);
     return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Top-down schematic of actual route geometry with uniform map scale; not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Geometry only; uniform map projection preserves turns and aspect. No terrain or obstacle information.');
   }
