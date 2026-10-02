@@ -344,8 +344,20 @@
     if(!p||!Number.isFinite(+p.lat)||!Number.isFinite(+p.lon)||String(p.source||'').toUpperCase().includes('DEMO'))return null;
     return {lat:+p.lat,lon:+p.lon,accuracy:Number.isFinite(+p.accuracy)?+p.accuracy:null};
   }
-  function bridgeWaypoints(){return (window.FIELD_MAP_DATA?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
-  function bridgeTrack(){return (window.FIELD_MAP_DATA?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon))}
+  let mapDataSource=null,waypointCache=null,trackCache=null;
+  function bridgeSource(){
+    const source=window.FIELD_MAP_DATA;
+    if(source!==mapDataSource){mapDataSource=source;waypointCache=null;trackCache=null}
+    return source;
+  }
+  function bridgeWaypoints(){
+    if(waypointCache)return waypointCache;
+    return waypointCache=(bridgeSource()?.waypoints?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+  }
+  function bridgeTrack(){
+    if(trackCache)return trackCache;
+    return trackCache=(bridgeSource()?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+  }
 
   let cachedRoute=null,routeBridge=null;
   function plannedRoute(){
@@ -538,8 +550,8 @@
   const redrawDataOverlay=()=>{
     states.forEach(st=>{if(!isVisible(st))return;const {w,h}=overlaySize(st);drawOverlay(st,w,h)});
   };
-  document.addEventListener('fieldos:waypointschange',redrawDataOverlay);
-  document.addEventListener('fieldos:trackchange',redrawDataOverlay);
+  document.addEventListener('fieldos:waypointschange',()=>{waypointCache=null;redrawDataOverlay()});
+  document.addEventListener('fieldos:trackchange',()=>{trackCache=null;redrawDataOverlay()});
   document.addEventListener('fieldos:positionchange',()=>{if(!liveEnabled)redrawDataOverlay()});
 
   document.addEventListener('fieldos:routechange',()=>{
