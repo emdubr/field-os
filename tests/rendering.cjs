@@ -103,12 +103,18 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
    gradeAtDistance(_profile,distanceM){return distanceM<90?2:distanceM<200?10:18},
    slopeClass(grade){return {key:grade>=15?'hard':grade>=8?'medium':'easy'}}
  };
- w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:gradedSamples}}};
+ let currentSamples=null;
+ w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:currentSamples}}};
  d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'route stays neutral before elevation arrives');
+ const tileRevisionBeforeProfile=st.tileRevision;
+ currentSamples=gradedSamples;
+ d.dispatchEvent(new w.CustomEvent('fieldos:routebootstrapchange'));
  assert.ok(st.overlay.querySelector('.planned-route-slope-medium'),'medium sustained grade draws orange planned route on main map');
  assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'hard sustained grade draws red planned route on main map');
- w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:gradedSamples.map((p,i)=>({...p,distanceM:i*gradeStep*3}))}}};
- d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(st.tileRevision,tileRevisionBeforeProfile,'DEM arrival repaints only vectors, not raster tiles');
+ currentSamples=gradedSamples.map((p,i)=>({...p,distanceM:i*gradeStep*3}));
+ d.dispatchEvent(new w.CustomEvent('fieldos:routebootstrapchange'));
  assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'stale elevation profile must not color a different route');
  console.log('PASS overview map restores orange/red sustained-grade sections and refuses mismatched DEM data');
 
