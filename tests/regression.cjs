@@ -10,7 +10,23 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,routeSlopeDisplayPieces,debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('  function gradeAtDistance(profile,distanceM){','  function gradeAtDistance(profile,distanceM){window.__testGradeCalls=(window.__testGradeCalls||0)+1;');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,routeSlopeDisplayPieces,debugSlopeCache:(profile,pts)=>{
+const previous=activeElevationProfile;
+activeElevationProfile=profile;
+window.__testGradeCalls=0;
+drawDomRouteLayer(pts);
+const initial=window.__testGradeCalls;
+drawDomRouteLayer(pts);
+const afterPan=window.__testGradeCalls;
+activeElevationProfile={...profile,samples:profile.samples.map(p=>({...p,elevationFt:p.elevationFt+40}))};
+drawDomRouteLayer(pts);
+const afterProfile=window.__testGradeCalls;
+const edited=pts.map((p,i)=>i===Math.floor(pts.length/2)?{...p,lon:p.lon+.0002}:p);
+drawDomRouteLayer(edited);
+const afterRoute=window.__testGradeCalls;
+activeElevationProfile=previous;
+drawDomRouteLayer(state()?.getPoints?.()||[]);
+return {initial,afterPan,afterProfile,afterRoute};},debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -645,6 +661,15 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(Math.abs(first.midM-(first.startM+first.endM)/2)<.001);
  assert.equal(r.routeSlopeDisplayPieces([],120).length,0,'an empty route has no slope overlay geometry');
  console.log('PASS route slope colors retain original winding-trail mileage after decimation');
+ const sustainedFixture={samples:winding.map((p,i)=>({...p,distanceM:(fullM*i)/(winding.length-1),
+   elevationFt:500+i*.8})),gainFt:720,lossFt:0,minFt:500,maxFt:1220,maxGrade:20};
+ const slopeCache=r.debugSlopeCache(sustainedFixture,winding);
+ assert.ok(slopeCache.initial>0,'initial planner map render computes DEM grade bands');
+ assert.equal(slopeCache.afterPan,slopeCache.initial,'unchanged route/profile pan must reuse grade classifications');
+ assert.ok(slopeCache.afterProfile>slopeCache.afterPan,'replacement DEM invalidates native planner slope cache');
+ assert.ok(slopeCache.afterRoute>slopeCache.afterProfile,'edited route geometry invalidates cached planner color bands');
+ console.log('PASS native planner caches expensive grade analysis across camera-only reprojects');
+
 
  assert.ok(w.FIELD_ROUTE_SLOPE,'main map shares the live route planner sustained-grade classifier');
  assert.equal(w.FIELD_ROUTE_SLOPE.slopeClass(w.FIELD_ROUTE_SLOPE.gradeAtDistance(sustainedSteep,50)).key,'hard');
