@@ -196,6 +196,15 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  assert.equal(st.wheelZoom,0);
  w.requestAnimationFrame=nativeRAF;w.cancelAnimationFrame=nativeCAF;
  console.log('PASS delayed wheel frames settle and cancel stale zoom previews');
+ w.FIELD_MAP_DATA={trackPreview:()=>[{lat:44.4759,lon:-73.2121,seq:0},
+  {lat:44.477,lon:-73.211,seq:20,gapBefore:true},{lat:44.478,lon:-73.210,seq:21}],waypoints:()=>[]};
+ d.dispatchEvent(new w.CustomEvent('fieldos:trackchange'));
+ engine.setView('homeRealMap',{lat:44.477,lon:-73.211},14);
+ assert.ok(st.overlay.querySelector('.native-track-trailhead'),'original trailhead shown as separate marker');
+ const clipped=st.overlay.querySelector('.native-track-line');
+ assert.ok(clipped&&clipped.getAttribute('points').trim().split(/\s+/).length===2,
+  'do not join retained trailhead to missing interior breadcrumb history');
+ console.log('PASS track rendering never draws across a missing breadcrumb gap');
  const tiles=[...st.tiles.values()];engine.unmount('homeRealMap');
  assert.equal(st.tiles.size,0);assert.ok(tiles.every(t=>t.img.onload===null&&t.img.onerror===null));assert.equal(d.getElementById('homeRealMap').childElementCount,0);
  assert.equal(d.getElementById('realMap').childElementCount,0,'Hidden Terrain map should not load duplicate tiles');
