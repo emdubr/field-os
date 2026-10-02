@@ -726,6 +726,16 @@
     states.forEach(st=>{if(!isVisible(st))return;const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)});
   });
 
+  // A DEM profile is stored after route geometry is already published.
+  // Repaint the overlay when that profile arrives, without refitting the
+  // camera or triggering another raster tile render.
+  let lastElevationProfile=null;
+  document.addEventListener('fieldos:routebootstrapchange',()=>{
+    const profile=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile??null;
+    if(profile===lastElevationProfile)return;
+    lastElevationProfile=profile;
+    redrawDataOverlay();
+  });
   document.addEventListener('fieldos:routechange',()=>{
     cachedRoute=null;
     states.forEach(st=>{
