@@ -619,7 +619,7 @@ function pressureChartColors(){
 }
 function drawPressureChart(){
   const c=pressureChartEl,ctx=pressureChartCtx;if(!c||!ctx)return;
-  const w=c.width,h=c.height,{fg,line}=pressureChartColors();if(!pressureHistory.length){ctx.clearRect(0,0,w,h);ctx.fillStyle=fg;ctx.font='14px monospace';ctx.fillText('NO VERIFIED PRESSURE DATA',14,30);return;}ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}const min=Math.min(...pressureHistory)-.3,max=Math.max(...pressureHistory)+.3;ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();pressureHistory.forEach((v,i)=>{const x=i/(pressureHistory.length-1)*w,y=h-(v-min)/(max-min)*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle=fg;ctx.font='22px monospace';ctx.fillText(`${pressureHistory.at(-1).toFixed(1)} hPa`,14,30);
+  const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,pressureHistory.length?'Verified pressure trend':'No verified pressure data')||{w:c.width,h:c.height},{fg,line}=pressureChartColors();if(!pressureHistory.length){ctx.clearRect(0,0,w,h);ctx.fillStyle=fg;ctx.font='14px monospace';ctx.fillText('NO VERIFIED PRESSURE DATA',14,30);return;}ctx.clearRect(0,0,w,h);ctx.strokeStyle=line;ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}const min=Math.min(...pressureHistory)-.3,max=Math.max(...pressureHistory)+.3;ctx.strokeStyle=fg;ctx.lineWidth=3;ctx.beginPath();pressureHistory.forEach((v,i)=>{const x=i/(pressureHistory.length-1)*w,y=h-(v-min)/(max-min)*h;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle=fg;ctx.font='22px monospace';ctx.fillText(`${pressureHistory.at(-1).toFixed(1)} hPa`,14,30);
 }
 drawPressureChart();
 
@@ -769,7 +769,7 @@ function routeProfileColors(){
 }
 function drawRouteProfile(dist,gain,terrain){
   const c=routeProfileEl,ctx=routeProfileCtx;if(!c||!ctx)return;
-  const w=c.width,h=c.height,colors=routeProfileColors();
+  const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Saved route elevation profile')||{w:c.width,h:c.height},colors=routeProfileColors();
   ctx.clearRect(0,0,w,h);ctx.strokeStyle=colors.line;ctx.lineWidth=1;
   for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}
   const samples=routePlan.elevationProfile;
