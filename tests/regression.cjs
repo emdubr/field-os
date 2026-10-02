@@ -228,7 +228,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const eta=w.FIELD_ADAPTIVE_ETA.compute(etaPlan,{lat:44.01,lon:-73});assert.equal(eta.pace.source,'RECORDED TRACK');assert.ok(eta.totalHours>0);assert.ok(eta.remainingHours<eta.totalHours);w.FIELD_ADAPTIVE_ETA.render(eta);
  console.log('PASS feature 25 Adaptive ETA learns a bounded personal pace from recorded tracks and adjusts time for grade, conditions and route progress');
  const projectionPoints=Array.from({length:601},(_,i)=>({lat:44+i*.00002,lon:-73+.00002*Math.sin(i/30)})),projectionPlan={points:projectionPoints},projectionPosition={lat:44+.00002*390+.00003,lon:-73+.00002*Math.sin(390/30)+.00004};
- const projectedCum=[0];for(let i=1;i<projectionPoints.length;i++)projectedCum[i]=projectedCum[i-1]+r.meters(projectionPoints[i-1],projectionPoints[i]);
+ const probeMeters=(a,b)=>{const rad=Math.PI/180,dlat=(b.lat-a.lat)*rad,dlon=(b.lon-a.lon)*rad,h=Math.sin(dlat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dlon/2)**2;return 12742000*Math.asin(Math.min(1,Math.sqrt(h)))};
+ const projectedCum=[0];for(let i=1;i<projectionPoints.length;i++)projectedCum[i]=projectedCum[i-1]+probeMeters(projectionPoints[i-1],projectionPoints[i]);
  let referenceDist=Infinity,referenceAlong=0;
  for(let i=0;i<projectionPoints.length-1;i++){
    const a=projectionPoints[i],b=projectionPoints[i+1],latScale=111320,lonScale=111320*Math.cos((a.lat+b.lat+projectionPosition.lat)*Math.PI/540);
