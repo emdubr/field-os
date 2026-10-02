@@ -358,7 +358,7 @@
   function bridgeTrack(){
     const source=bridgeSource();
     if(trackCache)return trackCache;
-    return trackCache=(source?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
+    return trackCache=(source?.trackPreview?.(1500)||source?.track?.()||[]).filter(p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon));
   }
 
   let cachedRoute=null,routeBridge=null;
