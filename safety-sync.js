@@ -56,7 +56,7 @@
     put('homeTrackSummary',(Number(track.points)||0)+' points'+(validNum(track.distanceMiles)?' · '+fmtMiles(track.distanceMiles):''));
     const wp=safeRead('waypoints',[]),wpBox=$('homeWaypointRows');
     if(wpBox && Array.isArray(wp)){
-      const stamp=wp.map(w=>[w.id,w.name,w.type,w.lat,w.lon].join(':')).join('|');
+      const stamp=(info.trusted?[info.p.lat.toFixed(4),info.p.lon.toFixed(4)].join(':'):'NO FIX')+'|'+wp.map(w=>[w.id,w.name,w.type,w.lat,w.lon].join(':')).join('|');
       if(wpBox.dataset.stamp!==stamp){
         wpBox.dataset.stamp=stamp;wpBox.replaceChildren();
         wp.slice(0,6).forEach((w,i)=>{
@@ -123,6 +123,7 @@
     put('homeSensorBaro',validNum(telemetry?.env?.pressureHpa)&&fresh(telemetryAt,15000)?Number(telemetry.env.pressureHpa).toFixed(1)+' hPa':'—');
     put('homeSensorWind','—');
     put('homeSensorMesh','NO VERIFIED LINK');
+    const minutes=-new Date().getTimezoneOffset();const sign=minutes>=0?'+':'-';put('liveUtcOffset',sign+String(Math.floor(Math.abs(minutes)/60)).padStart(2,'0')+':'+String(Math.abs(minutes)%60).padStart(2,'0'));
     const map=window.FIELD_MAP_ENGINE?.state;
     put('homeMapPack',safeRead('offline-map-active',null)?'CHECK PACK IN MAP':'CHECK MAP MANAGER');
   }
