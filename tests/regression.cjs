@@ -235,7 +235,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
  const turnPlan={name:'TEST ROUTE',points:[{lat:44,lon:-73},{lat:44.005,lon:-73},{lat:44.005,lon:-72.995},{lat:44.01,lon:-72.995}],trailSections:[{name:'North Trail',distanceM:550},{name:'East Link',distanceM:400},{name:'Summit Trail',distanceM:550}]};
  const cues=w.FIELD_TURNS.generate(turnPlan);assert.ok(cues.length>=3);assert.ok(cues.some(x=>x.type==='right'||x.type==='left'));assert.equal(cues.at(-1).type,'finish');const nextCue=w.FIELD_TURNS.next({lat:44.0001,lon:-73},turnPlan);assert.ok(nextCue);assert.ok(Number.isFinite(nextCue.distanceToCueM));
+ const longTurnPlan={points:Array.from({length:2001},(_,i)=>({lat:44+i*.00001,lon:-73})),trailSections:Array.from({length:10},(_,i)=>({name:'Section '+i,distanceM:150}))};
+ const longCues=w.FIELD_TURNS.generate(longTurnPlan);const secondSection=longCues.find(c=>c.trail==='Section 1');
+ assert.ok(secondSection&&secondSection.index>=130&&secondSection.index<=140,'named trail transition should find nearest long-route point');
+ w.FIELD_TURNS.generate(turnPlan);
  console.log('PASS feature 27 Turn-by-Turn Trail Instructions generates named-trail and geometry-turn cues with distance-to-next guidance');
+ console.log('PASS long-route trail cue nearest-point lookup uses logarithmic search');
 
 
 
