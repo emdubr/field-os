@@ -72,24 +72,34 @@
     return j?{...j,distanceToM:Math.max(0,j.distanceM-projection.progressM),offsetM:projection.offsetM,near:projection.offsetM<=75&&j.distanceM-projection.progressM<=100}:null;
   }
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const text=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};
+  const text=(id,value)=>{const el=document.getElementById(id);if(el&&el.textContent!==value)el.textContent=value};
   function isLivePosition(p,now=Date.now()){const age=now-Number(p?.timestamp);return valid(p)&&p.timestamp!=null&&age>=0&&age<=120000&&!/DEMO|FALLBACK|LAST|ESTIMAT/i.test(p.source||'')&&!!p.source&&!(Number.isFinite(p.accuracy)&&p.accuracy>100)}
+  let routeInfo=null;
+  function invalidateRoute(){routeInfo=null;projectionCache=new WeakMap()}
   function render(){
     const plan=window.FIELD_ROUTE_STATE?.getPlan?.()||{},raw=window.FIELD_ROUTE_STATE?.current?.(),live=isLivePosition(raw);
-    const groups=continuity(plan.trailSections),rows=document.getElementById('trailContinuityRows');
-    if(rows)rows.innerHTML=groups.length?groups.map(g=>`<div class="guidance-row"><b>${esc(g.label)}</b><span>${(g.startM/1609.344).toFixed(2)}–${(g.endM/1609.344).toFixed(2)} mi</span>${g.connectorM?`<small>Includes ${Math.round(g.connectorM)} m of unnamed connectors between matching named sections.</small>`:''}</div>`).join(''):'<p class="muted">Trail names appear after a snapped route is built. Direct and imported geometry may have no names.</p>';
-    const junctions=Array.isArray(plan.junctions)?plan.junctions:[],cue=live?next(plan,raw):null;
-    text('junctionState',!Array.isArray(plan.junctions)?'NO TOPOLOGY DATA':!live?'ROUTE PREVIEW':cue?.near?'JUNCTION AHEAD':cue?'NEXT MAPPED JUNCTION':'NO FURTHER MAPPED JUNCTIONS');
+    const key=[plan.updatedAt||'',plan.points?.length||0,plan.trailSections?.length||0,plan.junctions?.length||0].join('|');
+    if(!routeInfo||routeInfo.key!==key){
+      const groups=continuity(plan.trailSections),junctions=Array.isArray(plan.junctions)?plan.junctions:[];
+      routeInfo={key,groups,junctions,points:Array.isArray(plan.points)?plan.points:[],hasTopology:Array.isArray(plan.junctions),rowsEl:null,listEl:null,
+        continuityHtml:groups.length?groups.map(g=>`<div class="guidance-row"><b>${esc(g.label)}</b><span>${(g.startM/1609.344).toFixed(2)}–${(g.endM/1609.344).toFixed(2)} mi</span>${g.connectorM?`<small>Includes ${Math.round(g.connectorM)} m of unnamed connectors between matching named sections.</small>`:''}</div>`).join(''):'<p class="muted">Trail names appear after a snapped route is built. Direct and imported geometry may have no names.</p>',
+        junctionHtml:junctions.slice(0,50).map(j=>`<div class="guidance-row"><b>${(j.distanceM/1609.344).toFixed(2)} mi · ${j.degree}-way junction</b><span>${j.nextId==null?'Arrive at route end':'Follow '+esc(j.outgoing||'plotted route')}</span><small>Other mapped branches: ${(j.alternatives||[]).map(a=>esc(a.name)).join(', ')}</small></div>`).join('')};
+    }
+    const {groups,junctions}=routeInfo,rows=document.getElementById('trailContinuityRows'),list=document.getElementById('junctionRows');
+    if(rows&&routeInfo.rowsEl!==rows){rows.innerHTML=routeInfo.continuityHtml;routeInfo.rowsEl=rows}
+    if(list&&routeInfo.listEl!==list){list.innerHTML=routeInfo.junctionHtml;routeInfo.listEl=list}
+    const cue=live?next({points:routeInfo.points,junctions},raw):null;
+    text('junctionState',!routeInfo.hasTopology?'NO TOPOLOGY DATA':!live?'ROUTE PREVIEW':cue?.near?'JUNCTION AHEAD':cue?'NEXT MAPPED JUNCTION':'NO FURTHER MAPPED JUNCTIONS');
     text('junctionInstruction',cue?`${cue.nextId==null?'Arrive at route end':'Follow '+(cue.outgoing||'the plotted route')} — ${Math.round(cue.distanceToM)} m along route`:`${junctions.length} mapped junction${junctions.length===1?'':'s'} on this route`);
     text('junctionDetail',cue?`${cue.degree} mapped branches. ${cue.offsetM>75?'Position is away from the route; along-route distance is only a reference.':'Check signs and the route line before choosing a branch.'}`:'Proximity guidance needs a recent live position with usable accuracy. Mapped topology can be incomplete.');
-    const list=document.getElementById('junctionRows');if(list)list.innerHTML=junctions.slice(0,50).map(j=>`<div class="guidance-row"><b>${(j.distanceM/1609.344).toFixed(2)} mi · ${j.degree}-way junction</b><span>${j.nextId==null?'Arrive at route end':'Follow '+esc(j.outgoing||'plotted route')}</span><small>Other mapped branches: ${(j.alternatives||[]).map(a=>esc(a.name)).join(', ')}</small></div>`).join('');
     document.getElementById('junctionPanel')?.classList.toggle('junction-near',!!cue?.near);
     return {groups,junctions,cue};
   }
   window.FIELD_GUIDANCE={isLivePosition,continuity,junctionsForPath,combine,reverseJunctions,reverseLeg,length,project,next,render};
   let pending=false;
   function schedule(){if(pending||document.hidden||!document.querySelector('#nav.active,#route.active'))return;pending=true;requestAnimationFrame(()=>{pending=false;render()})}
-  for(const event of ['fieldos:routechange','fieldos:routemetadatachange','fieldos:positionchange'])document.addEventListener(event,schedule);
+  for(const event of ['fieldos:routechange','fieldos:routemetadatachange'])document.addEventListener(event,()=>{invalidateRoute();schedule()});
+  document.addEventListener('fieldos:positionchange',schedule);
   document.addEventListener('fieldos:viewchange',e=>{if(['nav','route'].includes(e.detail?.view))render()});
   window.FIELD_RUNTIME?.every(()=>{if(document.querySelector('#nav.active'))schedule()},5000);
   schedule();
