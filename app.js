@@ -1148,7 +1148,7 @@ function updateHandheldStatus(){
   const mtd=document.getElementById('mobileTrailDist'),mtb=document.getElementById('mobileTrailBrg'),mbd=document.getElementById('mobileBaseDist'),mbb=document.getElementById('mobileBaseBrg');
   if(mtd)mtd.textContent=td;if(mtb)mtb.textContent=tb;if(mbd)mbd.textContent=bd;if(mbb)mbb.textContent=bb;
   const now=new Date(),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
-  if(!hasTrustedMapPosition()){if(day)day.textContent='NO FIX';if(sun)sun.textContent='SUN TIMES UNAVAILABLE — NO VERIFIED LOCATION';return;}
+  if(!hasTrustedMapPosition()){if(day)day.textContent='NO FIX';if(sun)sun.textContent='SUN TIMES UNAVAILABLE — NO VERIFIED LOCATION'}else{
   const solar=solarEventsForDate(now,currentNavPosition.lat,currentNavPosition.lon),pos=solarPosition(now,currentNavPosition.lat,currentNavPosition.lon),isDay=pos.el>-.833,isCivil=pos.el>-6;
   if(day)day.textContent=solar.state==='POLAR DAY'?'24h 00m':solar.state==='POLAR NIGHT'?'POLAR NIGHT':isDay&&solar.sunset?fmtDurationMs(Math.max(0,solar.sunset-now)):isCivil?'TWILIGHT':solar.sunrise&&now<solar.sunrise?'BEFORE SUNRISE':'SUN HAS SET';
   if(sun){
@@ -1159,6 +1159,7 @@ function updateHandheldStatus(){
       sun.textContent=`SUN SET · CIVIL DUSK ${solar.civilDusk?fmtClock(solar.civilDusk):'--'}`;
     }else if(solar.sunset) sun.textContent=`SUNSET ${fmtClock(solar.sunset)}`;
     else sun.textContent=solar.state==='POLAR DAY'?'SUN ALL DAY':'NO SUNSET';
+  }
   }
   const hc=document.getElementById('mobileCheckin');
   if(hc){
@@ -1847,7 +1848,7 @@ function refreshPositionDrivenView(view=document.querySelector('.view.active')?.
   if(view==='home'||view==='nav')updateLiveNavigationUI();
   if(view==='home'||view==='map')updateFieldMaps(false);
 }
-let lastHeavyLocationPaint=0;
+let lastHeavyLocationPaint=0,lastSolarPositionUpdate=0;
 function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:Number.isFinite(p.coords.altitude)?p.coords.altitude*3.28084:null,source,timestamp:Number.isFinite(p.timestamp)?p.timestamp:Date.now(),accuracy:p.coords.accuracy??null};
   window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null};
@@ -1862,6 +1863,7 @@ function applyFieldGeolocation(p,source='PHONE GNSS'){
   lastHeavyLocationPaint=sampleAt;
   document.dispatchEvent(new CustomEvent('fieldos:positionchange',{detail:{...window.FIELD_CURRENT_POSITION}}));
   updatePositionDisplays();
+  if(fieldViewActive('home','nav')&&(sampleAt-lastSolarPositionUpdate>60000||!lastSolarPositionUpdate)){lastSolarPositionUpdate=sampleAt;updateSolar();}
   if(fieldViewActive('home','nav','trailreturn'))updateReturnGuidance();
   if(fieldViewActive('waypoints'))updateWaypointNav();
   if(fieldViewActive('home','nav'))updateLiveNavigationUI();
