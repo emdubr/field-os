@@ -413,6 +413,27 @@
     }
     st.overlay.setAttribute('viewBox',`0 0 ${w} ${h}`);
     st.overlay.innerHTML=parts.join('');
+    st.positionNodes=null;
+  }
+
+  // A GPS fix changes the marker, not the route/track/waypoint geometry.
+  // Retain the heavy SVG polyline and update only the three live marker nodes.
+  function drawPositionOverlay(st,w,h){
+    const position=livePosition||bridgePosition();
+    if(!position){drawOverlay(st,w,h);return}
+    const nodes=st.positionNodes||{
+      ring:st.overlay.querySelector('.native-accuracy-ring'),
+      marker:st.overlay.querySelector('.native-self-marker'),
+      arrow:st.overlay.querySelector('.native-self-arrow')
+    };
+    if(!nodes.ring||!nodes.marker||!nodes.arrow){drawOverlay(st,w,h);return}
+    st.positionNodes=nodes;
+    const c=world(st.center.lat,st.center.lon,st.zoom),p=world(position.lat,position.lon,st.zoom),x=p.x-c.x+w/2,y=p.y-c.y+h/2;
+    const mpp=Math.max(.01,156543.03392*Math.cos(position.lat*Math.PI/180)/Math.pow(2,st.zoom));
+    const r=Math.max(5,Math.min(90,(locationAccuracy||position.accuracy||8)/mpp));
+    nodes.ring.setAttribute('cx',x);nodes.ring.setAttribute('cy',y);nodes.ring.setAttribute('r',r);
+    nodes.marker.setAttribute('cx',x);nodes.marker.setAttribute('cy',y);
+    nodes.arrow.setAttribute('d',`M ${x} ${y-14} l -5 9 h 10 z`);
   }
 
   function drawEditorOverlay(st,w,h){
@@ -554,7 +575,10 @@
   };
   document.addEventListener('fieldos:waypointschange',()=>{waypointCache=null;redrawDataOverlay()});
   document.addEventListener('fieldos:trackchange',()=>{trackCache=null;redrawDataOverlay()});
-  document.addEventListener('fieldos:positionchange',()=>{if(!liveEnabled)redrawDataOverlay()});
+  document.addEventListener('fieldos:positionchange',()=>{
+    if(liveEnabled)return;
+    states.forEach(st=>{if(!isVisible(st))return;const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)});
+  });
 
   document.addEventListener('fieldos:routechange',()=>{
     cachedRoute=null;
@@ -605,7 +629,7 @@
       if(!Number.isFinite(drift)||drift>Math.max(12,(locationAccuracy||0)*.65)){
         st.center={...next};
         if(visible){st.rendered=true;render(st)}
-      }else if(visible){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
+      }else if(visible){const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)}
     }
     updateLocationLabels();
     if(typeof window.applyFieldGeolocation==='function')window.applyFieldGeolocation(p,'PHONE GNSS');
