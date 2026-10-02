@@ -1048,7 +1048,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  assert.ok(fieldIntelJs.includes('data-readiness-id'));
  assert.ok(fieldIntelJs.includes('FIELD_MISSION_READINESS'));
  console.log('PASS mission readiness is actionable and styled as touch controls');
- assert.ok(routePlannerJs.includes("displayRoutePoints(pts,600)"));
+ assert.ok(routePlannerJs.includes("routeSlopeDisplayPieces(pts,600)"));
  assert.ok(routePlannerJs.includes("displayRoutePoints(pts,1200)"));
  console.log('PASS route planner display geometry is capped without changing full navigation geometry');
  assert.ok(routePlannerJs.includes("lastOverlayGeometryKey"));
