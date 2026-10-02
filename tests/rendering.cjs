@@ -115,6 +115,36 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  assert.equal(st.overlay.querySelector('.planned-route-line'),stableRoute,'GPS must not recreate route geometry SVG');
  assert.equal(st.overlay.querySelector('.native-track-line'),stableTrack,'GPS must not recreate recorded track SVG');
  assert.equal(inactive.overlay.innerHTML,hiddenBeforeGps,'hidden map remains untouched after repeat GPS fix');
+ // Regression: releasing the main mobile map must not allow the next GPS
+ // fix to pull the camera back. Location marker continues updating in place.
+ engine.center('homeRealMap');
+ assert.equal(engine.getView('homeRealMap').following,true,'Explicit center resumes camera following');
+ st.onPointerDown({pointerId:501,button:0,clientX:160,clientY:175,preventDefault(){}});
+ st.onPointerMove({pointerId:501,clientX:235,clientY:200});
+ st.onPointerUp({pointerId:501,clientX:235,clientY:200});
+ const manuallyPanned=engine.getView('homeRealMap');
+ assert.equal(manuallyPanned.following,false,'Dragging disables only camera following');
+ const markerBeforeFarFix=st.overlay.querySelector('.native-self-marker').getAttribute('cx');
+ onGeoFix({coords:{latitude:44.6,longitude:-73.3,accuracy:4}});
+ engine.refresh(false);
+ assert.deepEqual(engine.getView('homeRealMap').center,manuallyPanned.center,'A GPS fix and passive refresh must preserve a manually panned center');
+ assert.notEqual(st.overlay.querySelector('.native-self-marker').getAttribute('cx'),markerBeforeFarFix,'The live GPS marker still updates after manual panning');
+ onGeoFix({coords:{latitude:44.61,longitude:-73.31,accuracy:4}});
+ assert.deepEqual(engine.getView('homeRealMap').center,manuallyPanned.center,'Repeated GPS fixes must never override manual panning');
+ engine.stopLiveLocation();engine.startLiveLocation();
+ assert.equal(engine.getView('homeRealMap').following,false,'Turning GPS back on never overrides manual map movement');
+ onGeoFix({coords:{latitude:44.615,longitude:-73.315,accuracy:4}});
+ assert.deepEqual(engine.getView('homeRealMap').center,manuallyPanned.center,'GPS reactivation preserves manually chosen viewport');
+ engine.center('homeRealMap');
+ assert.equal(engine.getView('homeRealMap').following,true,'Explicit center re-enables follow when GPS is live');
+ onGeoFix({coords:{latitude:44.62,longitude:-73.32,accuracy:4}});
+ assert.ok(Math.abs(engine.getView('homeRealMap').center.lat-44.62)<.00001,'Camera follows live GPS again after explicit center');
+ engine.zoom('homeRealMap',.5);
+ assert.equal(engine.getView('homeRealMap').following,false,'Manual zoom disengages GPS follow');
+ const zoomCenter=engine.getView('homeRealMap').center;
+ onGeoFix({coords:{latitude:44.7,longitude:-73.4,accuracy:4}});
+ assert.deepEqual(engine.getView('homeRealMap').center,zoomCenter,'Zoomed map remains independent of subsequent GPS updates');
+ console.log('PASS manual mobile pan/zoom keeps camera stable through GPS updates; recenter explicitly restores following');
  d.getElementById('home').classList.remove('active');hidden.classList.add('active');
  d.dispatchEvent(new w.CustomEvent('fieldos:viewchange',{detail:{view:'map'}}));
  await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
@@ -145,6 +175,9 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
  engine.setTapHandler('homeRealMap',null);
  console.log('PASS interrupted mobile drag/pinch preserves camera without phantom taps');
+ // Make the older wheel timing test independent of the GPS/manual camera
+ // sequence above (which can leave Topo almost at its maximum zoom).
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2121},14);
  // A throttled rAF must not leave an uncommitted wheel preview on screen.
  const nativeRAF=w.requestAnimationFrame.bind(w),nativeCAF=w.cancelAnimationFrame.bind(w);
  const heldFrames=new Map();let nextFrame=80000;

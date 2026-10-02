@@ -501,6 +501,12 @@
       wheelPxPerZoomLevel:180
     }).setView([here.lat,here.lon],14);
     enableContinuousPlannerZoom(plannerMap);
+    // Following is a camera choice, not a requirement for showing live GPS.
+    // Stop automatic pan-to-GPS as soon as the user manually drags the map.
+    // Keep the GPS watch and location marker active; FOLLOW ME resumes it.
+    plannerMap.on('dragstart',()=>{
+      if(followEnabled){followEnabled=false;updateFollowButton();}
+    });
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
       maxZoom:19,
