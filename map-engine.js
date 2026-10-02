@@ -274,16 +274,35 @@
       }
     };
     st.onPointerCancel=e=>{
-      // A cancelled OS/browser gesture must never become a map tap.
+      // Mobile browsers can cancel touch gestures when UI chrome moves or the
+      // OS takes over. Commit the last *visible* preview before clearing state;
+      // otherwise render() restores the old camera and the map snaps backward.
+      const points=[...st.pointers.values()];
+      if(st.pinchStart&&points.length>=2){
+        const pinch=st.pinchStart,dist=Math.hypot(points[1].x-points[0].x,points[1].y-points[0].y);
+        const ratio=dist/Math.max(1,pinch.dist);
+        const visualZoom=pinch.visualZoom??Math.max(2,Math.min(maxZoom(),pinch.zoom+Math.log2(Math.max(.5,Math.min(2,ratio)))));
+        preserveAnchor(pinch.anchor,pinch.lastMidX??pinch.midX,pinch.lastMidY??pinch.midY,visualZoom);
+        st.zoom=visualZoom;
+      }else if(st.deferredPinch){
+        const pinch=st.deferredPinch;
+        preserveAnchor(pinch.anchor,pinch.midX,pinch.midY,pinch.visualZoom);
+        st.zoom=pinch.visualZoom;
+      }else if(st.dragStart&&points.length===1){
+        const point=points[0],dx=point.x-st.dragStart.x,dy=point.y-st.dragStart.y;
+        const center=world(st.dragStart.center.lat,st.dragStart.center.lon,st.zoom);
+        st.center=unworld(center.x-dx,center.y-dy,st.zoom);
+      }
+      // A cancelled gesture must never be interpreted as a route-editor tap.
       st.pointers.clear();
       try{st.el.releasePointerCapture?.(e.pointerId)}catch{}
       st.dragStart=null;st.pinchStart=null;st.deferredPinch=null;st.pointerDownOrigin=null;
       st.el.classList.remove('native-map-dragging');
-      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0;st.pendingGesture=null}
+      if(st.gestureFrame){cancelAnimationFrame(st.gestureFrame);st.gestureFrame=0}
+      st.pendingGesture=null;
       clearTimeout(st.settleTimer);
-      // Preserve the last compositor frame on cancellation; rebuilding on an
-      // OS-level pointercancel caused the map to flash during interrupted pinch.
-      requestAnimationFrame(()=>render(st));
+      st.lastRenderKey='';
+      requestAnimationFrame(()=>{if(states.get(st.id)===st)render(st)});
     };
     st.onWheel=e=>{
       if(e.ctrlKey)return;
