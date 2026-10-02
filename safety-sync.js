@@ -60,7 +60,7 @@
       if(wpBox.dataset.stamp!==stamp){
         wpBox.dataset.stamp=stamp;wpBox.replaceChildren();
         wp.slice(0,6).forEach((w,i)=>{
-          const valid=validNum(w.lat)&&validNum(w.lon);
+          const valid=validNum(w.lat)&&validNum(w.lon)&&Math.abs(Number(w.lat))<=90&&Math.abs(Number(w.lon))<=180;
           const d=info.trusted&&valid?fmtMiles(distance(info.p,{lat:Number(w.lat),lon:Number(w.lon)})):'—';
           const b=info.trusted&&valid?bearingLabel(bearing(info.p,{lat:Number(w.lat),lon:Number(w.lon)})):'—';
           appendCells(wpBox,[String(i+1).padStart(2,'0'),w.name||'WAYPOINT',w.type||'GENERAL',d,b,fmtFeet(w.alt),'—']);
@@ -95,20 +95,20 @@
     ['sensorIntegrityImu','systemIntegrityImu'].forEach(id=>put(id,validNum(imu.pitch)&&validNum(imu.roll)?'DATA RECEIVED (NOT VERIFIED)':'UNKNOWN'));
     ['sensorIntegrityBaro','systemIntegrityBaro'].forEach(id=>put(id,validNum(baro.pressureHpa??baro.pressure)?'DATA RECEIVED (NOT VERIFIED)':'UNKNOWN'));
     put('sensorIntegrityDrift','UNKNOWN — NO CROSS-CHECK');
-    put('systemIntegrityDr','NOT VERIFIED');
+    put('systemIntegrityDr','NOT VERIFIED');put('cardImuState',validNum(imu.pitch)&&validNum(imu.roll)?'RECENT DATA':'NO RECENT DATA');put('cardImuDetail',validNum(imu.pitch)&&validNum(imu.roll)?'Pitch '+Number(imu.pitch).toFixed(1)+'° / Roll '+Number(imu.roll).toFixed(1)+'°; not cross-verified':'No verified IMU telemetry');put('cardEnvState',validNum(baro.pressureHpa??baro.pressure)?'RECENT DATA':'NO RECENT DATA');put('cardEnvDetail',validNum(baro.pressureHpa??baro.pressure)?'Pressure '+Number(baro.pressureHpa??baro.pressure).toFixed(1)+' hPa; source not cross-verified':'No verified barometer history');
   }
   function mapState(info){
     const p=info.p, status=info.trusted;
     put('sosPosition',status?decimal(p.lat,5)+', '+decimal(p.lon,5):'NO FIX — LAST POSITION NOT VERIFIED');
     put('sosAltitude',status?fmtFeet(p.alt):'UNKNOWN');
     put('sosGnss',status?'RECENT · ±'+Math.round(info.accuracy)+' m':'NO TRUSTED FIX');
-    put('sosBattery',phoneBattery==null?'UNAVAILABLE':Math.round(phoneBattery*100)+'% PHONE');
-    put('deskLat',status?decimal(p.lat,5)+(p.lat>=0?'° N':'° S'):'NO FIX');
+    put('sosBattery',phoneBattery==null?'UNAVAILABLE':Math.round(phoneBattery*100)+'% PHONE');put('phoneBatteryState',phoneBattery==null?'UNAVAILABLE':Math.round(phoneBattery*100)+'%');put('tapBatteryState',fresh(telemetryAt,15000)&&validNum(telemetry?.battery?.percent)?Math.round(Number(telemetry.battery.percent))+'% (BRIDGE REPORTED)':'UNAVAILABLE');
+    put('deskLat',status?decimal(Math.abs(p.lat),5)+(p.lat>=0?'° N':'° S'):'NO FIX');
     put('deskLon',status?decimal(Math.abs(p.lon),5)+(p.lon>=0?'° E':'° W'):'NO FIX');
     put('homeNavCoord',status?decimal(p.lat,5)+', '+decimal(p.lon,5):'NO LIVE POSITION');
     put('homeNavElevation',status?fmtFeet(p.alt):'—');
     put('homeNavAccuracy',status?'±'+Math.round(info.accuracy)+' m':'—');
-    put('homeNavFix',status?'RECENT':'NO FIX');
+    put('homeNavFix',status?'RECENT':'NO FIX');put('cardGnssState',status?'RECENT FIX':'NO FIX');put('cardGnssDetail',status?'±'+Math.round(info.accuracy)+' m reported; satellite count not provided':'No fresh accurate location fix');put('satCount',status?'FIX':'NO FIX');
     put('homeFixQuality',status?'RECENT FIX':'NO FIX');
     setStatus('satCount',status);
     if(!status){ put('mobileFixState','NO FIX');put('homeHeading','—');put('homeHeadingCardinal','—'); }
@@ -140,7 +140,7 @@
     const info=position();
     mapState(info);integrity(info);nodes();tables(info);
     if(phoneBattery==null){
-      ['mobileBattery','deskBatteryPct','powerPercent'].forEach(id=>put(id,'UNAVAILABLE'));
+      ['mobileBattery','deskBatteryPct','powerPercent'].forEach(id=>put(id,'UNAVAILABLE'));put('mobilePowerState','BATTERY API UNAVAILABLE');
     }
   }
   function initBattery(){
