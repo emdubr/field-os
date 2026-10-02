@@ -53,9 +53,9 @@
   }
   async function read(){
     if(!db)return legacy();
-    const tx=db.transaction('points','readonly'),request=tx.objectStore('points').getAll();
+    const tx=db.transaction('points','readonly'),finished=done(tx),request=tx.objectStore('points').getAll();
     const rows=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result||[]);request.onerror=()=>reject(request.error)});
-    await done(tx);
+    await finished;
     return rows.slice(-LIMIT);
   }
   async function write(rows,replace=false){
@@ -65,9 +65,9 @@
     rows.map(normalize).filter(Boolean).forEach(p=>store.put(p));
     await done(tx);
     // Trim only when above the cap, avoiding a full rewrite on every fix.
-    const countTx=db.transaction('points','readonly'),countReq=countTx.objectStore('points').count();
+    const countTx=db.transaction('points','readonly'),countDone=done(countTx),countReq=countTx.objectStore('points').count();
     const count=await new Promise((resolve,reject)=>{countReq.onsuccess=()=>resolve(countReq.result);countReq.onerror=()=>reject(countReq.error)});
-    await done(countTx);
+    await countDone;
     if(count>LIMIT){
       const excess=count-LIMIT,trim=db.transaction('points','readwrite'),store=trim.objectStore('points');
       const cur=store.openKeyCursor();let removed=0;
@@ -87,13 +87,14 @@
   async function migrate(){
     try{
       db=await openDB();
+      const legacyRaw=(()=>{try{return localStorage.getItem(LEGACY)}catch{return null}})();
       const imported=legacy();
       const sources=journalKeys().map(k=>({key:k,raw:(()=>{try{return localStorage.getItem(k)}catch{return null}})()}));
       const journal=sources.flatMap(s=>parseJournal(s.key));
       if(imported.length||journal.length)await write([...imported,...journal]);
       available=true;
       // Only clear sources that have not changed while the transaction ran.
-      try{if(imported.length&&localStorage.getItem(LEGACY))localStorage.removeItem(LEGACY);}catch{}
+      try{if(imported.length&&localStorage.getItem(LEGACY)===legacyRaw)localStorage.removeItem(LEGACY);}catch{}
       for(const source of sources)try{if(localStorage.getItem(source.key)===source.raw)localStorage.removeItem(source.key)}catch{}
       const rows=await read();
       if(volatile.length)await flush();
@@ -139,7 +140,7 @@
     })().finally(()=>{flushing=null});
     return flushing;
   }
-  async function all(){await initialized;await flush();return available?read():legacy();}
+  async function all(){await initialized;await flush();let persisted=[];if(db)try{persisted=await read()}catch{}return [...new Map([...persisted,...legacy(),...journalKeys().flatMap(parseJournal),...volatile].map(p=>[p.id,p])).values()].sort((a,b)=>a.id.localeCompare(b.id)).slice(-LIMIT);}
   async function clear(){
     epoch++;clearTimeout(timer);
     if(flushing)try{await flushing}catch{}
@@ -167,9 +168,9 @@
   async function restore(){
     await initialized;
     if(!db)return null;
-    const tx=db.transaction('backups','readonly'),req=tx.objectStore('backups').get('latest');
+    const tx=db.transaction('backups','readonly'),finished=done(tx),req=tx.objectStore('backups').get('latest');
     const backup=await new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error)});
-    await done(tx);
+    await finished;
     if(!backup)return null;
     await replace(backup.points||[]);
     return backup.points||[];
