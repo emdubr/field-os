@@ -118,7 +118,7 @@
   function renderTrailConditions(r=analyzeTrailConditions()){const box=document.getElementById('trailConditionTags'),sum=document.getElementById('trailConditionSummary'),state=document.getElementById('trailConditionState');if(box)box.innerHTML=r.tags.map(t=>`<span class="condition-tag ${t.level}">${esc(t.label)}</span>`).join('');if(sum)sum.textContent=r.summary;if(state)state.textContent=r.tags.some(t=>t.level==='bad')?'HIGH IMPACT':r.tags.some(t=>t.level==='warn')?'CONDITION FLAGS':'NO FLAGS';return r}
 
   // Feature 26 — Fatigue model.
-  function computeFatigue(plan=getPlan(),progress=routeProgressFraction(plan)){const pts=cleanPoints(plan.points||[]),distanceMi=Number(plan.distanceMiles)||routeDistanceM(pts)/1609.344,gainFt=Number(plan.elevationGainFt??plan.elevationProfile?.gainFt??plan.gain??0)||0,doneMi=distanceMi*clamp(progress,0,1),doneGain=gainFt*clamp(progress,0,1),factor=clamp(1+doneMi/45+doneGain/18000,1,1.6),level=factor<1.1?'FRESH':factor<1.25?'ACCUMULATING':factor<1.42?'FATIGUED':'HIGH FATIGUE LOAD';return {factor,level,distanceMi,gainFt,doneMi,doneGain,progress}}
+  function computeFatigue(plan=getPlan(),progress=routeProgressFraction(plan)){const geometry=routeGeometry(plan),distanceMi=Number(plan.distanceMiles)||geometry.total/1609.344,gainFt=Number(plan.elevationGainFt??plan.elevationProfile?.gainFt??plan.gain??0)||0,doneMi=distanceMi*clamp(progress,0,1),doneGain=gainFt*clamp(progress,0,1),factor=clamp(1+doneMi/45+doneGain/18000,1,1.6),level=factor<1.1?'FRESH':factor<1.25?'ACCUMULATING':factor<1.42?'FATIGUED':'HIGH FATIGUE LOAD';return {factor,level,distanceMi,gainFt,doneMi,doneGain,progress}}
 
   // Feature 25 — Adaptive ETA.
   let paceCacheRaw,paceCacheValue;
