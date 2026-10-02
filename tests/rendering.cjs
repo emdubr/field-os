@@ -34,6 +34,17 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  assert.ok([...st.tiles.values()].every(t=>t.z===15),'Fallback is retired after replacement loads');
  for(let i=0;i<40;i++)engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120+i*.004},15);
  assert.ok(st.tiles.size<smallPanCount*3,'Repeated panning has bounded tile DOM');
+ // Camera and GPS redraws should reuse planned route data until it changes.
+ let routeReads=0,activeRoute=[{lat:44.4759,lon:-73.2121},{lat:44.4761,lon:-73.2119}];
+ w.FIELD_ROUTE_STATE={getPoints(){routeReads++;return activeRoute.map(p=>({...p}))}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2121},14);
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120},14);
+ assert.equal(routeReads,1,'repainting the map should reuse cached route points');
+ activeRoute=[{lat:44.4759,lon:-73.2121},{lat:44.4765,lon:-73.2119}];
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(routeReads,2,'route changes must invalidate route point cache');
+ console.log('PASS planned route points are reused between map paints and refreshed on route edits');
  // Hidden map overlays should not rebuild for GPS/track events, but must catch up on entry.
  const hidden=d.createElement('div');hidden.id='map';hidden.className='view';hidden.innerHTML='<div id="realMap"></div>';d.body.appendChild(hidden);
  const inactive=engine.mount('realMap',{center:{lat:44.4759,lon:-73.2121},zoom:14});
