@@ -941,7 +941,10 @@ function trackDistanceMiles(){
  return trackDistanceCache=d;
 }
 function updateTrackUI(){
-  const d=document.getElementById('trackDistance'),p=document.getElementById('trackPoints'),line=document.getElementById('trackLine');if(d)d.textContent=trackDistanceMiles().toFixed(2);if(p)p.textContent=recordedTrack.length;
+  const d=document.getElementById('trackDistance'),p=document.getElementById('trackPoints'),line=document.getElementById('trackLine');
+  if(d)d.textContent=trackDistanceMiles().toFixed(2);if(p)p.textContent=recordedTrack.length;
+  const gapWarning=document.getElementById('trackHistoryGap'),first=recordedTrack[0],second=recordedTrack[1];
+  if(gapWarning)gapWarning.hidden=!(Number.isFinite(first?.seq)&&Number.isFinite(second?.seq)&&second.seq>first.seq+1);
   if(line){if(recordedTrack.length<2)line.setAttribute('points','');else{const lats=recordedTrack.map(x=>x.lat),lons=recordedTrack.map(x=>x.lon),minLat=Math.min(...lats),maxLat=Math.max(...lats),minLon=Math.min(...lons),maxLon=Math.max(...lons),latR=Math.max(maxLat-minLat,.00001),lonR=Math.max(maxLon-minLon,.00001);const first=recordedTrack[0],second=recordedTrack[1],
   gap=Number.isFinite(first?.seq)&&Number.isFinite(second?.seq)&&second.seq>first.seq+1;
   line.setAttribute('points',(gap?recordedTrack.slice(1):recordedTrack).map(x=>`${40+920*(x.lon-minLon)/lonR},${20+360*(maxLat-x.lat)/latR}`).join(' '));}}
