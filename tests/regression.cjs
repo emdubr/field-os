@@ -476,13 +476,13 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes(`sw.js?v=${release}`));
  assert.ok(!appJs.slice(appJs.indexOf("if(\'serviceWorker\' in navigator)"),appJs.indexOf("const bootLines=")).includes("location.reload()"));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
- assert.ok(manifest.includes(`index.html?v=${release}`));
+ assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
- console.log('PASS release cache-busting is aligned across HTML, app registration, service worker, and PWA manifest');
+ console.log('PASS versioned JS/CSS caches plus stable installed-PWA launch URL');
  assert.ok(!workstationJs.includes('3.10')&&!workstationJs.includes('v3.42'));
  assert.ok(workstationJs.includes(`FIELD / OS <b>${release}</b>`)&&workstationJs.includes(`<em>v${release}</em>`)&&workstationJs.includes(`FIELD/OS ${release}`));
  assert.ok(routePlannerJs.includes(`'BUILD: v${release}'`));
- assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
+ assert.ok(appJs.includes('FIELD/OS FIELD CONSOLE v'+release));
  assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
 
