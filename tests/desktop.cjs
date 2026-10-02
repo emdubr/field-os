@@ -85,15 +85,16 @@ const server=http.createServer((req,res)=>{
     });assert.ok(stable,'Unchanged schematic retains its DOM after an input burst');
     const lifecycle=await page.evaluate(async()=>{
       const before=document.querySelector('#route .ws-route-plot');
+      const oldPoints=before.querySelector('polyline').getAttribute('points');
       Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
       document.dispatchEvent(new Event('visibilitychange'));
       FIELD_ROUTE_STATE.setPoints([{lat:44,lon:-73},{lat:44.01,lon:-73.01}]);
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const paused=before===document.querySelector('#route .ws-route-plot');
+      const paused=before.querySelector('polyline').getAttribute('points')===oldPoints;
       delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      return {paused,resumed:before!==document.querySelector('#route .ws-route-plot')};
-    });assert.deepEqual(lifecycle,{paused:true,resumed:true});
+      return {paused,resumed:before.querySelector('polyline').getAttribute('points')!==oldPoints,retained:before===document.querySelector('#route .ws-route-plot')};
+    });assert.deepEqual(lifecycle,{paused:true,resumed:true,retained:true});
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>openView('home'));await page.waitForTimeout(30);
     const homeVisibility=await page.evaluate(()=>({

@@ -6,11 +6,11 @@ w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({measureText:()=>({width:
 w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedia=()=>({matches:false,addEventListener(){}});w.scrollTo=()=>{};w.alert=x=>alerts.push(x);w.confirm=()=>true;w.fetch=async()=>{throw new Error('Offline test')};w.ResizeObserver=class {observe(){} disconnect(){}};w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
-async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out waiting for async UI state')}
-for(const f of ['survival-data.js','route-state.js','runtime.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
-let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
+async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out: '+d.getElementById('routePlannerStatus').textContent+' '+d.getElementById('routePlannerDiag').textContent+' '+errors.join(' | '))}
+for(const f of ['survival-data.js','route-state.js','runtime.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
+let mapClick;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},bindTooltip(){return this},setOpacity(){return this},panTo(){return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:chain,tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -111,7 +111,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS feature 06 Breadcrumb Navigation computes next breadcrumb, bearing, remaining points, reverse mode, and minimal-screen navigation');
  const drEst=w.FIELD_DR.estimate({lat:44,lon:-73},300,1,0,10);assert.ok(drEst);assert.ok(drEst.lat>44);assert.ok(Math.abs(drEst.lon+73)<.001);assert.ok(drEst.uncertaintyM>100);
  const drLong=w.FIELD_DR.estimate({lat:44,lon:-73},1200,1.5,90,10);assert.ok(drLong.lon>-73);assert.ok(drLong.uncertaintyM>drEst.uncertaintyM);
- d.getElementById('mobileFixState').textContent='STALE';w.FIELD_DR.arm();w.FIELD_DR.state.speedMps=1;w.FIELD_DR.state.heading=0;w.FIELD_DR.state.anchorTime=Date.now()-60000;w.FIELD_DR.update();assert.equal(w.FIELD_DR.state.active,true);w.FIELD_OPEN_VIEW('nav',{history:false});w.FIELD_DR.render();assert.match(d.getElementById('drState').textContent,/ESTIMATED/);
+ d.getElementById('mobileFixState').textContent='STALE';w.FIELD_DR.arm();w.FIELD_DR.state.speedMps=1;w.FIELD_DR.state.heading=0;w.FIELD_DR.state.anchorTime=Date.now()-60000;w.FIELD_DR.update();assert.equal(w.FIELD_DR.state.active,true);w.FIELD_OPEN_VIEW('nav',{history:false});await tick();assert.match(d.getElementById('drState').textContent,/ESTIMATED/);
  d.getElementById('mobileFixState').textContent='3D / ±4m';w.FIELD_DR.update();assert.equal(w.FIELD_DR.state.active,false);w.FIELD_DR.reset();
  console.log('PASS feature 07 Dead Reckoning keeps a separately labeled estimate with growing uncertainty and returns authority to GNSS');
  d.getElementById('mobileFixState').textContent='3D / ±4m';d.getElementById('navAccuracy').textContent='±4 m';d.getElementById('fixAge').textContent='00:00:05';w.FIELD_DR.reset();
@@ -285,13 +285,22 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS copy-on-write adjacency leaves cached graph arrays immutable after endpoint snapping');
  console.log('PASS trail-edge projection, same-segment route, distance, no-nearby-trail detection');
  let elevationFetches=0;
- w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?(elevationFetches++,{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}):{elements:[{type:'way',id:1,nodes:[1,2],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98}],tags:{highway:'path'}}]}});
+ w.fetch=async url=>({ok:true,json:async()=>url.includes('elevation')?(elevationFetches++,{elevation:Array(new URL(url).searchParams.get('latitude').split(',').length).fill(100)}):{elements:[{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.993},{lat:44,lon:-72.98}],tags:{highway:'path',name:'Long Trail'}},{type:'way',id:2,nodes:[2,4],geometry:[{lat:44,lon:-72.993},{lat:44.002,lon:-72.993}],tags:{highway:'path',name:'Side Trail'}}]}});
  const cacheProbe=[{lat:40.12345,lon:-70.54321},{lat:40.22345,lon:-70.54321}];
  await r.fetchElevationProfile(cacheProbe);const afterFirstElevation=elevationFetches;await r.fetchElevationProfile(cacheProbe);
  assert.ok(afterFirstElevation>0);assert.equal(elevationFetches,afterFirstElevation,'identical elevation geometry should use memory cache');
  d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});await waitFor(()=>{const plan=w.FIELD_ROUTE_STATE.getPlan();return /SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent)&&Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1});
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
  console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
+ const topologyPlan=w.FIELD_ROUTE_STATE.getPlan();assert.equal(topologyPlan.junctions.length,1);assert.equal(topologyPlan.junctions[0].degree,3);
+ w.FIELD_GUIDANCE.render();assert.match(d.getElementById('junctionRows').textContent,/Side Trail/);assert.match(d.getElementById('trailContinuityRows').textContent,/Long Trail/);
+ r.saveCurrentRoute();const savedTopologyId=d.getElementById('savedRouteSelect').value;
+ w.FIELD_ROUTE_STATE.setMeta({junctions:null,trailSections:[]});d.getElementById('savedRouteSelect').value=savedTopologyId;r.loadSelectedRoute();
+ assert.equal(w.FIELD_ROUTE_STATE.getPlan().junctions.length,1);assert.equal(w.FIELD_ROUTE_STATE.getPlan().trailSections[0].name,'Long Trail');
+ const beforeJunction=w.FIELD_ROUTE_STATE.getPlan().junctions[0].distanceM;
+ r.reverse();assert.ok(Math.abs(w.FIELD_ROUTE_STATE.getPlan().junctions[0].distanceM-(r.meters(topologyPlan.points[0],topologyPlan.points.at(-1))-beforeJunction))<1);r.reverse();
+ console.log('PASS mapped junction integration, saved-route metadata restoration and reverse-route junction distances');
+
  const merged=r.displayTrailSections([{result:{trailSections:[
    {label:'Long Trail',name:'Long Trail',surface:'wood',distanceM:1000},
    {label:'Long Trail',name:'Long Trail',surface:'grass',distanceM:500},
@@ -401,7 +410,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
 
 
 
- assert.ok(swJs.includes("field-os-v3-83"));
+ assert.ok(swJs.includes("field-os-v3-84"));
  assert.ok(swJs.includes("c.match(e.request,{ignoreSearch:true})"));
  console.log('PASS map rendering is visibility-aware and shell assets retain offline failure fallback');
  assert.ok(fieldIntelJs.includes("if(document.querySelector('#nav.active'))renderPositionConfidence()"));assert.ok(!fieldIntelJs.includes("setInterval(renderPositionConfidence,2000)"));
@@ -424,12 +433,12 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('button:focus-visible'));
  console.log('PASS UI refinement preserves readable mobile forms, map space, desktop action grids, and focus visibility');
 
- const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.83');assert.equal(packageJson.version,release+'.0');
+ const release=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.equal(release,'3.84');assert.equal(packageJson.version,release+'.0');
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.ok(runtimeJs.includes('(id*37)%Math.max(17,interval)'));console.log('PASS runtime scheduler staggers recurring work instead of aligning timer bursts');
  assert.ok((html.match(/<script defer src=/g)||[]).length>=11);assert.ok(html.indexOf('map-engine.js?v='+release)<html.indexOf('route-planner.js?v='+release));console.log('PASS startup scripts fetch in parallel while preserving dependency order');
  assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.ok(fieldIntelJs.includes('readinessPollTimer=setTimeout(watch,500)'));assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
- assert.ok(workstationJs.includes("},60000);refresh();"));assert.ok(!workstationJs.includes("},5000);refresh();"));
+ assert.ok(workstationJs.includes("refresh(true)},60000);refresh();"));assert.ok(!workstationJs.includes("},5000);refresh();"));
  assert.match(appJs,/function scheduleReferenceFit\(\)[\s\S]*?requestAnimationFrame/);assert.ok(!appJs.includes("window.addEventListener('resize',fitReferenceConsole"));assert.ok(routePlannerJs.includes('function plannerWatchdog()'));assert.ok(routePlannerJs.includes('if(cancelled||tap.moved||plannerMobilePointers.size||busy)return'));assert.ok(!routePlannerJs.includes('plannerMobilePointers.size||busy||ignoreTarget(e))return'));
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
  assert.ok(appJs.includes("document.hidden||!document.querySelector('#home.active,#sensors.active,#nav.active,#map.active,#breadcrumb.active')"));
@@ -438,7 +447,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationJs.includes("e.target instanceof Element&&e.target.matches"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:positionchange',scheduleRefresh)"));assert.ok(workstationJs.includes("document.addEventListener('fieldos:trackchange',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('click',scheduleRefresh)"));assert.ok(!workstationJs.includes("document.addEventListener('input',scheduleRefresh)"));
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
- assert.ok(appJs.includes(`sw.js?v=${release}`)&&appJs.includes(`fieldos-sw-reloaded-v${release}`));
+ assert.ok(appJs.includes(`sw.js?v=${release}`));
+ assert.ok(!appJs.slice(appJs.indexOf("if(\'serviceWorker\' in navigator)"),appJs.indexOf("const bootLines=")).includes("location.reload()"));
  assert.ok(swJs.includes(`field-tools.js?v=${release}`));
  assert.ok(manifest.includes(`index.html?v=${release}`));
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
@@ -449,14 +459,14 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(appJs.includes('FIELD/OS SECURE FIELD CONSOLE v'+release));
  assert.ok(appJs.includes('creator="FIELD/OS v'+release+'"'));
  console.log('PASS package, boot UI, GPX exports, workstation and route diagnostics match the shipped release');
- assert.ok(mapEngineJs.includes('baseLoaded>=Math.max(1,Math.ceil(basePending*.55))')&&mapEngineJs.includes('setTimeout(commit,260)'));
+
  assert.ok(mapEngineJs.includes("lastRenderKey:''")&&mapEngineJs.includes('st.lastRenderKey===renderKey'));
  assert.ok(mapEngineJs.includes('function metersBetween(a,b)')&&mapEngineJs.includes('drift>Math.max(12,(locationAccuracy||0)*.65)'));
  console.log('PASS native map deduplicates near-identical tile frames and suppresses stationary GPS jitter reloads');
  assert.ok(mapEngineJs.includes('st.deferredPinch={visualZoom,midX,midY,anchor:pinch.anchor}')&&mapEngineJs.includes('if(st.deferredPinch)'));
  assert.ok(mapEngineJs.includes('st.wheelZoom-delta/560')&&mapEngineJs.includes('},120);'));
  console.log('PASS map gesture engine preserves pinch-to-drag continuity and damps dense wheel bursts');
- assert.ok(mapEngineJs.includes('st.lastTileBounds===tileBoundsKey')&&mapEngineJs.includes('st.lastTileBounds=tileBoundsKey')&&mapEngineJs.includes("st.lastTileBounds=''"));
+ // Retained tile identity, positioning and lifetime are exercised in rendering.cjs.
  assert.ok(mapEngineJs.includes('Math.abs(w-lastW)<8&&Math.abs(h-lastH)<8'));
  console.log('PASS native map reuses buffered tile envelopes and ignores mobile chrome micro-resizes');
  assert.ok(mapEngineJs.includes('layoutRect:null'));assert.ok(mapEngineJs.includes('const readLayout=()=>'));assert.ok(mapEngineJs.includes('st.layoutRect=null;'));console.log('PASS native map gestures cache layout measurements and invalidate them on resize');
@@ -474,8 +484,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
  assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
  assert.ok(workstationCss.includes('v3.82 UI EFFICIENCY'));
- assert.ok(workstationCss.includes('v3.83 FIELD UI EFFICIENCY'));
- assert.ok(workstationCss.includes('v3.83 ROUTE EDITOR MOBILE RELIABILITY'));
+ assert.ok(workstationCss.includes('v3.84 FIELD UI EFFICIENCY'));
+ assert.ok(workstationCss.includes('v3.84 ROUTE EDITOR MOBILE RELIABILITY'));
  assert.ok(routePlannerJs.includes('const fastMeters='));
  assert.ok(routePlannerJs.includes('routeMetricCache=new Map()'));
  assert.ok(mapEngineJs.includes('deferredPinch:null'));
@@ -702,7 +712,7 @@ assert.ok(workstationCss.includes('transform:translateY(0)!important'));
 console.log('PASS v3.61 mobile dock owns bottom safe area and More sheet geometry');
 
 assert.ok(mapEngineJs.includes('Math.floor(Number(z)+1e-6)'));
-assert.ok(mapEngineJs.includes("basePending*.55")&&mapEngineJs.includes("basePending*.7"));
+// Fractional tile reuse and integer-zoom replacement are covered behaviorally in rendering.cjs.
 console.log('PASS native map holds raster tiles through fractional zoom and stages replacement at integer raster boundaries');
 
 assert.ok(appJs.includes('zoomSnap:0')&&appJs.includes('zoomDelta:.25')&&appJs.includes('wheelPxPerZoomLevel:180'));
@@ -735,7 +745,7 @@ assert.ok(appJs.includes('Online maps are owned by map-engine.js'));
 assert.ok(mapEngineJs.includes('function setLayers(settings={},recenter=false)'));
 assert.ok(workstationCss.includes('v3.70 COMPACT WORKSTATION FLOW'));
 assert.ok(workstationCss.includes('body .module-secondary-grid'));
-assert.ok(workstationJs.includes('FIELD / OS <b>3.83</b>')&&workstationJs.includes('<em>v3.83</em>'));
+assert.ok(workstationJs.includes('FIELD / OS <b>3.84</b>')&&workstationJs.includes('<em>v3.84</em>'));
 console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding');
 
 
@@ -786,7 +796,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-83'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-84'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
@@ -804,9 +814,7 @@ assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routeP
  console.log('PASS route planner uses copy-on-write adjacency and draggable mobile control points');
  assert.ok(mapEngineJs.includes("const tileZoom=tileZoomFor(st.zoom)"));
  assert.ok(mapEngineJs.includes("st.center=unworld(c.x-dx,c.y-dy,st.zoom)"));
- assert.ok(mapEngineJs.includes("const hadTiles=st.base.childElementCount>0"));
- assert.ok(mapEngineJs.includes("setTimeout(commit,260)"));
- assert.ok(!mapEngineJs.includes("setTimeout(commit,420)"));
+ assert.ok(!mapEngineJs.includes("st.base.replaceChildren"));
  assert.ok(!mapEngineJs.includes("residualScale"));
  console.log('PASS native map uses one fractional camera and stages replacement tiles without release-time blanking');
  assert.ok(workstationCss.includes('v3.78 READINESS + ROUTE EFFICIENCY'));

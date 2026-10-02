@@ -619,27 +619,25 @@ async function copyText(text){try{await navigator.clipboard.writeText(text);retu
 document.getElementById('copySos')?.addEventListener('click',async()=>{const notes=emergencyNotes?.value.trim()||'None entered';const packet=`FIELD/OS SOS\nTIME: ${new Date().toISOString()}\nPOSITION: ${currentNavPosition.lat.toFixed(5)}, ${currentNavPosition.lon.toFixed(5)}\nALT: ${Math.round(currentNavPosition.alt??demo.alt)} ft\nPOSITION SOURCE: ${currentNavPosition.source||'POSITION'}\nNOTES: ${notes}`;await copyText(packet);alert('SOS packet copied. Prototype only — use 911 or certified satellite SOS for real emergencies when available.')});
 
 // Data export / wipe
-function collectState(){return {version:'0.5.1',release:'3.83',exported:new Date().toISOString(),trip:loadJSON('trip',{}),essentials:loadJSON('essentials',{}),fieldLog:loadJSON('fieldlog',[]),emergencyNotes:storageGet(STORE_PREFIX+'emergency-notes')||'',theme:document.body.dataset.theme,powerMode:storageGet(STORE_PREFIX+'power')||'normal',routePlan:loadJSON('routePlan',{}),offlineRoutePack:loadJSON('offlineRoutePack',{}),waypoints:loadJSON('waypoints',[]),track:loadJSON('track',[]),checkin:loadJSON('checkin',{})}}
+function collectState(){return {version:'0.5.1',release:'3.84',exported:new Date().toISOString(),trip:loadJSON('trip',{}),essentials:loadJSON('essentials',{}),fieldLog:loadJSON('fieldlog',[]),emergencyNotes:storageGet(STORE_PREFIX+'emergency-notes')||'',theme:document.body.dataset.theme,powerMode:storageGet(STORE_PREFIX+'power')||'normal',routePlan:loadJSON('routePlan',{}),offlineRoutePack:loadJSON('offlineRoutePack',{}),waypoints:loadJSON('waypoints',[]),track:loadJSON('track',[]),checkin:loadJSON('checkin',{})}}
 document.getElementById('exportState')?.addEventListener('click',()=>downloadJSON('fieldos-state.json',collectState()));
 document.getElementById('wipeLocal')?.addEventListener('click',()=>{if(confirm('Erase FIELD/OS v1.2 local trip plans, logs, checklists and emergency notes?')){storageKeys().filter(k=>k.startsWith(STORE_PREFIX)).forEach(storageRemove);location.reload()}});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.83',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('./sw.js?v=3.84',{updateViaCache:'none'});
       await reg.update();
-      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      // The new worker can serve the next navigation without interrupting this
+      // session. Never reload a route edit, GPS session, or unsaved form.
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        const key='fieldos-sw-reloaded-v3.83';
-        if(sessionStorage.getItem(key))return;
-        sessionStorage.setItem(key,'1');
-        location.reload();
+        document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
       });
     }catch(err){console.warn('FIELD/OS service worker update failed',err)}
   });
 }
 
-const bootLines=['FIELD/OS SECURE FIELD CONSOLE v3.83','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
+const bootLines=['FIELD/OS SECURE FIELD CONSOLE v3.84','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
 const boot=document.getElementById('boot'), bootText=document.getElementById('bootText'), bootFill=document.getElementById('bootFill');
 let lineIndex=0,progress=0;if(bootText)bootText.textContent='';
 function dismissBoot(){if(!boot)return;clearInterval(bootTimer);bootFill && (bootFill.style.width='100%');boot.classList.add('hidden')}
@@ -722,7 +720,7 @@ if(routeMap){
 }
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;saveRoutePlan();alert('Route saved locally for offline use.')});
-function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.83" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.84" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
 function downloadText(filename,text,type='application/octet-stream'){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 document.getElementById('exportGpx')?.addEventListener('click',()=>{if(routePoints.length<2)return alert('Plot at least two route points first.');downloadText('fieldos-route.gpx',routeAsGPX(),'application/gpx+xml')});
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
@@ -779,7 +777,7 @@ window.FIELD_ROUTE_STATE={
     document.dispatchEvent(new CustomEvent('fieldos:routemetadatachange'));
   },
   save:()=>saveRoutePlan(),
-  current:()=>({lat:Number(currentNavPosition.lat),lon:Number(currentNavPosition.lon),alt:currentNavPosition.alt??null,source:currentNavPosition.source||'POSITION'})
+  current:()=>({lat:Number(currentNavPosition.lat),lon:Number(currentNavPosition.lon),alt:currentNavPosition.alt??null,source:currentNavPosition.source||'POSITION',timestamp:currentNavPosition.timestamp??null,accuracy:currentNavPosition.accuracy??null})
 };
 loadRouteFields();queueMicrotask(drawRoute);
 const savedPack=loadJSON('offlineRoutePack',null);if(savedPack){const st=document.getElementById('offlineStatus');if(st){st.textContent='ROUTE + CORRIDOR SAVED';st.className='route-pack-saved'}}
@@ -862,7 +860,7 @@ function notifyTrackChange(detail={}){document.dispatchEvent(new CustomEvent('fi
 function addTrackPoint(pos,accuracy=null){const prev=recordedTrack.at(-1);if(prev&&haversineMiles(prev,pos)<.003)return;const point={lat:pos.lat,lon:pos.lon,alt:pos.alt??null,time:new Date().toISOString(),accuracy};recordedTrack.push(point);if(recordedTrack.length>5000)recordedTrack.shift();saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({added:point})}
 function startTrack(){if(!navigator.geolocation)return alert('Phone geolocation unavailable.');if(trackWatchId!=null)return;trackStartedAt=Date.now();trackStoppedAt=0;storageSet(STORE_PREFIX+'track-start',trackStartedAt);storageRemove(STORE_PREFIX+'track-stop');const state=document.getElementById('trackState');if(state)state.textContent='RECORDING';trackWatchId=navigator.geolocation.watchPosition(p=>{applyFieldGeolocation(p,'PHONE TRACK');addTrackPoint(currentNavPosition,p.coords.accuracy);const acc=document.getElementById('trackAccuracy');if(acc)acc.textContent=`±${Math.round(p.coords.accuracy)}m`;updateLiveNavigationUI();},err=>{stopTrack();alert(`Track recorder stopped: ${err.message}`)},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});}
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
-function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.83" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
+function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.84" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({cleared:true})}});
 window.FIELD_MAP_DATA={
   waypoints:()=>waypoints.map(w=>({...w})),
@@ -1131,11 +1129,8 @@ async function listFieldMapPacks(){return await fieldMapDb('readonly',s=>s.getAl
 async function getFieldMapPack(id){if(!id)return null;return await fieldMapDb('readonly',s=>s.get(id));}
 async function deleteFieldMapPack(id){if(!id)return;await fieldMapDb('readwrite',s=>s.delete(id));}
 async function ensureMapStorageCapacity(bytes){
-  const need=Math.max(0,Number(bytes)||0);
-  if(!navigator.storage?.estimate)return {ok:true,need,available:null};
-  const e=await navigator.storage.estimate(),available=Math.max(0,Number(e.quota||0)-Number(e.usage||0));
-  if(need&&available<need*1.12)throw new Error(`Not enough browser storage. Need about ${fmtBytes(need*1.12)} including safety margin; ${fmtBytes(available)} appears available.`);
-  return {ok:true,need,available,usage:Number(e.usage||0),quota:Number(e.quota||0)};
+  const result=await window.FIELD_MAP_READINESS.preflight(Number(bytes));
+  return {ok:result.allowed,need:result.needed,available:result.free??null};
 }
 function fmtMapPackAge(created){
   const ms=Date.now()-Date.parse(created||'');if(!Number.isFinite(ms)||ms<0)return 'UNKNOWN';
@@ -1170,6 +1165,7 @@ async function refreshFieldMapPackUI(){
   if(fieldActivePackId&&!packs.some(p=>p.id===fieldActivePackId)){fieldActivePackId='';fieldActivePackRecord=null;storageRemove(STORE_PREFIX+'map-pack');}
   const src=document.getElementById('offlineMapSource'),sz=document.getElementById('offlineMapSize'),mode=document.getElementById('offlineMapMode');
   const active=packs.find(p=>p.id===fieldActivePackId);
+  window.FIELD_MAP_READINESS?.showPack(packs.find(p=>p.id===sel?.value)||active||null);
   if(src)src.textContent=(fieldMapMode==='offline'&&active)?active.name:fieldOnlineMapLabel();
   if(sz)sz.textContent=active?fmtBytes(active.size):'—';
   const age=document.getElementById('offlineMapAge'),origin=document.getElementById('offlineMapOrigin');
@@ -1226,6 +1222,7 @@ function showFieldRealMap(state,label){
   state.el.hidden=false;
   if(state.fallback)state.fallback.hidden=true;
   if(state.label)state.label.textContent=label;
+  window.FIELD_MAP_READINESS?.sourceInfo();
   requestAnimationFrame(()=>state.map.invalidateSize(false));
 }
 function removeFieldBase(state){
@@ -1378,6 +1375,7 @@ async function updateFieldMaps(recenter=false){
   const src=document.getElementById('offlineMapSource');if(src)src.textContent=useOffline?(pack?.name||'OFFLINE PMTILES'):fieldOnlineMapLabel();
 }
 window.FIELD_OFFLINE_MAPS={
+  displayed(id='realMap'){const state=fieldMaps.get(id);return state?.base&&!state.el.hidden?{kind:state.baseKind,name:state.baseKind.startsWith('offline:')?fieldActivePackRecord?.name:null}:null},
   async active(){return await resolveActiveFieldPack()},
   async leafletLayer(){
     const pack=await resolveActiveFieldPack();if(!pack)return null;
@@ -1433,14 +1431,14 @@ async function downloadFieldPmtiles(url){
   const res=await fetch(u.href,{mode:'cors',credentials:'omit'});
   if(!res.ok)throw new Error(`Download failed: HTTP ${res.status}`);
   const advertised=Number(res.headers.get('content-length')||0);
-  if(advertised>FIELD_MAP_MAX_BYTES)throw new Error('Map pack exceeds the 250 MB FIELD/OS browser safety limit.');
-  if(advertised)await ensureMapStorageCapacity(advertised);
+  try{if(advertised>FIELD_MAP_MAX_BYTES)throw new Error('Map pack exceeds the 250 MB FIELD/OS browser safety limit.');if(advertised)await ensureMapStorageCapacity(advertised);}catch(err){await res.body?.cancel?.().catch(()=>{});throw err;}
   let blob;
   if(res.body?.getReader){
-    const reader=res.body.getReader(),chunks=[];let got=0;
+    const reader=res.body.getReader(),chunks=[];let got=0,checkedAt=0;
     while(true){
       const {done,value}=await reader.read();if(done)break;
       got+=value.byteLength;if(got>FIELD_MAP_MAX_BYTES){reader.cancel();throw new Error('Map pack exceeded the 250 MB FIELD/OS browser safety limit.');}
+      if(!advertised&&got-checkedAt>=16*1024*1024){try{await window.FIELD_MAP_READINESS?.preflight(got);checkedAt=got}catch(err){await reader.cancel().catch(()=>{});throw err}}
       chunks.push(value);setOfflineMapStatus(`DOWNLOADING ${fmtBytes(got)}`,advertised?got/advertised*92:Math.min(92,got/FIELD_MAP_MAX_BYTES*100));
     }
     blob=new Blob(chunks,{type:'application/octet-stream'});
@@ -1522,6 +1520,7 @@ document.getElementById('downloadPmtiles')?.addEventListener('click',async()=>{
   const btn=document.getElementById('downloadPmtiles');if(btn)btn.disabled=true;
   try{const rec=await downloadFieldPmtiles(document.getElementById('offlinePmtilesUrl')?.value);await refreshFieldMapPackUI();await activateFieldMapPack(rec.id);}catch(err){setOfflineMapStatus('DOWNLOAD FAILED');alert(err.message||String(err));}finally{if(btn)btn.disabled=false;}
 });
+document.getElementById('offlinePmtilesSelect')?.addEventListener('change',async e=>{const id=e.currentTarget.value;try{window.FIELD_MAP_READINESS?.showPack(await getFieldMapPack(id))}catch{window.FIELD_MAP_READINESS?.showPack(null)}});
 document.getElementById('activatePmtiles')?.addEventListener('click',async()=>{
   const id=document.getElementById('offlinePmtilesSelect')?.value;if(!id)return alert('No saved map pack selected.');
   try{await activateFieldMapPack(id);}catch(err){alert(err.message||String(err));}
@@ -1625,8 +1624,8 @@ function refreshPositionDrivenView(view=document.querySelector('.view.active')?.
   if(view==='home'||view==='map')updateFieldMaps(false);
 }
 function applyFieldGeolocation(p,source='PHONE GNSS'){
-  currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source};
-  window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null,timestamp:Date.now()};
+  currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:p.coords.altitude??demo.alt,source,timestamp:Number.isFinite(p.timestamp)?p.timestamp:Date.now(),accuracy:p.coords.accuracy??null};
+  window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null};
   try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(window.FIELD_CURRENT_POSITION))}catch{}
   currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:currentAccuracy;
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
