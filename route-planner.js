@@ -801,11 +801,12 @@
 
       tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
       tip.className=`route-profile-hover slope-${cls.key} active`;
-      if(rect.width<=760){
-        const tipW=Math.min(260,Math.max(150,rect.width-12));
-        const leftPx=clamp(x-tipW/2,6,Math.max(6,rect.width-tipW-6));
-        tip.style.left=`${leftPx}px`;
-      }else tip.style.left=`${x}px`;
+      // Keep the readout fully visible even when the cursor is at either end
+      // of a horizontal chart. The wrapper clips overflowing children.
+      const tipW=Math.min(rect.width<=760?260:230,Math.max(150,rect.width-12));
+      const leftPx=clamp(x-tipW/2,6,Math.max(6,rect.width-tipW-6));
+      tip.style.left=`${leftPx}px`;
+      tip.style.transform='none';
       if(line){line.classList.add('active');line.style.left=`${x}px`}
     };
 
@@ -1937,8 +1938,11 @@
       ctx.lineWidth=cls.key==='hard'?6:5;
       ctx.beginPath();ctx.moveTo(xy[i-1].x,xy[i-1].y);ctx.lineTo(xy[i].x,xy[i].y);ctx.stroke();
     }
-    ctx.fillStyle=fg;ctx.font='18px monospace';
-    ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,left,22);
+    // On a narrow horizontal overview, never clip the title into the chart.
+    ctx.fillStyle=fg;ctx.font=`${w<480?12:16}px monospace`;
+    const heading=w<480?`${distMi.toFixed(2)} mi · +${Math.round(profile.gainFt)} ft`:
+      `${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`;
+    ctx.fillText(heading,left,22,Math.max(1,w-left-right));
     renderElevationBreakdown(profile,distMi);
   }
 
