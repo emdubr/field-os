@@ -2120,6 +2120,8 @@
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
+  // Share sustained DEM grade classes with the Home/Terrain overview.
+  window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
   window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 })();
 
