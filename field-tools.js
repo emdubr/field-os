@@ -181,17 +181,64 @@ async function restore(){
 async function permissions(){const names=['geolocation','notifications'];const out=[];for(const name of names){try{const r=await navigator.permissions?.query?.({name});out.push(name.toUpperCase()+': '+String(r?.state||'UNKNOWN').toUpperCase())}catch{out.push(name.toUpperCase()+': BROWSER MANAGED')}}set('browserPermissionAudit',out.join(' // '));return out}
  async function swHealth(){let state='UNAVAILABLE';try{if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();state=reg?(navigator.serviceWorker.controller?'CONTROLLED':'REGISTERED / RELOAD NEEDED'):'NOT REGISTERED'}}catch{state='ERROR'}set('browserSwHealth',state);return state}
  let cacheScan=null;
+ // Audit the current shell; an old cache being present is not offline proof.
+ function offlineDependencies(){
+   const own=new Set(['./','./index.html','./manifest.webmanifest','./icon.svg']),external=new Set(),base=location.href;
+   for(const el of document.querySelectorAll('script[src],link[rel="stylesheet"][href]')){
+     const raw=el.getAttribute('src')||el.getAttribute('href');
+     if(!raw)continue;
+     try{const url=new URL(raw,base);if(url.origin===location.origin)own.add(url.href);else external.add(url.href)}catch{}
+   }
+   external.add('https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js');
+   external.add('https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js');
+   return {own:[...own].map(u=>new URL(u,base).href),external:[...external]};
+ }
  function cacheHealth(){
    if(cacheScan)return cacheScan;
    cacheScan=(async()=>{
-     let count=0,names=[];
-     try{if('caches' in window){names=(await caches.keys()).filter(n=>n.startsWith('field-os-'));for(const n of names){const cache=await caches.open(n);count+=(await cache.keys()).length}}}catch{}
-     set('browserCacheHealth',names.length+' APP CACHES // '+count+' RESPONSES');return {names,count};
+     let count=0,names=[],missing=[],externalMissing=[],verified=false,selected=null;
+     const {own,external}=offlineDependencies();
+     try{
+       if('caches' in window){
+         names=(await caches.keys()).filter(n=>n.startsWith('field-os-'));
+         const opened=await Promise.all(names.map(name=>caches.open(name)));
+         for(const cache of opened)count+=(await cache.keys()).length;
+         const app=own.find(u=>/\/app\.js(?:\?|$)/.test(u));
+         for(let i=opened.length-1;i>=0;i--){
+           if(typeof opened[i].match!=='function')continue;
+           if(app&&await opened[i].match(app)){selected=opened[i];break}
+         }
+         if(selected){
+           verified=true;
+           for(const url of own)if(!(await selected.match(url,{ignoreSearch:false})))missing.push(url);
+           for(const url of external)if(!(await selected.match(url,{ignoreSearch:false})))externalMissing.push(url);
+         }
+       }
+     }catch(err){verified=false;diag('OFFLINE AUDIT ERROR',String(err.message||err))}
+     const format=u=>{try{const x=new URL(u);return x.origin===location.origin?
+       x.pathname.split('/').at(-1)+(x.search||''):x.hostname+'/'+x.pathname.split('/').at(-1)}catch{return u}};
+     const status=!verified?'UNVERIFIED — OPEN INSTALLED APP ONLINE FIRST':
+       missing.length?'INCOMPLETE — '+missing.length+' REQUIRED APP FILE(S) MISSING':
+       externalMissing.length?'CORE CACHED — '+externalMissing.length+' MAP LIBRARY FILE(S) MISSING':'APP FILES CACHED — CHECK SAVED MAP AREA';
+     set('browserCacheHealth',status+' // '+count+' RESPONSES');
+     const panel=$('browserCacheDetails');
+     if(panel){
+       panel.replaceChildren();
+       const add=(label,urls)=>{if(!urls.length)return;const p=document.createElement('p');p.textContent=label+': '+urls.map(format).join(', ');panel.append(p)};
+       add('MISSING APP',missing);add('MISSING MAP LIBRARIES',externalMissing);
+       if(!missing.length&&!externalMissing.length){
+         const p=document.createElement('p');p.textContent=verified?
+           'Shell cached. Basemap still requires a separately saved, verified map pack.':
+           'No current cache verified. Old cache counts are not an offline check.';
+         panel.append(p);
+       }
+     }
+     return {names,count,verified,missing,externalMissing};
    })().finally(()=>{cacheScan=null});
    return cacheScan;
  }
  function stale(){const rows=[];for(const [key,label,maxH] of [['weather-cache','WEATHER',12],['environment-intel-cache','ENVIRONMENT',24]]){let d=null;try{d=JSON.parse(localStorage.getItem(P+key)||'null')}catch{}const t=Date.parse(d?.downloadedAt||d?.fetchedAt||'');const h=Number.isFinite(t)?(Date.now()-t)/3600000:Infinity;rows.push(label+': '+(h<=maxH?'FRESH':h<Infinity?Math.floor(h)+'H OLD':'MISSING'))}set('browserStaleData',rows.join(' // '));return rows}
- async function launch(){const results=[];results.push(['ONLINE',navigator.onLine]);results.push(['SERVICE WORKER',(await swHealth())!=='UNAVAILABLE']);results.push(['ROUTE',!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length]);results.push(['POSITION',window.FIELD_SAFETY?.position?.().trusted===true]);results.push(['OFFLINE MAP',!!localStorage.getItem(P+'map-pack')]);results.push(['WEATHER',!!localStorage.getItem(P+'weather-cache')]);results.push(['ENVIRONMENT',!!localStorage.getItem(P+'environment-intel-cache')]);const ok=results.filter(x=>x[1]).length;set('browserLaunchCheck',ok+'/'+results.length+' READY // '+(ok>=6?'GO':ok>=4?'PARTIAL':'PREP'));const e=$('browserLaunchList');if(e)e.innerHTML=results.map(x=>'<div class="condition-row"><b>'+x[0]+'</b><span>'+(x[1]?'READY':'MISSING')+'</span></div>').join('');diag('PREFLIGHT',ok+'/'+results.length+' ready');return results}
+ async function launch(){const results=[];results.push(['NETWORK HINT',navigator.onLine]);results.push(['SERVICE WORKER',(await swHealth())==='CONTROLLED']);results.push(['ROUTE',!!window.FIELD_ROUTE_STATE?.getPlan?.()?.points?.length]);results.push(['POSITION',window.FIELD_SAFETY?.position?.().trusted===true]);results.push(['OFFLINE MAP',Boolean((await window.FIELD_OFFLINE_MAPS?.ready?.())?.pack)]);results.push(['WEATHER',!!localStorage.getItem(P+'weather-cache')]);results.push(['ENVIRONMENT',!!localStorage.getItem(P+'environment-intel-cache')]);const ok=results.filter(x=>x[1]).length;set('browserLaunchCheck',ok+'/'+results.length+' READY // '+(ok>=6?'GO':ok>=4?'PARTIAL':'PREP'));const e=$('browserLaunchList');if(e)e.innerHTML=results.map(x=>'<div class="condition-row"><b>'+x[0]+'</b><span>'+(x[1]?'READY':'MISSING')+'</span></div>').join('');diag('PREFLIGHT',ok+'/'+results.length+' ready');return results}
  function softReset(){for(const k of ['touch-glove','touch-onehand'])try{localStorage.removeItem(P+k)}catch{}document.body.classList.remove('field-glove','field-onehand');set('browserRecoveryState','UI FIELD MODES RESET');diag('SAFE UI RESET','Touch modes reset only')}
  $('recoverySnapshot')?.addEventListener('click',()=>{void snapshot()});$('recoveryRestore')?.addEventListener('click',()=>{void restore()});$('browserRunAudit')?.addEventListener('click',async()=>{await permissions();await swHealth();await cacheHealth();stale();diag('AUDIT','Browser health audit complete')});$('browserLaunchPreflight')?.addEventListener('click',launch);$('browserSoftReset')?.addEventListener('click',softReset);
  window.addEventListener('error',e=>diag('JS ERROR',e.message||'Unknown error'));window.addEventListener('unhandledrejection',e=>diag('PROMISE ERROR',String(e.reason?.message||e.reason||'Unknown rejection')));
