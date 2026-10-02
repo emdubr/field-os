@@ -77,6 +77,17 @@ const server=http.createServer((req,res)=>{
     assert.ok(await page.locator('#gloveToggle').evaluate(e=>e.closest('article').getBoundingClientRect().height<350),'Touch settings must not stretch to the height of the utility console');
     await page.evaluate(()=>openView('route'));await page.waitForTimeout(50);
     assert.ok(await page.locator('.route-elevation-panel').evaluate(e=>e.getBoundingClientRect().width/e.parentElement.getBoundingClientRect().width>.95),'Elevation uses full workspace width');
+    const profileDesktop=await page.locator('#routeProfile').evaluate(c=>({width:c.getBoundingClientRect().width,height:c.getBoundingClientRect().height,wrap:c.parentElement.getBoundingClientRect().width}));
+    assert.ok(profileDesktop.width>300&&profileDesktop.width<=profileDesktop.wrap+1,'Desktop horizontal profile fills its own card without clipping');
+    assert.ok(profileDesktop.height>=215&&profileDesktop.height<=225,'Desktop horizontal overview has stable readable height');
+    await page.setViewportSize({width:390,height:844});await page.waitForTimeout(140);
+    const profileMobile=await page.locator('#routeProfile').evaluate(c=>({width:c.getBoundingClientRect().width,height:c.getBoundingClientRect().height,wrap:c.parentElement.getBoundingClientRect().width,prepared:Number(c.dataset.fieldCssWidth)||0,scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
+    assert.ok(profileMobile.width>180&&profileMobile.width<=profileMobile.wrap+1,'Phone horizontal profile stays inside its wrapper');
+    assert.ok(profileMobile.height>=185&&profileMobile.height<=195,'Phone profile has fixed height instead of stretched intrinsic canvas');
+    assert.ok(Math.abs(profileMobile.prepared-profileMobile.width)<=3,'Horizontal canvas re-renders at the new responsive width');
+    assert.ok(profileMobile.scroll<=profileMobile.viewport+1,'Horizontal chart must not create a sideways-scrolling page');
+    await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(130);
+    console.log('PASS horizontal route overview sizes and re-renders correctly on desktop and phone');
     await page.evaluate(()=>{
       FIELD_ROUTE_STATE.setPoints(Array.from({length:1000},(_,i)=>({lat:44+i/100000,lon:-73+i/100000})));
     });await page.waitForTimeout(100);
