@@ -22,6 +22,7 @@ jobs:
           node --check app.js
           node --check track-store.js
           node --check geo-hub.js
+          node --check canvas-utils.js
           node --check safety-sync.js
           node --check workstation.js
           node --check map-engine.js
