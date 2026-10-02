@@ -423,31 +423,31 @@
         const samples=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile;
         const grading=window.FIELD_ROUTE_SLOPE;
         if(grading&&Array.isArray(samples)&&samples.length>1){
-          let total=0;
-          for(let j=1;j<route.length;j++)total+=metersBetween(route[j-1],route[j]);
+          const cumulative=[0];
+          for(let j=1;j<route.length;j++)cumulative.push(cumulative[j-1]+metersBetween(route[j-1],route[j]));
+          const total=cumulative.at(-1);
           const sampleTotal=Number(samples.at(-1)?.distanceM);
           const match=Number.isFinite(sampleTotal)&&total>10&&Math.abs(sampleTotal-total)/total<.06
             &&metersBetween(samples[0],route[0])<60&&metersBetween(samples.at(-1),route.at(-1))<60;
           if(match){
             const overlayPaths={easy:[],medium:[],hard:[]};
-            const step=Math.max(1,Math.ceil((route.length-1)/450));let travelled=0;
+            const step=Math.max(1,Math.ceil((route.length-1)/450));
             for(let j=step;j<route.length;j+=step){
               const end=Math.min(j,route.length-1),start=end-step;
-              const run=metersBetween(route[start],route[end]),mid=travelled+run/2;
+              const mid=(cumulative[start]+cumulative[end])/2;
               const grade=grading.gradeAtDistance({samples},mid),cls=grading.slopeClass(grade).key;
-              travelled+=run;
               // FLAT (<3%) remains the normal route color, not a warning.
               if(Math.abs(grade)<3)continue;
-              const a=pts[start],b=pts[end];
-              overlayPaths[cls]?.push(`M${a.x.toFixed(1)},${a.y.toFixed(1)}L${b.x.toFixed(1)},${b.y.toFixed(1)}`);
+              const segment=pts.slice(start,end+1).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+              overlayPaths[cls]?.push(segment);
             }
             // Include the final segment when decimation skipped the last point.
             const last=Math.floor((route.length-1)/step)*step;
             if(last<route.length-1){
-              const run=metersBetween(route[last],route.at(-1)),grade=grading.gradeAtDistance({samples},travelled+run/2),cls=grading.slopeClass(grade).key;
+              const grade=grading.gradeAtDistance({samples},(cumulative[last]+total)/2),cls=grading.slopeClass(grade).key;
               if(Math.abs(grade)>=3){
-                const a=pts[last],b=pts.at(-1);
-                overlayPaths[cls]?.push(`M${a.x.toFixed(1)},${a.y.toFixed(1)}L${b.x.toFixed(1)},${b.y.toFixed(1)}`);
+                const segment=pts.slice(last).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+                overlayPaths[cls]?.push(segment);
               }
             }
             for(const cls of ['easy','medium','hard'])if(overlayPaths[cls].length)
@@ -614,7 +614,7 @@
       // Image.onload means bytes decoded, not necessarily painted. Keep the
       // outgoing tiles through two compositor frames before retiring them.
       // A new wheel event invalidates this retirement and retains the old view.
-      if((baseReady||terrainReady)&&!st.retireFrame){
+      if((baseReady||terrainReady)&&!st.retireFrame&&[...st.tiles.keys()].some(key=>!needed.has(key))){
         st.retireFrame=requestAnimationFrame(()=>{
           st.retireFrame=requestAnimationFrame(()=>{
             st.retireFrame=0;
