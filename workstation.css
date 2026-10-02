@@ -4308,3 +4308,103 @@ select option{background:#010a05;color:var(--crt-green-hot)}
 .native-map-overlay .planned-route-slope-easy{stroke:#35ff9c;stroke-width:5px}
 .native-map-overlay .planned-route-slope-medium{stroke:#f28c28;stroke-width:7px}
 .native-map-overlay .planned-route-slope-hard{stroke:#e5484d;stroke-width:8px}
+
+/* v3.85 MOBILE SHELL RESTORE — one responsive authority.
+   Older v0.9 rules hid #app's real header while later mobile rules reserved
+   its height. Keep one usable top bar and one safe-area-aware bottom dock. */
+@media(max-width:767px){
+ :root{
+   --mobile-topbar-h:calc(52px + env(safe-area-inset-top,0px));
+   --mobile-dock-buttons:58px;
+   --mobile-dock-h:calc(var(--mobile-dock-buttons) + env(safe-area-inset-bottom,0px));
+ }
+ html,body{max-width:100%;overflow-x:clip!important}
+ body #app.shell{
+   width:100%!important;max-width:100%!important;min-width:0!important;
+   overflow:visible!important;
+   padding:0 0 calc(var(--mobile-dock-h) + 12px)!important;
+ }
+ body #app.shell>.topbar{
+   display:flex!important;position:sticky!important;top:0!important;
+   align-items:center!important;justify-content:space-between!important;
+   gap:6px!important;z-index:105!important;
+   min-height:var(--mobile-topbar-h)!important;
+   padding:calc(6px + env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) 6px max(8px,env(safe-area-inset-left,0px))!important;
+   border:0!important;border-bottom:1px solid var(--line)!important;
+   background:var(--bg)!important;box-shadow:none!important;
+ }
+ body #app.shell>.topbar>div{min-width:0!important}
+ body #app.shell>.topbar .brand-line{display:flex!important;min-width:0!important;flex-wrap:nowrap!important;gap:0!important}
+ body #app.shell>.topbar .brand{
+   min-width:0!important;font-size:clamp(10px,3vw,13px)!important;
+   letter-spacing:.015em!important;line-height:1.2!important;
+   white-space:normal!important;overflow-wrap:normal!important;
+ }
+ body #app.shell>.topbar .version{
+   display:inline!important;font-size:9px!important;
+   letter-spacing:0!important;white-space:nowrap!important;
+ }
+ body #app.shell>.topbar .classification,body #app.shell>.topbar .subtitle{display:none!important}
+ body #app.shell>.topbar .clock-wrap{flex:0 0 auto!important;min-width:0!important}
+ body #app.shell>.topbar .clock-wrap #clock{font-size:11px!important}
+ body #app.shell>.topbar .clock-wrap #date{font-size:8px!important}
+ body #app.shell .screen{min-width:0!important;padding:5px max(7px,env(safe-area-inset-right,0px)) 8px max(7px,env(safe-area-inset-left,0px))!important}
+ body #app.shell .view.active:not(#home)>.view-head{
+   /* A sticky offset inside the nested mobile view creates a second,
+      invisible 52px row below the now-restored real app header. */
+   position:relative!important;top:0!important;
+   display:grid!important;z-index:85!important;min-height:44px!important;
+   margin:0 0 7px!important;padding:5px 7px!important;
+   background:var(--bg)!important;color:var(--fg)!important;
+   border:1px solid var(--line)!important;
+ }
+ body #app.shell .view.active:not(#home)>.view-head h2{font-size:11px!important;overflow-wrap:anywhere!important}
+ body #app.shell .tabbar{
+   display:grid!important;position:fixed!important;inset:auto 0 0 0!important;
+   grid-template-columns:repeat(5,minmax(0,1fr))!important;
+   width:100%!important;max-width:100%!important;
+   height:var(--mobile-dock-h)!important;min-height:var(--mobile-dock-h)!important;
+   padding:0 max(2px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(2px,env(safe-area-inset-left,0px))!important;
+   gap:0!important;margin:0!important;
+   border:0!important;border-top:1px solid var(--line)!important;
+   background:var(--bg)!important;z-index:10000!important;overflow:hidden!important;
+ }
+ body #app.shell .tabbar .tab-btn{
+   display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;
+   width:100%!important;height:var(--mobile-dock-buttons)!important;
+   min-height:var(--mobile-dock-buttons)!important;margin:0!important;
+   padding:4px 2px!important;gap:2px!important;border:0!important;
+   border-right:1px solid var(--line)!important;border-radius:0!important;
+   background:var(--panel2)!important;color:var(--fg)!important;box-shadow:none!important;
+ }
+ body #app.shell .tabbar .tab-btn:last-child{border-right:0!important}
+ body #app.shell .tabbar .tab-btn.active,
+ body #app.shell .tabbar .tab-btn[aria-current="page"]{
+   background:color-mix(in srgb,var(--fg2) 15%,var(--panel2))!important;
+   border-top:2px solid var(--fg2)!important;color:var(--fg2)!important;
+ }
+ body #app.shell .tabbar .tab-btn span{font-size:19px!important;line-height:20px!important;height:20px!important;color:inherit!important}
+ body #app.shell .tabbar .tab-btn small{font-size:9px!important;line-height:12px!important;letter-spacing:.04em!important;color:inherit!important}
+ body #app.shell .tab-sheet{bottom:var(--mobile-dock-h)!important;max-height:calc(100dvh - var(--mobile-topbar-h) - var(--mobile-dock-h))!important}
+ /* Offscreen intrinsic-size placeholders produced long empty strips on iOS;
+    inactive views and optional diagnostic panels are still display:none. */
+ body #app.shell .view.active:not(#home) .module-grid>.panel,
+ body #app.shell .view.active:not(#home) .module-grid>.module-slot,
+ body #app.shell #home .console-mid-grid>.terminal-panel,
+ body #app.shell #home .console-bottom-grid>.terminal-panel,
+ body #app.shell #home .detailed-route-info{
+   content-visibility:visible!important;contain-intrinsic-size:none!important;
+ }
+ body #app.shell #home .console-main-grid{min-width:0!important;align-items:start!important}
+ body #app.shell #home .map-console{min-width:0!important;grid-column:1/-1!important;order:-1!important}
+ body #app.shell #home .home-real-map{height:clamp(310px,48svh,465px)!important;min-height:310px!important;max-height:465px!important}
+ body #app.shell #home .console-command-strip{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+ body #app.shell #home .console-command-strip button{min-height:40px!important;font-size:9px!important;line-height:1.2!important}
+ body #app.shell #map .module-grid,body #app.shell #route .module-grid{min-width:0!important;max-width:100%!important}
+ body #app.shell #route .route-planner-real-map{height:clamp(340px,49svh,490px)!important;min-height:340px!important}
+}
+@media(max-width:350px){
+ body #app.shell>.topbar .brand{font-size:10px!important}
+ body #app.shell>.topbar .clock-wrap #date{display:none!important}
+ body #app.shell #home .console-command-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
