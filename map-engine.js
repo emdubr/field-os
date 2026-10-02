@@ -14,6 +14,10 @@
   let terrain=localStorage.getItem(STORE_PREFIX+'terrain-shade')==='on';
   let grid=localStorage.getItem(STORE_PREFIX+'map-grid')==='on';
   let liveEnabled=localStorage.getItem(STORE_PREFIX+'live-location')==='on';
+  // OpenTopoMap is optional. Once its tile server starts failing, continue
+  // rendering OSM instead of refetching a broken overlay on every mouse zoom.
+  let topoErrorCount=0,topoFallbackUntil=0;
+  const topoFallbackActive=()=>mode==='topo'&&Date.now()<topoFallbackUntil;
   let livePosition=null;
   let locationAccuracy=null;
   let lastFixTime=0;
@@ -96,7 +100,7 @@
 
   function updateLabels(){
     document.dispatchEvent(new CustomEvent('fieldos:maplayerschange'));
-    const kind=mode==='satellite'?'SATELLITE':mode==='osm'?'STREET OSM':'HIKING TOPO';
+    const kind=mode==='satellite'?'SATELLITE':mode==='osm'?'STREET OSM':topoFallbackActive()?'STREET OSM / TOPO UNAVAILABLE':'HIKING TOPO';
     const suffix=liveEnabled?(livePosition?'LIVE GNSS':'GNSS ACQUIRING'):(livePosition?'LAST FIX':'GNSS OFF');
     const h=document.getElementById('homeMapModeLabel');if(h)h.textContent=`${kind} / ${suffix}`;
     const m=document.getElementById('mapModeLabel');if(m)m.textContent=`${kind} / ${suffix}`;
@@ -143,6 +147,11 @@
       return st.layoutRect={left:rect.left,top:rect.top,width:rect.width,height:rect.height};
     };
     const invalidateLayout=()=>{st.layoutRect=null};
+    // Bounding boxes move when the PAGE scrolls even if the map's width and
+    // height never change. A stale top/left shifts mouse-wheel zoom anchors by
+    // hundreds of pixels after navigating/scrolling the desktop workspace.
+    st.onPageScroll=invalidateLayout;
+    window.addEventListener('scroll',st.onPageScroll,{capture:true,passive:true});
 
     const rasterLayers=[st.base,st.terrain,st.trail],vectorLayers=[st.grid,st.overlay,st.editor];
     const applyRestingCamera=()=>{
@@ -205,6 +214,7 @@
 
     st.onPointerDown=e=>{
       if(e.button!==undefined&&e.button>0)return;
+      invalidateLayout();
       e.preventDefault();
       try{st.el.setPointerCapture?.(e.pointerId)}catch{}
       st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -329,6 +339,7 @@
       if(e.ctrlKey)return;
       st.followGPS=false;st.manualCamera=true;
       e.preventDefault();
+      if(!st.wheelAnchor)invalidateLayout();
       st.wheelDelta+=Math.max(-120,Math.min(120,e.deltaY));
       if(!st.wheelAnchor)st.wheelAnchor={point:screenToLatLon(st,e.clientX,e.clientY),x:e.clientX,y:e.clientY};
       if(!st.renderFrame)st.renderFrame=requestAnimationFrame(()=>{st.renderFrame=0;flushWheel()});
@@ -346,6 +357,7 @@
     st.onDbl=e=>{
       st.followGPS=false;st.manualCamera=true;
       e.preventDefault();
+      invalidateLayout();
       const anchor=screenToLatLon(st,e.clientX,e.clientY),nextZoom=Math.min(maxZoom(),st.zoom+1);
       preserveAnchor(anchor,e.clientX,e.clientY,nextZoom);st.zoom=nextZoom;render(st);
     };
@@ -604,7 +616,8 @@
     const tileZoom=tileZoomFor(st.zoom),renderScale=rasterScaleFor(st.zoom),c=world(st.center.lat,st.center.lon,tileZoom);
     // Exact camera coordinates matter: a 32px rounded key left raster tiles
     // behind the route overlay on small drags.
-    const renderKey=[mode,trails,terrain,grid,st.zoom,c.x,c.y,w,h].join('|');
+    const topoSuspended=topoFallbackActive();
+    const renderKey=[mode,trails,terrain,grid,topoSuspended,st.zoom,c.x,c.y,w,h].join('|');
     if(!force&&st.lastRenderKey===renderKey){drawOverlay(st,w,h);drawEditorOverlay(st,w,h);return;}
     st.lastRenderKey=renderKey;
     if(st.retireFrame){cancelAnimationFrame(st.retireFrame);st.retireFrame=0;}
@@ -624,7 +637,7 @@
       st.terrainAnchor=null;
       st.terrainTiles.style.transform='';
     }
-    const activeClasses=new Set(['native-osm-base',...(mode==='topo'?['native-topo-tile']:mode==='satellite'?['native-satellite-tile']:[]),...(terrain?['native-terrain-tile']:[]),...(trails?['native-trail-tile']:[])]);
+    const activeClasses=new Set(['native-osm-base',...(mode==='topo'&&!topoSuspended?['native-topo-tile']:mode==='satellite'?['native-satellite-tile']:[]),...(terrain?['native-terrain-tile']:[]),...(trails?['native-trail-tile']:[])]);
     function remove(key,tile){tile.img.onload=tile.img.onerror=null;tile.img.remove();st.tiles.delete(key);}
     function place(tile){
       const shade=tile.layer===st.terrainTiles;
@@ -650,7 +663,7 @@
       }
       st.loaded=loaded;st.errors=errors;st.pending=pending;
       const diag=st.el.querySelector('.native-map-diag');
-      if(diag)diag.textContent=`TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
+      if(diag)diag.textContent=`${topoSuspended?'TOPO UNAVAILABLE / OSM FALLBACK · ':''}TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
       // Image.onload means bytes decoded, not necessarily painted. Keep the
       // outgoing tiles through two compositor frames before retiring them.
       // A new wheel event invalidates this retirement and retains the old view.
@@ -692,9 +705,22 @@
         tile={img,cls,layer,x,y,z:tileZoom,status:'pending',revision};st.tiles.set(key,tile);
         img.onload=()=>{tile.status='loaded';st.retryCounts.delete(key);st.updateTileDiagnostics?.();};
         img.onerror=()=>{
+          if(st.tiles.get(key)!==tile)return;
           tile.status='error';tile.failedAt=Date.now();
           const failed=(st.retryCounts.get(key)||0)+1;st.retryCounts.set(key,failed);
-          st.updateTileDiagnostics?.();if(failed<3)scheduleRetry();
+          if(cls==='native-topo-tile'&&mode==='topo'&&!topoFallbackActive()){
+            topoErrorCount++;
+            if(topoErrorCount>=3){
+              topoFallbackUntil=Date.now()+5*60*1000;topoErrorCount=0;
+              // Keep the already loaded OSM layer underneath. Once new OSM
+              // tiles have painted, existing topo imagery retires naturally.
+              invalidateFrames();updateLabels();
+              requestAnimationFrame(()=>{
+                states.forEach(map=>{if(isVisible(map))render(map,true)});
+              });
+            }
+          }
+          st.updateTileDiagnostics?.();if(failed<3&&!topoFallbackActive())scheduleRetry();
         };
         layer.appendChild(img);img.src=src;
       }
@@ -702,7 +728,7 @@
     }
     for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
       use(osmUrl(tileZoom,x,y),'native-osm-base',st.base,x,y);
-      if(mode==='topo')use(topoUrl(tileZoom,x,y),'native-topo-tile',st.base,x,y);
+      if(mode==='topo'&&!topoSuspended)use(topoUrl(tileZoom,x,y),'native-topo-tile',st.base,x,y);
       if(mode==='satellite')use(satelliteUrl(tileZoom,x,y),'native-satellite-tile',st.base,x,y);
       if(terrain)use(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',st.terrainTiles,x,y);
       if(trails&&tileZoom<=18)use(trailUrl(tileZoom,x,y),'native-trail-tile',st.trail,x,y);
@@ -725,7 +751,7 @@
     const attrib=st.el.querySelector('.native-map-attrib');
     if(attrib)attrib.textContent=['© OpenStreetMap contributors',...(mode==='topo'?['OpenTopoMap']:[]),...(mode==='satellite'||terrain?['Esri']:[]),...(trails?['Waymarked Trails']:[])].join(' · ');
     const corner=st.el.querySelector('.native-map-corner');
-    if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?'TOPO + OSM':'OSM'} Z${st.zoom.toFixed(1)}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
+    if(corner)corner.textContent=`${mode==='satellite'?'SAT':mode==='topo'?(topoSuspended?'OSM / TOPO OFFLINE':'TOPO + OSM'):'OSM'} Z${st.zoom.toFixed(1)}${terrain?' // TERRAIN':''}${trails?' // HIKING':''}`;
     clearTimeout(st.failureTimer);
     st.failureTimer=setTimeout(()=>{if(states.get(st.id)===st&&st.loaded===0&&st.pending===0&&st.errors>0){const diag=st.el.querySelector('.native-map-diag');if(diag)diag.textContent='MAP TILES UNAVAILABLE — CHECK CONNECTION / OFFLINE PACK';}},3500);
   }
@@ -800,7 +826,10 @@
 
   function setLayers(settings={},recenter=false){
     const before=`${mode}|${trails}|${terrain}|${grid}`;
-    if(['osm','topo','satellite'].includes(settings.mode))mode=settings.mode;
+    if(['osm','topo','satellite'].includes(settings.mode)){
+      if(settings.mode==='topo'&&mode!=='topo'){topoFallbackUntil=0;topoErrorCount=0;}
+      mode=settings.mode;
+    }
     if(typeof settings.trails==='boolean')trails=settings.trails;
     if(typeof settings.terrain==='boolean')terrain=settings.terrain;
     if(typeof settings.grid==='boolean')grid=settings.grid;
@@ -814,6 +843,7 @@
   function invalidateFrames(){states.forEach(st=>{st.lastRenderKey='';st.lastTileBounds=''})}
   function setMode(next){
     mode=['osm','topo','satellite'].includes(next)?next:'topo';
+    if(mode==='topo'){topoFallbackUntil=0;topoErrorCount=0;}
     localStorage.setItem(STORE_PREFIX+'map-source',mode);
     states.forEach(st=>{st.zoom=Math.min(st.zoom,maxZoom())});invalidateFrames();
     emitState();refresh(false);
@@ -921,6 +951,7 @@
     st.el.removeEventListener('pointercancel',st.onPointerCancel);
     st.el.removeEventListener('wheel',st.onWheel);
     st.el.removeEventListener('dblclick',st.onDbl);
+    window.removeEventListener('scroll',st.onPageScroll,true);
     for(const tile of st.tiles.values())tile.img.onload=tile.img.onerror=null;
     st.tiles.clear();st.retryCounts.clear();st.updateTileDiagnostics=null;st.el.innerHTML='';states.delete(id);return true;
   }
@@ -965,6 +996,7 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(locationUiVisible())updateLocationLabels();refresh(false)}});
   window.addEventListener('online',()=>{
     if(offlineOwnsMap())return;
+    topoFallbackUntil=0;topoErrorCount=0;
     states.forEach(st=>{
       clearTimeout(st.retryTimer);st.retryTimer=0;st.retryCounts.clear();
       for(const [key,tile] of st.tiles)if(tile.status==='error'){
@@ -980,7 +1012,7 @@
     if(!id)return;
     updateLocationLabels();
     requestAnimationFrame(()=>{
-      const st=ensure(id);if(!st)return;st.rendered=true;
+      const st=ensure(id);if(!st)return;st.invalidateLayout?.();st.rendered=true;
       const route=plannedRoute();
       if(!st.routeFitted&&route.length>1&&!liveEnabled){st.routeFitted=true;fitBounds(id,route,{padding:48,maxZoom:16});}
       else render(st);
