@@ -22,6 +22,7 @@ jobs:
           node --check app.js
           node --check track-store.js
           node --check geo-hub.js
+          node --check canvas-utils.js
           node --check safety-sync.js
           node --check workstation.js
           node --check map-engine.js
@@ -55,3 +56,17 @@ jobs:
           name: desktop-ui-failure
           path: test-artifacts/
           if-no-files-found: ignore
+
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps webkit
+      - name: Safari-engine startup at phone and tablet sizes
+        run: npm run test:webkit

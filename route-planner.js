@@ -780,8 +780,9 @@
       if(samples.length<2||!tip)return;
 
       const rect=canvas.getBoundingClientRect();
-      const left=(52/canvas.width)*rect.width;
-      const right=(14/canvas.width)*rect.width;
+      const cssW=Number(canvas.dataset.fieldCssWidth)||canvas.width;
+      const left=(52/cssW)*rect.width;
+      const right=(14/cssW)*rect.width;
       const plotW=Math.max(1,rect.width-left-right);
       const clientX=Number.isFinite(e.clientX)?e.clientX:(e.touches?.[0]?.clientX??rect.left+left);
       const x=clamp(clientX-rect.left,left,rect.width-right);
@@ -1862,7 +1863,8 @@
 
   function drawElevationProfile(profile,distMi){
     const c=$('routeProfile');if(!c||!profile?.samples?.length)return;
-    const ctx=c.getContext('2d'),w=c.width,h=c.height,st=getComputedStyle(document.body);
+    const ctx=c.getContext('2d');if(!ctx)return;
+    const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Trail elevation profile; hover for distance and grade')||{w:c.width,h:c.height},st=getComputedStyle(document.body);
     const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',warn=st.getPropertyValue('--warn').trim()||'#ffd166';
     ctx.clearRect(0,0,w,h);
     const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),span=Math.max(40,max-min);
