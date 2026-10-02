@@ -415,8 +415,15 @@ function fmtDurationMs(ms){
   return `${h}h ${String(m).padStart(2,'0')}m`;
 }
 function updateSolar(){
-  const now=new Date(),lat=currentNavPosition.lat,lon=currentNavPosition.lon,p=solarPosition(now,lat,lon),ev=solarEventsForDate(now,lat,lon);
   const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+  if(!hasTrustedMapPosition()){
+    ['sunAz','sunEl','civilDawnTime','sunriseTime','solarNoonTime','solarNoonElevation','sunsetTime','civilDuskTime','daylightDuration','daylightRemaining','sunNextEvent'].forEach(id=>set(id,'NO FIX'));
+    set('sunState','NO VERIFIED LOCATION');set('solarLocation','NO VERIFIED GPS FIX');
+    set('solarPositionSource','NO FIX — SOLAR CALCULATION PAUSED');
+    const marker=document.getElementById('sunArcMarker');if(marker)marker.style.left='0%';
+    return null;
+  }
+  const now=new Date(),lat=currentNavPosition.lat,lon=currentNavPosition.lon,p=solarPosition(now,lat,lon),ev=solarEventsForDate(now,lat,lon);
   set('sunAz',`${p.az.toFixed(1)}°`);
   set('sunEl',`${p.el.toFixed(1)}°`);
   set('civilDawnTime',ev.civilDawn?fmtClock(ev.civilDawn):'---');
@@ -428,7 +435,7 @@ function updateSolar(){
   set('daylightDuration',fmtDurationMs(ev.daylightMs));
 
   const isDay=p.el>-0.833,isCivil=p.el>-6;
-  const stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':'SUN HAS SET';
+  const stateText=isDay?'SUN ABOVE HORIZON':isCivil?'CIVIL TWILIGHT':ev.sunrise&&now<ev.sunrise?'BEFORE SUNRISE':'SUN HAS SET';
   set('sunState',stateText);
 
   let remaining='0h 00m',next='NO UPCOMING SOLAR EVENT';
@@ -470,20 +477,21 @@ sendDemo?.addEventListener('click', ()=>{
   else alert(`No FIELD/OS transport queue is available yet. Message was not cleared.`);
 });
 
-let sosTimer;
+let sosTimer,sosResetTimer;
+function finishDemoSos(){if(!sos)return;clearTimeout(sosResetTimer);sos.textContent='DEMO ONLY — NO SOS TRANSMITTED';sosResetTimer=setTimeout(()=>{if(sos.textContent==='DEMO ONLY — NO SOS TRANSMITTED')sos.textContent='HOLD TO PREPARE DEMO SOS'},4500)}
 const sos=document.getElementById('meshSos');
 function startSos(e){
   e?.preventDefault?.();
   clearTimeout(sosTimer);
   sos.textContent='HOLD...';
-  sosTimer=setTimeout(()=>{sosTimer=null;sos.textContent='DEMO ONLY — NO SOS TRANSMITTED'; navigator.vibrate?.([120,80,120]);},1600);
+  sosTimer=setTimeout(()=>{sosTimer=null;finishDemoSos();navigator.vibrate?.([120,80,120]);},1600);
 }
 function cancelSos(){
   if(sosTimer){clearTimeout(sosTimer);sosTimer=null}
   if(sos?.textContent==='HOLD...') sos.textContent='HOLD TO PREPARE DEMO SOS';
 }
 sos?.addEventListener('pointerdown',startSos);
-sos?.addEventListener('click',e=>{if(e.detail===0&&confirm('Prepare DEMO SOS? No message is sent.'))sos.textContent='DEMO ONLY — NO SOS TRANSMITTED';});
+sos?.addEventListener('click',e=>{if(e.detail===0&&confirm('Prepare DEMO SOS? No message is sent.'))finishDemoSos();});
 sos?.addEventListener('pointerup',cancelSos);
 sos?.addEventListener('pointerleave',cancelSos);
 sos?.addEventListener('pointercancel',cancelSos);
@@ -498,17 +506,19 @@ const guides=window.FIELD_GUIDES || [];
 const guideGrid=document.getElementById('guideGrid');
 const guideDetail=document.getElementById('guideDetail');
 const guideSearch=document.getElementById('guideSearch');
-const categories=['ALL',...new Set(guides.map(g=>g.category.toUpperCase()))];
+const guideCategory=g=>String(g?.category||'GENERAL').toUpperCase();
+const guideSteps=g=>Array.isArray(g?.steps)?g.steps:[];
+const categories=['ALL',...new Set(guides.filter(g=>g&&typeof g==='object').map(guideCategory))];
 let activeCategory='ALL';
 function renderFilters(){
   const wrap=document.getElementById('guideFilters'); if(!wrap) return;
-  wrap.innerHTML=categories.map(c=>`<button class="filter-chip ${c===activeCategory?'active':''}" data-guide-filter="${c}">${c}</button>`).join('');
+  wrap.innerHTML=categories.map(c=>`<button class="filter-chip ${c===activeCategory?'active':''}" data-guide-filter="${escapeHTML(c)}">${escapeHTML(c)}</button>`).join('');
 }
 function renderGuides(){
   if(!guideGrid) return;
   const q=(guideSearch?.value||'').trim().toLowerCase();
-  const filtered=guides.filter(g=>(activeCategory==='ALL'||g.category.toUpperCase()===activeCategory) && (!q||`${g.title} ${g.category} ${g.summary} ${g.steps.join(' ')}`.toLowerCase().includes(q)));
-  guideGrid.innerHTML=filtered.map(g=>`<button class="survival-card ${g.urgency==='EMERGENCY'?'emergency':g.urgency==='HIGH'?'high':''}" data-guide="${g.id}"><span class="urgency">${g.urgency}</span><b>${g.title}</b><small>${g.summary}</small></button>`).join('') || '<article class="panel"><p>No matching guide entries.</p></article>';
+  const filtered=guides.filter(g=>g&&typeof g==='object'&&(activeCategory==='ALL'||guideCategory(g)===activeCategory) && (!q||`${g.title||''} ${guideCategory(g)} ${g.summary||''} ${guideSteps(g).join(' ')}`.toLowerCase().includes(q)));
+  guideGrid.innerHTML=filtered.map(g=>`<button class="survival-card ${g.urgency==='EMERGENCY'?'emergency':g.urgency==='HIGH'?'high':''}" data-guide="${escapeHTML(String(g.id??''))}"><span class="urgency">${escapeHTML(g.urgency||'GUIDE')}</span><b>${escapeHTML(g.title||'Untitled guide')}</b><small>${escapeHTML(g.summary||'')}</small></button>`).join('') || '<article class="panel"><p>No matching guide entries.</p></article>';
 }
 function closeGuideReader(){
   document.getElementById('survival')?.classList.remove('guide-reading-mode');
@@ -516,11 +526,11 @@ function closeGuideReader(){
   document.getElementById('survival')?.scrollIntoView({behavior:'auto',block:'start'});
 }
 function showGuide(id){
-  const g=guides.find(x=>x.id===id); if(!g||!guideDetail) return;
+  const g=guides.find(x=>String(x?.id)===String(id)); if(!g||!guideDetail) return;
   guideDetail.innerHTML=`<button class="guide-reader-back" type="button" data-guide-close>← FIELD GUIDE MENU</button>
-    <header class="guide-reader-head"><span>${g.category.toUpperCase()} · ${g.urgency}</span><h3>${g.title}</h3><p>${g.summary}</p></header>
-    <div class="guide-reader-body"><ol class="guide-steps">${g.steps.map(x=>`<li>${x}</li>`).join('')}</ol>
-    <div class="guide-source"><b>SOURCE:</b> ${g.source}<br><span class="source-link">${g.url}</span><br><br>Offline quick reference only. For medical emergencies, use trained first aid and professional emergency services when available.</div></div>`;
+    <header class="guide-reader-head"><span>${escapeHTML(guideCategory(g))} · ${escapeHTML(g.urgency||'GUIDE')}</span><h3>${escapeHTML(g.title||'Untitled guide')}</h3><p>${escapeHTML(g.summary||'')}</p></header>
+    <div class="guide-reader-body"><ol class="guide-steps">${guideSteps(g).map(x=>`<li>${escapeHTML(x)}</li>`).join('')}</ol>
+    <div class="guide-source"><b>SOURCE:</b> ${escapeHTML(g.source||'NOT VERIFIED')}<br><span class="source-link">${escapeHTML(g.url||'')}</span><br><br>Offline quick reference only. For medical emergencies, use trained first aid and professional emergency services when available.</div></div>`;
   document.getElementById('survival')?.classList.add('guide-reading-mode');
   guideDetail.classList.add('active');
   document.getElementById('survival')?.scrollIntoView({behavior:'auto',block:'start'});
@@ -590,7 +600,7 @@ document.getElementById('exportLog')?.addEventListener('click',()=>downloadJSON(
 function applyPowerMode(mode){document.body.classList.remove('low-power','emergency-power');if(mode==='low')document.body.classList.add('low-power');if(mode==='emergency')document.body.classList.add('emergency-power');storageSet(STORE_PREFIX+'power',mode);window.FIELD_GEO_HUB?.setPowerMode(mode);const t=document.getElementById('powerModeText');if(t)t.textContent=mode==='low'?'Reduced visual effects and animation to conserve power.':mode==='emergency'?'Minimum-display mode: decorative effects disabled; prioritize navigation, comms and SOS.':'Normal refresh and display behavior.'}
 applyPowerMode(storageGet(STORE_PREFIX+'power')||'normal');
 document.querySelectorAll('.power-mode').forEach(b=>b.addEventListener('click',()=>applyPowerMode(b.dataset.power)));
-if(navigator.getBattery){navigator.getBattery().then(b=>{const update=()=>{const p=document.getElementById('powerPercent');if(p)p.textContent=`${Math.round(b.level*100)}%`};update();b.addEventListener('levelchange',update)}).catch(()=>{})}
+if(navigator.getBattery){navigator.getBattery().then(b=>{const update=()=>{const p=document.getElementById('powerPercent');if(p)p.textContent=`${Math.round(b.level*100)}%`};update();b.addEventListener('levelchange',update)}).catch(()=>{const p=document.getElementById('powerPercent');if(p)p.textContent='UNAVAILABLE — BROWSER';})}else{const p=document.getElementById('powerPercent');if(p)p.textContent='UNAVAILABLE — BROWSER';}
 
 // Pressure trend canvas
 const pressureChartEl=document.getElementById('pressureChart'),pressureChartCtx=pressureChartEl?.getContext('2d')||null;
@@ -609,8 +619,19 @@ drawPressureChart();
 
 // SOS packet and notes
 const emergencyNotes=document.getElementById('emergencyNotes'); if(emergencyNotes){emergencyNotes.value=storageGet(STORE_PREFIX+'emergency-notes')||'';emergencyNotes.addEventListener('input',()=>storageSet(STORE_PREFIX+'emergency-notes',emergencyNotes.value))}
-async function copyText(text){try{await navigator.clipboard.writeText(text);return true}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();return true}}
-document.getElementById('copySos')?.addEventListener('click',async()=>{const notes=emergencyNotes?.value.trim()||'None entered',trusted=hasTrustedMapPosition();const packet=`FIELD/OS SOS\nTIME: ${new Date().toISOString()}\nPOSITION: ${trusted?currentNavPosition.lat.toFixed(5)+', '+currentNavPosition.lon.toFixed(5):'NO TRUSTED FIX — OBTAIN/STATE LOCATION MANUALLY'}\nALT: ${trusted&&Number.isFinite(currentNavPosition.alt)?Math.round(currentNavPosition.alt)+' ft':'UNKNOWN'}\nPOSITION SOURCE: ${trusted?(currentNavPosition.source||'LIVE FIX'):'UNVERIFIED'}\nNOTES: ${notes}`;await copyText(packet);alert('SOS packet copied. Prototype only — use 911 or certified satellite SOS for real emergencies when available.')});
+async function copyText(text){
+ try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);return true}}catch{}
+ let ta=document.createElement('textarea');ta.value=String(text);ta.setAttribute('aria-label','Select and copy FIELD/OS data manually');
+ ta.style.cssText='position:fixed;z-index:40000;left:4%;top:15%;width:92%;min-height:180px;background:#09120b;color:#fff;font-size:16px';
+ document.body.append(ta);ta.select();
+ let copied=false;try{copied=!!document.execCommand?.('copy')}catch{}
+ if(copied){ta.remove();return true}
+ fieldNotice('Automatic copy failed. Select the visible text and copy manually before closing it.',{urgent:true});
+ const close=document.createElement('button');close.type='button';close.className='action';close.textContent='CLOSE COPY TEXT';close.style.cssText='position:fixed;z-index:40001;left:4%;top:calc(15% + 190px)';
+ close.addEventListener('click',()=>{ta.remove();close.remove()});document.body.append(close);
+ return false;
+}
+document.getElementById('copySos')?.addEventListener('click',async()=>{const notes=emergencyNotes?.value.trim()||'None entered',trusted=hasTrustedMapPosition();const packet=`FIELD/OS SOS\nTIME: ${new Date().toISOString()}\nPOSITION: ${trusted?currentNavPosition.lat.toFixed(5)+', '+currentNavPosition.lon.toFixed(5):'NO TRUSTED FIX — OBTAIN/STATE LOCATION MANUALLY'}\nALT: ${trusted&&Number.isFinite(currentNavPosition.alt)?Math.round(currentNavPosition.alt)+' ft':'UNKNOWN'}\nPOSITION SOURCE: ${trusted?(currentNavPosition.source||'LIVE FIX'):'UNVERIFIED'}\nNOTES: ${notes}`;const copied=await copyText(packet);fieldNotice(copied?'SOS TEXT COPIED LOCALLY — NO MESSAGE SENT. Call local emergency services or use certified satellite SOS.':'SOS COPY NOT VERIFIED — manually select the visible text. No emergency message was sent.',{urgent:true})});
 
 // Data export / wipe
 async function collectState(){await trackHydration;return {version:'0.5.1',release:'3.85',exported:new Date().toISOString(),trip:loadJSON('trip',{}),essentials:loadJSON('essentials',{}),fieldLog:loadJSON('fieldlog',[]),emergencyNotes:storageGet(STORE_PREFIX+'emergency-notes')||'',theme:document.body.dataset.theme,powerMode:storageGet(STORE_PREFIX+'power')||'normal',routePlan:loadJSON('routePlan',{}),offlineRoutePack:loadJSON('offlineRoutePack',{}),waypoints:loadJSON('waypoints',[]),track:trackStore?await trackStore.all():recordedTrack,checkin:loadJSON('checkin',{})}}
@@ -1066,9 +1087,10 @@ function updateHandheldStatus(){
   const bd=document.getElementById('rtbDistance')?.textContent||'---',bb=document.getElementById('rtbBearing')?.textContent||'---';
   const mtd=document.getElementById('mobileTrailDist'),mtb=document.getElementById('mobileTrailBrg'),mbd=document.getElementById('mobileBaseDist'),mbb=document.getElementById('mobileBaseBrg');
   if(mtd)mtd.textContent=td;if(mtb)mtb.textContent=tb;if(mbd)mbd.textContent=bd;if(mbb)mbb.textContent=bb;
-  const now=new Date(),solar=solarEventsForDate(now,currentNavPosition.lat,currentNavPosition.lon),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
-  const pos=solarPosition(now,currentNavPosition.lat,currentNavPosition.lon),isDay=pos.el>-.833,isCivil=pos.el>-6;
-  if(day)day.textContent=isDay?fmtDurationMs(Math.max(0,(solar.sunset?.getTime()||now.getTime())-now.getTime())):isCivil?'TWILIGHT':'SUN HAS SET';
+  const now=new Date(),day=document.getElementById('mobileDaylight'),sun=document.getElementById('mobileSunState');
+  if(!hasTrustedMapPosition()){if(day)day.textContent='NO FIX';if(sun)sun.textContent='SUN TIMES UNAVAILABLE — NO VERIFIED LOCATION';return;}
+  const solar=solarEventsForDate(now,currentNavPosition.lat,currentNavPosition.lon),pos=solarPosition(now,currentNavPosition.lat,currentNavPosition.lon),isDay=pos.el>-.833,isCivil=pos.el>-6;
+  if(day)day.textContent=solar.state==='POLAR DAY'?'24h 00m':solar.state==='POLAR NIGHT'?'POLAR NIGHT':isDay&&solar.sunset?fmtDurationMs(Math.max(0,solar.sunset-now)):isCivil?'TWILIGHT':solar.sunrise&&now<solar.sunrise?'BEFORE SUNRISE':'SUN HAS SET';
   if(sun){
     if(!isDay&&!isCivil){
       const moonrise=nextMoonrise(now,currentNavPosition.lat,currentNavPosition.lon),sunrise=nextSunrise(now,currentNavPosition.lat,currentNavPosition.lon);
