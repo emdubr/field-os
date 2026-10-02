@@ -49,11 +49,31 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  const newShades=[...st.tiles.values()].filter(v=>v.cls==='native-terrain-tile'&&v.z===16);
  assert.ok(newShades.length>0,'new hillshade requested at new raster zoom');
  newShades.forEach(v=>v.img.onload?.());
- assert.ok(!st.tiles.has(shadeKey),'old hillshade retires when replacement terrain finishes');
+ assert.ok(st.tiles.has(shadeKey),'decoded hillshade keeps previous frame until the browser paints the replacement');
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve))));
+ assert.ok(!st.tiles.has(shadeKey),'old hillshade retires after replacement has painted');
  [...st.tiles.values()].filter(t=>t.z===16).forEach(t=>t.img.onload?.());
- assert.ok([...st.tiles.values()].every(t=>t.z===16),'Fallback retires once replacement imagery loads');
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve))));
+ assert.ok([...st.tiles.values()].every(t=>t.z===16),'Fallback retires once replacement imagery has painted');
  engine.setTerrain(false);
  assert.ok(![...st.tiles.values()].some(v=>v.cls==='native-terrain-tile'),'turning terrain off removes the hillshade atlas');
+ // Browser wheel burst across an integer raster zoom must never expose
+ // an empty pale base while new tile requests are still pending.
+ engine.setView('homeRealMap',{lat:44.4759,lon:-73.2120},14.8);
+ [...st.tiles.values()].filter(t=>t.z===14).forEach(t=>t.img.onload?.());
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve))));
+ const outgoing=[...st.tiles.values()].filter(t=>t.layer===st.base&&t.z===14&&t.status==='loaded');
+ assert.ok(outgoing.length>0,'prior zoom has decoded base tiles');
+ for(let i=0;i<3;i++)st.onWheel({ctrlKey:false,deltaY:-60,clientX:190,clientY:170,preventDefault(){}});
+ await new Promise(resolve=>setTimeout(resolve,175));
+ assert.ok(st.zoom>15,'wheel burst crosses an integer tile boundary');
+ assert.ok([...st.tiles.values()].some(t=>t.layer===st.base&&t.z===15&&t.status==='pending'),'higher-resolution imagery requests are still pending');
+ assert.ok(outgoing.some(t=>t.img.isConnected),'prior imagery stays visible during pending wheel zoom');
+ [...st.tiles.values()].filter(t=>t.layer===st.base&&t.z===15).forEach(t=>t.img.onload?.());
+ assert.ok(outgoing.some(t=>t.img.isConnected),'prior imagery stays visible until decoded replacements paint');
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve))));
+ assert.ok(outgoing.every(t=>!t.img.isConnected),'replaced imagery retires after a painted frame, not during wheel preview');
+ console.log('PASS desktop wheel bursts keep outgoing base tiles until decoded replacements paint');
  const failing=[...st.tiles.values()].find(t=>t.cls==='native-osm-base');
  const failedKey=[...st.tiles].find(([,tile])=>tile===failing)[0];
  failing.img.onerror?.();assert.equal(failing.status,'error');
@@ -74,6 +94,30 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
  assert.equal(routeReads,2,'route edits must invalidate cached route points');
  console.log('PASS planned route geometry is cached and invalidates after route edits');
+ // Route difficulty shading was previously present only inside Route Planner.
+ // Assert that an existing DEM profile also grades the visible Home/Terrain map.
+ const gradedPoints=[0,1,2,3].map(i=>({lat:44.4759+i*.0009,lon:-73.2121}));
+ const gradeStep=6371000*(.0009*Math.PI/180);
+ const gradedSamples=gradedPoints.map((p,i)=>({...p,distanceM:i*gradeStep,elevationFt:500+i*45}));
+ w.FIELD_ROUTE_SLOPE={
+   gradeAtDistance(_profile,distanceM){return distanceM<90?2:distanceM<200?10:18},
+   slopeClass(grade){return {key:grade>=15?'hard':grade>=8?'medium':'easy'}}
+ };
+ let currentSamples=null;
+ w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:currentSamples}}};
+ d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
+ assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'route stays neutral before elevation arrives');
+ const tileRevisionBeforeProfile=st.tileRevision;
+ currentSamples=gradedSamples;
+ d.dispatchEvent(new w.CustomEvent('fieldos:routebootstrapchange'));
+ assert.ok(st.overlay.querySelector('.planned-route-slope-medium'),'medium sustained grade draws orange planned route on main map');
+ assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'hard sustained grade draws red planned route on main map');
+ assert.equal(st.tileRevision,tileRevisionBeforeProfile,'DEM arrival repaints only vectors, not raster tiles');
+ currentSamples=gradedSamples.map((p,i)=>({...p,distanceM:i*gradeStep*3}));
+ d.dispatchEvent(new w.CustomEvent('fieldos:routebootstrapchange'));
+ assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'stale elevation profile must not color a different route');
+ console.log('PASS overview map restores orange/red sustained-grade sections and refuses mismatched DEM data');
+
  // Hidden-map telemetry should not redraw offscreen SVG overlays, but
  // navigation into that view must present the latest track data.
  const hidden=d.getElementById('map');
