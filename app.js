@@ -866,9 +866,18 @@ window.FIELD_TRACK_STATUS=()=>({active:trackWatchId!=null,points:recordedTrack.l
 function stopTrack(){if(trackWatchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(trackWatchId);if(trackWatchId!=null){trackStoppedAt=Date.now();storageSet(STORE_PREFIX+'track-stop',trackStoppedAt)}trackWatchId=null;const state=document.getElementById('trackState');if(state)state.textContent='STOPPED';}
 function trackAsGPX(){return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.84" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>FIELD OS TRACK</name><trkseg>${recordedTrack.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}">${p.alt!=null?`<ele>${(p.alt/3.28084).toFixed(2)}</ele>`:''}<time>${p.time}</time></trkpt>`).join('')}</trkseg></trk></gpx>`}
 document.getElementById('startTrack')?.addEventListener('click',startTrack);document.getElementById('stopTrack')?.addEventListener('click',stopTrack);document.getElementById('addDemoTrackPoint')?.addEventListener('click',()=>addTrackPoint(currentNavPosition));document.getElementById('exportTrack')?.addEventListener('click',()=>{if(recordedTrack.length<2)return alert('Record at least two points first.');downloadText('fieldos-breadcrumb-track.gpx',trackAsGPX(),'application/gpx+xml')});document.getElementById('clearTrack')?.addEventListener('click',()=>{if(confirm('Clear recorded breadcrumb track?')){stopTrack();recordedTrack=[];trackDistanceCache=0;trackStartedAt=0;trackStoppedAt=0;storageRemove(STORE_PREFIX+'track-start');storageRemove(STORE_PREFIX+'track-stop');saveJSON('track',recordedTrack);updateTrackUI();notifyTrackChange({cleared:true})}});
+function mapTrackPreview(maxPoints=1500){
+  const count=Math.min(recordedTrack.length,Math.max(2,Math.min(1500,Math.floor(Number(maxPoints)||1500))));
+  if(!count)return [];
+  if(count===1)return [{...recordedTrack[0]}];
+  const end=recordedTrack.length-1,preview=[];
+  for(let i=0;i<count;i++)preview.push({...recordedTrack[Math.round(i*end/(count-1))]});
+  return preview;
+}
 window.FIELD_MAP_DATA={
   waypoints:()=>waypoints.map(w=>({...w})),
   track:()=>recordedTrack.map(p=>({...p})),
+  trackPreview:mapTrackPreview,
   current:()=>({...currentNavPosition,accuracy:currentAccuracy,fixAge,updatedAt:lastFixAt})
 };
 document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='track')updateTrackUI()});
