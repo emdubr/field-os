@@ -122,11 +122,12 @@
     const el=document.getElementById(id);
     if(!el)return null;
     el.hidden=false;
-    el.innerHTML='<div class="native-map-base"></div><div class="native-map-terrain"></div><div class="native-map-trails"></div><div class="native-map-grid"></div><svg class="native-map-overlay" xmlns="http://www.w3.org/2000/svg"></svg><svg class="native-map-editor-overlay" xmlns="http://www.w3.org/2000/svg"></svg><div class="native-map-corner">FIELD/OS MAP</div><div class="native-map-attrib"></div><div class="native-map-diag">TILES 0 / ERR 0</div>';
+    el.innerHTML='<div class="native-map-base"></div><div class="native-map-terrain"><div class="native-map-terrain-tiles"></div></div><div class="native-map-trails"></div><div class="native-map-grid"></div><svg class="native-map-overlay" xmlns="http://www.w3.org/2000/svg"></svg><svg class="native-map-editor-overlay" xmlns="http://www.w3.org/2000/svg"></svg><div class="native-map-corner">FIELD/OS MAP</div><div class="native-map-attrib"></div><div class="native-map-diag">TILES 0 / ERR 0</div>';
     const st={
       id,el,
       base:el.querySelector('.native-map-base'),
       terrain:el.querySelector('.native-map-terrain'),
+      terrainTiles:el.querySelector('.native-map-terrain-tiles'),
       trail:el.querySelector('.native-map-trails'),
       grid:el.querySelector('.native-map-grid'),
       overlay:el.querySelector('.native-map-overlay'),
@@ -134,7 +135,7 @@
       center:{...centerCandidate()},zoom:14,
       loaded:0,errors:0,pending:0,token:0,pointers:new Map(),dragStart:null,pinchStart:null,pointerDownOrigin:null,
       geoOverlay:null,tapHandler:null,rendered:false,renderFrame:0,wheelDelta:0,wheelZoom:0,wheelTimer:0,wheelAnchor:null,failureTimer:0,resizeObserver:null,
-      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map()
+      settleTimer:0,gestureFrame:0,pendingGesture:null,deferredPinch:null,lastRenderKey:'',layoutRect:null,renderSize:null,tiles:new Map(),tileRevision:0,retryTimer:0,retryCounts:new Map(),terrainAnchor:null
     };
     const readLayout=()=>{
       if(st.layoutRect)return st.layoutRect;
@@ -513,26 +514,49 @@
     const revision=++st.tileRevision,needed=new Set();
     const coverW=w/renderScale,coverH=h/renderScale;
     const minX=Math.floor((c.x-coverW/2)/TILE)-1,maxX=Math.floor((c.x+coverW/2)/TILE)+1,minY=Math.floor((c.y-coverH/2)/TILE)-1,maxY=Math.floor((c.y+coverH/2)/TILE)+1;
+    // Keep hillshade tiles fixed inside one anchored, GPU-composited atlas.
+    // Camera pans move only the atlas container, never the filtered tile images.
+    const oldShadeAnchor=st.terrainAnchor;
+    if(terrain){
+      if(!oldShadeAnchor||oldShadeAnchor.z!==tileZoom||oldShadeAnchor.w!==w||oldShadeAnchor.h!==h)
+        st.terrainAnchor={x:c.x,y:c.y,z:tileZoom,w,h,serial:(oldShadeAnchor?.serial||0)+1};
+      const dx=st.terrainAnchor.x-c.x,dy=st.terrainAnchor.y-c.y;
+      const move=`translate3d(${dx}px,${dy}px,0)`;
+      if(st.terrainTiles.style.transform!==move)st.terrainTiles.style.transform=move;
+    }else{
+      st.terrainAnchor=null;
+      st.terrainTiles.style.transform='';
+    }
     const activeClasses=new Set(['native-osm-base',...(mode==='topo'?['native-topo-tile']:mode==='satellite'?['native-satellite-tile']:[]),...(terrain?['native-terrain-tile']:[]),...(trails?['native-trail-tile']:[])]);
     function remove(key,tile){tile.img.onload=tile.img.onerror=null;tile.img.remove();st.tiles.delete(key);}
     function place(tile){
+      const shade=tile.layer===st.terrainTiles;
+      if(shade&&tile.terrainFrame===st.terrainAnchor?.serial&&tile.terrainZoom===tileZoom)return;
       const scale=Math.pow(2,tileZoom-tile.z),size=TILE*scale;
-      tile.img.style.left=(tile.x*size-c.x+w/2)+'px';
-      tile.img.style.top=(tile.y*size-c.y+h/2)+'px';
+      const origin=shade?st.terrainAnchor:c;
+      tile.img.style.left=(tile.x*size-origin.x+w/2)+'px';
+      tile.img.style.top=(tile.y*size-origin.y+h/2)+'px';
       tile.img.style.width=size+'px';tile.img.style.height=size+'px';
-      tile.img.style.zIndex=String((tile.cls==='native-osm-base'?0:2)+(tile.revision===revision?1:0));
+      if(shade){
+        tile.img.style.zIndex=String(tile.z===tileZoom?3:2);
+        tile.terrainFrame=st.terrainAnchor.serial;
+        tile.terrainZoom=tileZoom;
+      }else tile.img.style.zIndex=String((tile.cls==='native-osm-base'?0:2)+(tile.revision===revision?1:0));
     }
     function diagnostics(){
       if(states.get(st.id)!==st)return;
-      let loaded=0,errors=0,pending=0,baseReady=true;
+      let loaded=0,errors=0,pending=0,baseReady=true,terrainReady=true;
       for(const key of needed){const tile=st.tiles.get(key);if(!tile)continue;
         if(tile.status==='loaded')loaded++;else if(tile.status==='error')errors++;else pending++;
         if(tile.layer===st.base&&tile.status!=='loaded')baseReady=false;
+        if(tile.layer===st.terrainTiles&&tile.status!=='loaded')terrainReady=false;
       }
       st.loaded=loaded;st.errors=errors;st.pending=pending;
       const diag=st.el.querySelector('.native-map-diag');
       if(diag)diag.textContent=`TILES ${loaded} / ERR ${errors}${pending?' / LOADING '+pending:''}`;
-      if(baseReady)for(const [key,tile] of st.tiles)if(!needed.has(key))remove(key,tile);
+      for(const [key,tile] of st.tiles)if(!needed.has(key)){
+        if(tile.layer===st.terrainTiles?terrainReady:baseReady)remove(key,tile);
+      }
       st.el.classList.toggle('standalone-map-error',!loaded&&!pending&&errors>0);
     }
     st.updateTileDiagnostics=diagnostics;
@@ -567,7 +591,7 @@
       use(osmUrl(tileZoom,x,y),'native-osm-base',st.base,x,y);
       if(mode==='topo')use(topoUrl(tileZoom,x,y),'native-topo-tile',st.base,x,y);
       if(mode==='satellite')use(satelliteUrl(tileZoom,x,y),'native-satellite-tile',st.base,x,y);
-      if(terrain)use(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',st.terrain,x,y);
+      if(terrain)use(hillshadeUrl(tileZoom,x,y),'native-terrain-tile',st.terrainTiles,x,y);
       if(trails&&tileZoom<=18)use(trailUrl(tileZoom,x,y),'native-trail-tile',st.trail,x,y);
     }
     for(const [key,tile] of st.tiles){
@@ -575,10 +599,12 @@
       // Preserve loaded base imagery through multi-level zoom and source
       // switches. Pending obsolete requests and stale overlays are pruned.
       const oldSource=tile.layer===st.base&&!activeClasses.has(tile.cls);
-      const fallback=tile.layer===st.base&&tile.status==='loaded'&&Math.abs(tile.z-tileZoom)<=3&&(tile.z!==tileZoom||oldSource);
+      const terrainFallback=terrain&&tile.layer===st.terrainTiles&&tile.status==='loaded'&&Math.abs(tile.z-tileZoom)<=3;
+      const fallback=(tile.layer===st.base&&tile.status==='loaded'&&Math.abs(tile.z-tileZoom)<=3&&(tile.z!==tileZoom||oldSource))||terrainFallback;
       if(!fallback){remove(key,tile);continue;}
       place(tile);
-      const left=parseFloat(tile.img.style.left),top=parseFloat(tile.img.style.top),size=parseFloat(tile.img.style.width);
+      const size=TILE*Math.pow(2,tileZoom-tile.z);
+      const left=tile.x*size-c.x+w/2,top=tile.y*size-c.y+h/2;
       if(left+size<0||top+size<0||left>w||top>h)remove(key,tile);
     }
     st.grid.classList.toggle('active',grid);
