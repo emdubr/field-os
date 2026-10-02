@@ -611,25 +611,71 @@ document.getElementById('wipeLocal')?.addEventListener('click',async()=>{if(!con
 });
 
 if('serviceWorker' in navigator){
-  window.addEventListener('load',async()=>{
-    try{
-      const reg=await navigator.serviceWorker.register('./sw.js?v=3.84',{updateViaCache:'none'});
-      await reg.update();
-      // The new worker can serve the next navigation without interrupting this
-      // session. Never reload a route edit, GPS session, or unsaved form.
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
-      });
-    }catch(err){console.warn('FIELD/OS service worker update failed',err)}
-  });
+ window.addEventListener('load',async()=>{
+  try{
+   const reg=await navigator.serviceWorker.register('./sw.js?v=3.84',{updateViaCache:'none'});
+   let approved=false;
+   const showUpdate=()=>{
+    if(!reg.waiting||!navigator.serviceWorker.controller)return;
+    let bar=document.getElementById('fieldUpdateNotice');
+    if(!bar){
+     bar=document.createElement('div');bar.id='fieldUpdateNotice';bar.className='field-update-notice';
+     bar.setAttribute('role','status');
+     const copy=document.createElement('span');copy.textContent='FIELD/OS UPDATE READY — your current session is preserved until you approve.';
+     const btn=document.createElement('button');btn.type='button';btn.textContent='UPDATE WHEN SAFE';btn.className='action';
+     btn.addEventListener('click',()=>{
+      if(!confirm('Reload FIELD/OS to install the update? Export any unsaved notes or active track first.'))return;
+      approved=true;
+      // Journaled track points are flushed before activating the next worker.
+      Promise.resolve(window.FIELD_TRACK_STORE?.flush?.()).then(()=>{
+       if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      }).catch(()=>{approved=false;alert('Track persistence did not finish. Update postponed.')});
+     });
+     bar.append(copy,btn);document.body.append(bar);
+    }
+    const state=document.getElementById('browserSwHealth');if(state)state.textContent='UPDATE AVAILABLE — CONFIRM WHEN SAFE';
+   };
+   if(reg.waiting)showUpdate();
+   reg.addEventListener('updatefound',()=>{
+    const installing=reg.installing;
+    installing?.addEventListener('statechange',()=>{if(installing.state==='installed')showUpdate()});
+   });
+   navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(approved){location.reload();return;}
+    document.dispatchEvent(new CustomEvent('fieldos:offlineupdate'));
+   });
+   // Checks in the background; never auto-reloads while route planning or recording.
+   void reg.update().catch(err=>console.warn('FIELD/OS SW update check failed',err));
+  }catch(err){console.warn('FIELD/OS service worker registration failed',err)}
+ });
 }
 
-const bootLines=['FIELD/OS FIELD CONSOLE v3.84','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
-const boot=document.getElementById('boot'), bootText=document.getElementById('bootText'), bootFill=document.getElementById('bootFill');
-let lineIndex=0,progress=0;if(bootText)bootText.textContent='';
-function dismissBoot(){if(!boot)return;clearInterval(bootTimer);bootFill && (bootFill.style.width='100%');boot.classList.add('hidden');boot.setAttribute('aria-hidden','true')}
-const bootTimer=setInterval(()=>{if(lineIndex<bootLines.length){bootText.textContent+=`${bootLines[lineIndex]}\n`;lineIndex++}progress=Math.min(progress+20,100);if(bootFill)bootFill.style.width=`${progress}%`;if(progress>=100){clearInterval(bootTimer);setTimeout(()=>{boot?.classList.add('hidden');boot?.setAttribute('aria-hidden','true')},140)}},110);
-boot?.addEventListener('click',dismissBoot,{once:true});document.getElementById('bootSkip')?.addEventListener('click',dismissBoot);
+const bootLines=['FIELD/OS FIELD CONSOLE v3.84','MOUNTING OFFLINE MAP CORE...','PREPARING NAVIGATION...','LOADING OFFLINE LIBRARY...','READY'];
+const boot=document.getElementById('boot'),bootText=document.getElementById('bootText'),bootFill=document.getElementById('bootFill');
+const bootSeenKey='fieldos-v12-boot-seen';
+let bootSeen=false;try{bootSeen=localStorage.getItem(bootSeenKey)==='yes'}catch{}
+let bootTimer=0;
+function dismissBoot(){
+ if(!boot)return;
+ clearTimeout(bootTimer);if(bootFill)bootFill.style.width='100%';
+ boot.classList.add('hidden');boot.setAttribute('aria-hidden','true');
+ try{localStorage.setItem(bootSeenKey,'yes')}catch{}
+}
+if(bootSeen||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches){
+ dismissBoot();
+}else{
+ let i=0;const advance=()=>{
+  if(!boot||i>=bootLines.length){dismissBoot();return}
+  if(bootText)bootText.textContent+=bootLines[i++]+'\n';
+  if(bootFill)bootFill.style.width=(i/bootLines.length*100)+'%';
+  bootTimer=setTimeout(advance,105);
+ };if(bootText)bootText.textContent='';
+ bootTimer=setTimeout(advance,0);
+ // Failsafe for slow devices; never hold navigation behind an intro.
+ setTimeout(dismissBoot,790);
+}
+boot?.addEventListener('click',dismissBoot,{once:true});
+document.getElementById('bootSkip')?.addEventListener('click',dismissBoot);
 
 // v0.7 Route planner / Return-to-Trail / Return-to-Base
 const routeMap=document.getElementById('routeMap');
