@@ -389,7 +389,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(fieldToolsJs.includes("fieldos-v12-map-pack"));assert.ok(!fieldToolsJs.includes("fieldos-v12-active-map-pack"));
  const qaCss=fs.readFileSync(dir+'/styles.css','utf8');assert.ok(qaCss.includes('v3.50 QA/UI stabilization'));assert.ok(qaCss.includes('#system .field-tools-panel .button-row'));assert.ok(qaCss.includes('@media(max-width:390px)'));
  console.log('PASS feature 40-70 offline map readiness uses active pack key and System tools have phone-safe responsive layout');
- assert.ok(mapEngineJs.includes("const drift=metersBetween(st.center,next)??Infinity,visible=isVisible(st)"));assert.ok(mapEngineJs.includes("if(visible){st.rendered=true;render(st)}"));assert.ok(mapEngineJs.includes("else if(visible){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}"));
+ assert.ok(mapEngineJs.includes("const drift=metersBetween(st.center,next)??Infinity,visible=isVisible(st)"));assert.ok(mapEngineJs.includes("if(visible){st.rendered=true;render(st)}"));assert.ok(mapEngineJs.includes("else if(visible){const {w,h}=overlaySize(st);drawPositionOverlay(st,w,h)}"));assert.ok(mapEngineJs.includes("function drawPositionOverlay(st,w,h)"));
  assert.ok(mapEngineJs.includes("if(!isVisible(st))"));
  assert.ok(mapEngineJs.includes("const overlaySize=st=>")&&mapEngineJs.includes("drawOverlay(st,w,h)"));
  assert.ok(mapEngineJs.includes("if(!document.hidden&&locationUiVisible())updateLocationLabels()"));
