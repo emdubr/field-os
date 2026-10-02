@@ -21,6 +21,7 @@
   const getPlan=()=>window.FIELD_ROUTE_STATE?.getPlan?.()||{};
   const cleanPoints=list=>(Array.isArray(list)?list:[]).filter(validPoint).map(p=>({lat:Number(p.lat),lon:Number(p.lon),alt:p.alt??null}));
   let routeGeometryCacheKey='',routeGeometryCache=null;
+  document.addEventListener('fieldos:routechange',()=>{routeGeometryCacheKey='';routeGeometryCache=null});
   function routeGeometry(plan=getPlan()){
     const raw=Array.isArray(plan?.points)?plan.points:[],key=plan?.updatedAt?`${plan.updatedAt}|${raw.length}`:'';
     if(key&&routeGeometryCacheKey===key&&routeGeometryCache)return routeGeometryCache;
