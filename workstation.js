@@ -127,13 +127,49 @@
   function plot(){
     if(plotHtml!==null)return plotHtml;
     if(routePoints.length<2)return note('Plot at least two points in Route Planner to show a route diagram.')+actions([['route','OPEN ROUTE PLANNER']]);
-    let minLa=Infinity,minLo=Infinity,maxLa=-Infinity,maxLo=-Infinity;
-    for(const p of routePoints){minLa=Math.min(minLa,p.lat);maxLa=Math.max(maxLa,p.lat);minLo=Math.min(minLo,p.lon);maxLo=Math.max(maxLo,p.lon);}
-    const dLa=maxLa-minLa||.001,dLo=maxLo-minLo||.001;
-    // Bound schematic markup, while retaining full geometry for route calculations.
-    const stride=Math.max(1,Math.ceil((routePoints.length-1)/599));
-    const pts=routePoints.filter((_,i)=>i%stride===0||i===routePoints.length-1).map(p=>[24+(p.lon-minLo)/dLo*352,196-(p.lat-minLa)/dLa*172]);
-    return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Schematic diagram of the planned route, not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Route geometry only. Axes scaled independently; no terrain or obstacle information.');
+    // Match the real map's Web Mercator geometry with ONE uniform scale.
+    // The former diagram stretched latitude and longitude independently,
+    // distorting turns and making this horizontal overview disagree with the
+    // route planner. Unwrap longitude so dateline crossings stay continuous.
+    const projected=[];let lastLon=null,minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    for(const p of routePoints){
+      let lon=p.lon;
+      if(lastLon!==null){
+        while(lon-lastLon>180)lon-=360;
+        while(lon-lastLon< -180)lon+=360;
+      }
+      lastLon=lon;
+      const lat=Math.max(-85.05112878,Math.min(85.05112878,p.lat))*Math.PI/180;
+      const x=(lon+180)/360,y=(1-Math.log(Math.tan(Math.PI/4+lat/2))/Math.PI)/2;
+      projected.push({x,y});minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    }
+    const spanX=maxX-minX,spanY=maxY-minY;
+    const uniformScale=Math.min(spanX>1e-14?352/spanX:Infinity,spanY>1e-14?172/spanY:Infinity);
+    const scale=Number.isFinite(uniformScale)?uniformScale:1;
+    const offsetX=(400-spanX*scale)/2,offsetY=(220-spanY*scale)/2;
+    const screen=projected.map(p=>[offsetX+(p.x-minX)*scale,offsetY+(p.y-minY)*scale]);
+
+    // Pixel-error simplification retains actual bends rather than throwing
+    // away every Nth point. The full route remains in navigation/storage.
+    const simplify=tolerance=>{
+      const selected=new Set([0,screen.length-1]),stack=[[0,screen.length-1]],limit=tolerance*tolerance;
+      while(stack.length){
+        const [a,b]=stack.pop();if(b-a<2)continue;
+        const p=screen[a],q=screen[b],dx=q[0]-p[0],dy=q[1]-p[1],den=dx*dx+dy*dy;
+        let winner=-1,best=limit;
+        for(let k=a+1;k<b;k++){
+          const v=screen[k],t=den?Math.max(0,Math.min(1,((v[0]-p[0])*dx+(v[1]-p[1])*dy)/den)):0;
+          const ex=v[0]-p[0]-dx*t,ey=v[1]-p[1]-dy*t,d=ex*ex+ey*ey;
+          if(d>best){best=d;winner=k;}
+        }
+        if(winner>=0){selected.add(winner);stack.push([a,winner],[winner,b]);}
+      }
+      return [...selected].sort((a,b)=>a-b);
+    };
+    let tolerance=.3,indices=simplify(tolerance);
+    while(indices.length>600&&tolerance<8){tolerance*=1.65;indices=simplify(tolerance);}
+    const pts=indices.map(i=>screen[i]);
+    return plotHtml=`<svg class="ws-route-plot" viewBox="0 0 400 220" role="img" aria-label="Top-down schematic of actual route geometry with uniform map scale; not a terrain map"><path d="M0 55H400M0 110H400M0 165H400M100 0V220M200 0V220M300 0V220" stroke="currentColor" opacity=".16"/><polyline points="${pts.map(p=>p.map(n=>n.toFixed(2)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="2"/>${pts.filter((_,i)=>i===0||i===pts.length-1).map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="5" fill="currentColor"/><text x="${Math.min(x+9,330)}" y="${Math.max(y-10,16)}">${i?'END':'START'}</text>`).join('')}<text x="12" y="18">N ↑ / ROUTE SCHEMATIC</text></svg>`+rows([['LENGTH',`${routeMiles().toFixed(2)} mi`],['POINTS',routePoints.length]])+note('Geometry only; uniform map projection preserves turns and aspect. No terrain or obstacle information.');
   }
   const bodies={
     status:()=>rows([
