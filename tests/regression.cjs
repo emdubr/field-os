@@ -487,7 +487,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`));
  assert.ok(appJs.includes('if(approved){location.reload();return;}'),'reload requires explicit update approval');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
- assert.ok(swJs.includes(`field-tools.js?v=${release}`));assert.ok(swJs.includes('track-store.js?v=3.85-opt2'));assert.ok(swJs.includes('geo-hub.js?v=3.85-opt2'));
+ assert.ok(swJs.includes(`field-tools.js?v=${release}`));assert.ok(swJs.includes('track-store.js?v=3.85-fieldfix1'));assert.ok(swJs.includes('geo-hub.js?v=3.85-opt2'));
  assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
  console.log('PASS versioned JS/CSS caches plus stable installed-PWA launch URL');
