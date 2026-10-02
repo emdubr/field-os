@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#08110b" />
+<meta name="description" content="FIELD/OS backcountry mapping and companion interface. Live safety features require a current fix and connected hardware." />
+<meta name="color-scheme" content="dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="FIELD/OS" />
@@ -14,7 +16,7 @@
   <link rel="stylesheet" href="workstation.css?v=3.83">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
-<body data-theme="green">
+<body data-theme="green"><script>try{const t=localStorage.getItem("fieldos-v12-theme")||localStorage.getItem("fieldos-theme");if(["green","amber","mono","red"].includes(t))document.body.dataset.theme=t;}catch{}</script>
   <div class="crt-overlay" aria-hidden="true"></div>
   <div class="noise-overlay" aria-hidden="true"></div>
   <div class="grid-overlay" aria-hidden="true"></div>
@@ -47,31 +49,31 @@
     </header>
 
     <section class="status-strip" aria-label="System status">
-      <button class="status-chip good" data-open="system"><span class="dot"></span>LINK <b id="meshCount">07</b></button>
-      <button class="status-chip good" data-open="nav"><span class="dot"></span>GNSS <b id="satCount">18</b></button>
-      <button class="status-chip good" data-open="comms"><span class="dot"></span>CHANNEL OPEN</button>
+      <button class="status-chip warn" data-open="system"><span class="dot"></span>LINK <b id="meshCount">—</b></button>
+      <button class="status-chip warn" data-open="nav"><span class="dot"></span>GNSS <b id="satCount">NO FIX</b></button>
+      <button class="status-chip good" data-open="comms"><span class="dot"></span>LINK UNVERIFIED</button>
       <button class="status-chip warn" data-open="system"><span class="dot"></span>OPS DEMO</button>
     </section>
 
-    <div class="signal-ticker"><span>RX CH-07 // LOCAL MESH ACTIVE // GNSS LOCK // ENV STREAM // NO EXTERNAL UPLINK // FIELD/OS STANDALONE //</span></div>
+    <div class="signal-ticker"><span>LIVE LINKS UNVERIFIED // ONLINE MAP, WEATHER AND DATA REQUESTS LEAVE THE DEVICE // OFFLINE REQUIRES SAVED PACKS //</span></div>
     <main id="screen" class="screen" tabindex="-1">
       <section class="view active" id="home" data-view="home">
         <div class="console-viewport"><div class="console-shell detail-console">
           <div class="console-header">
             <strong>TAP V2 // FIELD OS <span>v3.83</span></strong>
-            <span>OFFLINE MODE</span><span>GPS: 3D FIX (<b id="deskSatCount">18</b> SAT)</span><span>MESH: <b id="deskMeshCount">07</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">62%</b></span>
+            <span>OFFLINE MODE</span><span>GPS: <b id="homeFixQuality">NO FIX</b></span><span>MESH: <b id="deskMeshCount">—</b> NODES</span><span>RTC: <b id="deskClock">--:--:--</b></span><span class="battery-glyph">▰▰▰▱ <b id="deskBatteryPct">UNAVAILABLE</b></span>
           </div>
-          <div class="detail-statusline"><span>SECTOR VT-021</span><span>DATUM WGS84</span><span>MAG VAR 14.2°W</span><span>TRACK REC</span><span>BARO TREND ↓</span><span>LINK CH-07</span></div>
+          <div class="detail-statusline"><span>DATUM WGS84</span><span>MAG VAR UNVERIFIED</span><span>TRACK: SEE RECORDER</span><span>BARO: NO VERIFIED TREND</span><span>LINK: SEE COMMS</span></div>
           <section class="handheld-status" aria-label="Handheld field status">
-            <button data-open="nav"><span>GNSS FIX</span><b id="mobileFixState">3D / ±4m</b><small id="mobileFixAge">AGE 00:04</small></button>
-            <button data-open="trailreturn"><span>TO TRAIL</span><b id="mobileTrailDist">0.7 mi</b><small id="mobileTrailBrg">312° NW</small></button>
-            <button data-open="trailreturn"><span>TO BASE</span><b id="mobileBaseDist">6.8 mi</b><small id="mobileBaseBrg">245° SW</small></button>
+            <button data-open="nav"><span>GNSS FIX</span><b id="mobileFixState">NO FIX</b><small id="mobileFixAge">AGE —</small></button>
+            <button data-open="trailreturn"><span>TO TRAIL</span><b id="mobileTrailDist">NO FIX</b><small id="mobileTrailBrg">—</small></button>
+            <button data-open="nav"><span>TO BASE</span><b id="mobileBaseDist">NO FIX</b><small id="mobileBaseBrg">—</small></button>
             <button data-open="nav"><span>DAYLIGHT</span><b id="mobileDaylight">CALC…</b><small id="mobileSunState">SOLAR</small></button>
             <button data-open="power"><span>PHONE BAT</span><b id="mobileBattery">--%</b><small id="mobilePowerState">LOCAL</small></button>
             <button data-open="trip"><span>CHECK-IN</span><b id="mobileCheckin">READY</b><small>LOCAL TIMER</small></button>
           </section>
           <div class="handheld-actions" aria-label="Quick field actions">
-            <button data-open="trailreturn">↶ RETURN TRAIL</button><button data-open="trailreturn">⌂ RETURN BASE</button><button data-open="lost">? LOST MODE</button><button class="handheld-sos" data-open="sos">! SOS</button>
+            <button data-open="trailreturn">↶ RETURN TRAIL</button><button data-open="nav">⌂ RETURN BASE</button><button data-open="lost">? LOST MODE</button><button class="handheld-sos" data-open="sos">! SOS</button>
           </div>
           <section id="priorityNow" class="priority-now priority-good" aria-live="polite">
             <div class="priority-now-copy"><span>WHAT MATTERS NOW <b id="priorityLevel">NOMINAL</b></span><strong id="priorityTitle">FIELD STATUS NOMINAL</strong><p id="priorityDetail">Monitoring route, position, daylight, battery, check-in and field conditions.</p></div>
@@ -82,13 +84,13 @@
           <div class="console-main-grid detail-main-grid">
             <nav class="console-rail terminal-panel" aria-label="Field modules">
               <div class="terminal-title">FIELD MODULES <span>?</span></div>
-              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="trailreturn">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="mission">▷ MISSION MODE</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="weather">▷ WEATHER INTELLIGENCE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
-              <div class="rail-mini-status"><b>NODE TAP-01</b><br>UPTIME 14:26:31<br>STORAGE 72% FREE<br>MAP PACK: LOCAL<br>UTC OFFSET -04:00</div>
+              <button data-open="map">▶ MAP</button><button data-open="nav">▷ NAVIGATION</button><button data-open="route">▷ ROUTE PLANNER</button><button data-open="trailreturn">▷ RETURN TO TRAIL</button><button data-open="nav">▷ RETURN TO BASE</button><button data-open="waypoints">▷ WAYPOINTS</button><button data-open="track">▷ TRACK RECORDER</button><button data-open="trip">▷ TRIP PLAN</button><button data-open="mission">▷ MISSION MODE</button><button data-open="survival">▷ FIELD GUIDE</button><button data-open="weather">▷ WEATHER INTELLIGENCE</button><button data-open="comms">▷ COMMS / MESH</button><button data-open="sensors">▷ SENSORS</button><button data-open="log">▷ FIELD LOG</button><button data-open="system">▷ SYSTEM</button><hr><button data-open="system">› SETTINGS</button><button data-open="power">› POWER</button>
+              <div class="rail-mini-status"><b>FIELD/OS</b><br>UPTIME: NOT PROVIDED<br>STORAGE: SEE SYSTEM<br>MAP PACK: SEE MAP MANAGER<br>UTC OFFSET: <span id="liveUtcOffset">—</span></div>
             </nav>
 
             <section class="terminal-panel map-console detailed-map-console">
               <div class="terminal-title">♙ TERRAIN MAP // FIELD GRID <span id="homeMapModeLabel">MAP STARTING</span></div>
-              <div class="map-meta">N <b id="deskLat">44.4759°</b> &nbsp; W <b id="deskLon">73.2121°</b> &nbsp; ELEV <b id="altitude">3420 ft</b> &nbsp; SCALE 2.0 mi/div &nbsp; GRID 1000 m &nbsp; N ↑</div>
+              <div class="map-meta">POSITION <b id="deskLat">NO FIX</b>, <b id="deskLon">NO FIX</b> &nbsp; ALT <b id="altitude">—</b> &nbsp; SCALE / GRID: SEE MAP &nbsp; N ↑</div>
               <div class="map-workarea">
                 <div id="homeRealMap" class="field-real-map home-real-map" aria-label="Interactive hiking topographic map"></div><div id="homeMapFallback" class="field-map-fallback home-map-fallback" hidden>
                   <b>LIVE MAP UNAVAILABLE</b>
@@ -117,8 +119,7 @@
             <section class="console-right-stack detail-right-stack">
               <article class="terminal-panel nav-console detailed-nav" data-open="nav">
                 <div class="terminal-title">♙ NAVIGATION <span>POSITION SOURCE BELOW</span></div>
-                <div class="nav-toprow"><div class="nav-readout">N 44.4759°<br>W 73.2121°<br>ELEV 3,420 ft<br>ACC ±4 m</div><div class="nav-fix">FIX<br><b>3D</b><br>HDOP 0.9</div></div>
-                <div class="home-compass-cluster">
+                <div class="nav-toprow"><div class="nav-readout"><span id="homeNavCoord">NO LIVE POSITION</span><br>ELEV <span id="homeNavElevation">—</span><br>ACC <span id="homeNavAccuracy">—</span></div><div class="nav-fix">GNSS<br><b id="homeNavFix">NO FIX</b></div></div><div class="home-compass-cluster">
                   <div class="field-compass home-field-compass" id="homeCompass" role="img" aria-label="Home navigation compass">
                     <svg class="field-compass-svg" viewBox="0 0 200 200" aria-hidden="true">
                       <circle class="compass-svg-outer" cx="100" cy="100" r="92"/>
@@ -147,42 +148,38 @@
                     </svg>
                   </div>
                   <div class="home-compass-readout">
-                    <strong id="homeHeading">245°</strong><small id="homeHeadingCardinal">SW</small>
+                    <strong id="homeHeading">—</strong><small id="homeHeadingCardinal">—</small>
                     <span id="homeCompassSource">DEMO</span>
                   </div>
                   <button id="homeEnableCompass" class="compass-enable-btn home-compass-enable" type="button">ENABLE DEVICE COMPASS</button>
                   <small id="homeCompassPermissionState" class="compass-permission-state">Same heading source as NAV CORE.</small>
                 </div>
-                <div class="nav-stats"><span>SPEED <b id="speed">2.4 mph</b></span><span>BEARING <b>245°</b></span><span>DIST NEXT <b>2.4 mi</b></span><span>ETA <b>1h 02m</b></span><span>VERT SPD <b>+380 ft/h</b></span><span>COURSE <b>238°</b></span></div>
+                <div class="nav-stats"><span>SPEED <b id="speed">—</b></span><span>BEARING <b id="homeBearing">—</b></span><span>DIST NEXT <b id="homeDistanceNext">—</b></span><span>ETA <b id="homeEta">—</b></span><span>VERT SPD <b id="homeVertSpeed">—</b></span><span>COURSE <b id="homeCourse">—</b></span></div>
               </article>
               <article class="terminal-panel sensors-console detailed-sensors" data-open="sensors">
                 <div class="terminal-title">♙ SENSORS / ENV <span>DEMO</span></div>
-                <div class="sensor-lines"><span>TEMP <b id="temp">31°F</b></span><span>BARO <b id="pressure">898 hPa</b></span><span>ALT <b>3,420 ft</b></span><span>HUM <b id="humidity">64%</b></span><span>WIND <b>6.1 mph NW</b></span><span>GNSS <b>3D FIX</b></span><span>MESH <b>07 NODES</b></span><span>RTC <b>SYNC ±0.2s</b></span></div>
-                <div class="mini-chart-title">PRESSURE (24H)</div><svg class="mini-chart" viewBox="0 0 260 72" preserveAspectRatio="none"><g><path d="M0 14H260M0 36H260M0 58H260M40 0V72M90 0V72M140 0V72M190 0V72M240 0V72"/></g><polyline points="0,24 18,19 35,26 52,23 70,34 88,31 105,38 123,42 140,37 158,45 176,51 194,46 212,55 230,49 260,54"/></svg>
-                <div class="chart-axis"><span>-24h</span><span>-12h</span><span>now</span></div>
-              </article>
+                <div class="sensor-lines"><span>TEMP <b id="temp">—</b></span><span>BARO <b id="homeSensorBaro">—</b></span><span>ALT <b id="homeSensorAltitude">—</b></span><span>HUM <b id="humidity">—</b></span><span>WIND <b id="homeSensorWind">—</b></span><span>GNSS <b id="homeSensorGnss">NO FIX</b></span><span>MESH <b id="homeSensorMesh">NO VERIFIED LINK</b></span><span>RTC <b id="homeSensorRtc">NOT VERIFIED</b></span></div>
+                <p class="muted">LIVE PRESSURE TREND UNAVAILABLE WITHOUT VERIFIED BAROMETER TELEMETRY.</p></article>
               <article class="terminal-panel route-info-console detailed-route-info" data-open="route">
                 <div class="terminal-title">♙ ROUTE INFO <span>×</span></div>
-                <div class="route-info-split"><p>ROUTE: JAY_PEAK_LOOP<br>TYPE: Hike (Loop)<br>DISTANCE: 12.6 mi<br>ELEV GAIN: 3,420 ft<br>MAX GRADE: 28%<br>EST TIME: 6h 20m<br>DIFFICULTY: HARD ▰▰▰▰▱<br>PROGRESS: 41%<br>REMAIN: 7.4 mi</p><div><div class="mini-chart-title">ELEVATION PROFILE</div><svg class="elev-chart" viewBox="0 0 300 115" preserveAspectRatio="none"><g><path d="M0 20H300M0 55H300M0 90H300M60 0V115M120 0V115M180 0V115M240 0V115"/></g><polyline points="0,92 25,82 50,75 75,58 100,51 125,42 150,30 175,20 200,27 225,45 250,65 275,77 300,86"/></svg><div class="chart-axis"><span>0</span><span>6.3</span><span>12.6 mi</span></div></div></div>
-              </article>
+                <p id="homeRouteSummary">NO SAVED ROUTE — OPEN PLANNER</p></article>
             </section>
           </div>
 
           <div class="console-mid-grid detail-mid-grid">
             <article class="terminal-panel waypoint-console" data-open="waypoints">
-              <div class="terminal-title">♙ WAYPOINTS (6) <span>×</span></div>
-              <div class="waypoint-table-rich"><div class="thead"><b>ID</b><b>NAME</b><b>TYPE</b><b>DIST</b><b>BRG</b><b>ELEV</b><b>AGE</b></div><div><span>01</span><span>BASE</span><span>Base</span><span>6.8 mi</span><span>245°</span><span>312 ft</span><span>01:26</span></div><div><span>02</span><span>CAMP 1</span><span>Camp</span><span>2.4 mi</span><span>018°</span><span>1,180 ft</span><span>00:48</span></div><div><span>03</span><span>WATER</span><span>Water</span><span>3.1 mi</span><span>076°</span><span>1,004 ft</span><span>00:37</span></div><div><span>04</span><span>SUMMIT</span><span>Peak</span><span>5.6 mi</span><span>042°</span><span>3,862 ft</span><span>--</span></div><div><span>05</span><span>BAILOUT</span><span>Escape</span><span>4.2 mi</span><span>133°</span><span>980 ft</span><span>--</span></div><div><span>06</span><span>TRAIL JCT</span><span>Junction</span><span>1.9 mi</span><span>291°</span><span>760 ft</span><span>--</span></div></div>
-              <div class="mini-actions"><button data-open="waypoints">ADD</button><button data-open="waypoints">EDIT</button><button data-open="waypoints">GOTO</button><button data-open="waypoints">EXPORT GPX</button></div>
+              <div class="terminal-title">♙ WAYPOINTS <span>×</span></div>
+              <div class="waypoint-table-rich"><div class="thead"><b>ID</b><b>NAME</b><b>TYPE</b><b>DIST</b><b>BRG</b><b>ELEV</b><b>AGE</b></div><div id="homeWaypointRows">NO WAYPOINTS SAVED</div></div><div class="mini-actions"><button data-open="waypoints">ADD</button><button data-open="waypoints">EDIT</button><button data-open="waypoints">GOTO</button><button data-open="waypoints">EXPORT GPX</button></div>
             </article>
-            <article class="terminal-panel track-console" data-open="track"><div class="terminal-title">♙ TRACK RECORDER <span>×</span></div><div class="track-rich"><p><b>● RECORDING...</b><br>TIME: 01:26:13<br>DIST: 5.2 mi<br>POINTS: 1,842<br>AVG SPD: 2.6 mph<br>MAX SPD: 5.8 mph<br>ELEV +: 1,120 ft<br>ELEV −: 860 ft</p><div class="vertical-keys"><button data-open="track">PAUSE</button><button data-open="track">STOP</button><button data-open="track">SAVE</button></div></div><div class="track-meter"><i style="width:41%"></i></div></article>
-            <article class="terminal-panel return-console" data-open="trailreturn"><div class="terminal-title">♙ RETURN FUNCTIONS <span>×</span></div><button data-open="trailreturn">← RETURN TO TRAIL</button><p>Nearest route: 0.7 mi<br>Bearing: 312° NW<br>Δ Elev: −140 ft<br>Intercept: LEG 03</p><button data-open="trailreturn">← RETURN TO BASE</button><p>Distance: 6.8 mi<br>Bearing: 245° SW<br>ETA: 2h 42m<br>Breadcrumb: READY</p></article>
+            <article class="terminal-panel track-console" data-open="track"><div class="terminal-title">♙ TRACK RECORDER <span>×</span></div><div class="track-rich"><p><b id="homeTrackState">STOPPED</b><br><span id="homeTrackSummary">0 points</span></p><div class="vertical-keys"><button data-open="track">OPEN RECORDER</button></div></div><div class="track-meter"><i style="width:0%"></i></div></article>
+            <article class="terminal-panel return-console" data-open="trailreturn"><div class="terminal-title">♙ RETURN FUNCTIONS <span>×</span></div><button data-open="trailreturn">← RETURN TO TRAIL</button><p>Live fix and saved route required</p><button data-open="nav">← RETURN TO BASE</button><p>See Nav for saved route start / base guidance.</p></article>
           </div>
 
           <div class="console-bottom-grid detail-bottom-grid">
-            <article class="terminal-panel event-console" data-open="log"><div class="terminal-title">♙ MESSAGES / EVENT LOG <span>×</span></div><div class="event-lines"><span><b>13:36:12</b> [GPS] 3D fix acquired (18 satellites)</span><span><b>13:36:15</b> [MESH] Node “RIDGE-01” online / -85 dBm</span><span><b>13:36:41</b> [NAV] Off-route warning: 180 ft</span><span><b>13:37:02</b> [ROUTE] Recalculated ETA: 1h 02m</span><span><b>13:37:18</b> [ENV] Pressure trend: -1.7 hPa / 3h</span><span><b>13:37:34</b> [TRACK] Breadcrumb point 1842 committed</span><span><b>13:37:55</b> [SYSTEM] Battery 62% / est. 14h</span></div></article>
-            <article class="terminal-panel trip-console" data-open="trip"><div class="terminal-title">♙ TRIP PLAN <span>×</span></div><p>NAME: Jay Peak Loop<br>DATE: 2026-10-04<br>START: 08:00<br>EST. TIME: 6h 20m<br>CHECK-INS: Every 2 hours<br>NEXT: 14:00 / 00:22:05<br>TURNAROUND: 15:30<br>EMERGENCY: Armed</p><div class="trip-progress"><i style="width:41%"></i></div></article>
+            <article class="terminal-panel event-console" data-open="log"><div class="terminal-title">♙ MESSAGES / EVENT LOG <span>×</span></div><div class="event-lines" id="homeEventRows">NO RECORDED EVENTS</div></article>
+            <article class="terminal-panel trip-console" data-open="trip"><div class="terminal-title">♙ TRIP PLAN <span>×</span></div><p id="homeTripSummary">NO TRIP PLAN SAVED</p></article>
             <article class="terminal-panel survival-console" data-open="survival"><div class="terminal-title">♙ FIELD GUIDE <span>×</span></div><div class="survival-rich"><span>› TEN ESSENTIALS</span><span>› LOST / DISORIENTED</span><span>› SHELTER / EXPOSURE</span><span>› WATER TREATMENT</span><span>› HYPOTHERMIA</span><span>› BLEEDING / SHOCK</span><span>› LIGHTNING</span><span>› SIGNALING</span></div></article>
-            <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table"><b>NODE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DIST&nbsp;&nbsp;RSSI&nbsp;&nbsp;HOP&nbsp;BAT</b><br>BASE-01&nbsp;&nbsp;&nbsp;1.2mi&nbsp;-72&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;88%<br>RIDGE-01&nbsp;&nbsp;3.6mi&nbsp;-85&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;71%<br>CAMP-01&nbsp;&nbsp;&nbsp;4.8mi&nbsp;-91&nbsp;&nbsp;&nbsp;2&nbsp;&nbsp;&nbsp;64%<br>RELAY-A&nbsp;&nbsp;&nbsp;5.1mi&nbsp;-96&nbsp;&nbsp;&nbsp;3&nbsp;&nbsp;&nbsp;92%</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
+            <article class="terminal-panel mesh-console" data-open="comms"><div class="terminal-title">♙ COMMS / MESH <span>×</span></div><div class="mesh-table" id="homeMeshRows">NO RECENT MESH NODE DATA</div><div class="mini-actions"><button data-open="comms">▶ SEND MESSAGE</button><button class="sos-key" data-open="sos">▶ SOS</button></div></article>
           </div>
           <div class="console-command-strip"><button data-open="mission">MISSION</button><button data-open="route">PLAN ROUTE</button><button data-open="waypoints">WAYPOINTS</button><button data-open="track">RECORD TRACK</button><button data-open="trip">TRIP PLAN</button><button data-open="log">FIELD LOG</button><button data-open="system">SETTINGS</button></div>
         </div></div>
@@ -312,7 +309,7 @@
         <div class="grid two-col field-condition-grid">
           <article class="panel pressure-storm-panel"><div class="panel-title"><span>BAROMETRIC STORM WATCH</span><span class="tiny" id="stormWatchState">INSUFFICIENT HISTORY</span></div><div class="condition-hero"><b id="pressureRate">---</b><span>hPa / 3h trend</span></div><dl class="readouts"><div><dt>CURRENT</dt><dd id="pressureCurrent">---</dd></div><div><dt>1H Δ</dt><dd id="pressureDelta1h">---</dd></div><div><dt>3H Δ</dt><dd id="pressureDelta3h">---</dd></div><div><dt>ASSESSMENT</dt><dd id="pressureAssessment">---</dd></div></dl></article>
           <article class="panel fire-smoke-panel"><div class="panel-title"><span>WILDFIRE / SMOKE / CLOSURES</span><span class="tiny" id="hazardLayerState">CACHE // EMPTY</span></div><div class="button-row"><label class="action file-action">IMPORT GEOJSON<input id="hazardGeoJsonImport" type="file" accept=".json,.geojson,application/geo+json,application/json" hidden></label><button id="hazardClear" class="danger-lite" type="button">CLEAR CACHE</button></div><div id="hazardRouteSummary" class="condition-summary">No cached fire/smoke/closure geometry.</div><div id="hazardList" class="condition-list"></div></article>
-          <article class="panel avalanche-panel"><div class="panel-title"><span>AVALANCHE TERRAIN SCREENING</span><span class="tiny" id="avalancheState">WAITING FOR ROUTE</span></div><div class="condition-hero"><b id="avalancheExposure">---</b><span>route in 25–45° slope band</span></div><dl class="readouts"><div><dt>25–30°</dt><dd id="avalancheLow">---</dd></div><div><dt>30–35°</dt><dd id="avalancheModerate">---</dd></div><div><dt>35–45°</dt><dd id="avalancheHigh">---</dd></div><div><dt>&gt;45°</dt><dd id="avalancheExtreme">---</dd></div></dl><label class="field-label" for="avalancheBulletin">BULLETIN SNAPSHOT / NOTES</label><textarea id="avalancheBulletin" class="terminal-area" placeholder="Paste the current official avalanche bulletin summary before going offline..."></textarea><p class="muted">Slope-angle screening alone cannot determine avalanche safety. Use the current official avalanche forecast, observations, snowpack assessment and terrain-management practices.</p></article>
+          <article class="panel avalanche-panel"><div class="panel-title"><span>AVALANCHE TERRAIN SCREENING</span><span class="tiny" id="avalancheState">WAITING FOR ROUTE</span></div><div class="condition-hero"><b id="avalancheExposure">---</b><span>route in 25–45° slope band</span></div><dl class="readouts"><div><dt>25–30°</dt><dd id="avalancheLow">---</dd></div><div><dt>30–35°</dt><dd id="avalancheModerate">---</dd></div><div><dt>35–45°</dt><dd id="avalancheHigh">---</dd></div><div><dt>&gt;45°</dt><dd id="avalancheExtreme">---</dd></div></dl><label class="field-label" for="avalancheBulletin">BULLETIN SNAPSHOT / NOTES</label><textarea id="avalancheBulletin" class="terminal-area" placeholder="Paste the current official avalanche bulletin summary before going offline..."></textarea><p class="muted">WARNING: GLO-90 DEM is approximately 90 m and can smooth steep 35–45° terrain. This route-line screen does not evaluate slopes or avalanche paths above the route. Never use it to determine avalanche safety. Consult the current official forecast and evaluate surrounding terrain and snow conditions.</p></article>
           <article class="panel snow-travel-panel"><div class="panel-title"><span>SNOW TRAVEL</span><span class="tiny" id="snowTravelState">NO FORECAST</span></div><dl class="readouts large-readouts"><div><dt>SNOWFALL 24H</dt><dd id="snowfall24">---</dd></div><div><dt>SNOW DEPTH</dt><dd id="snowDepth">---</dd></div><div><dt>FREEZING LEVEL</dt><dd id="snowFreezingLevel">---</dd></div><div><dt>WIND</dt><dd id="snowWind">---</dd></div><div><dt>LOADING ASPECT</dt><dd id="snowLoadingAspect">---</dd></div><div><dt>TRAVEL NOTE</dt><dd id="snowTravelNote">---</dd></div></dl></article>
           <article class="panel water-intel-panel"><div class="panel-title"><span>WATER INTELLIGENCE</span><span class="tiny" id="waterIntelState">LOCAL DATA</span></div><div class="button-row"><button id="waterSearchOnline" class="action" type="button">FIND + CACHE WATER</button><button id="waterClearCache" class="danger-lite" type="button">CLEAR WATER CACHE</button></div><div id="waterIntelList" class="condition-list"><p class="muted">Saved WATER/SPRING waypoints and tagged route crossings will appear here.</p></div></article>
           <article class="panel trail-condition-panel"><div class="panel-title"><span>TRAIL-CONDITION INTELLIGENCE</span><span class="tiny" id="trailConditionState">WAITING FOR ROUTE</span></div><div id="trailConditionTags" class="condition-tags"></div><p id="trailConditionSummary" class="condition-summary">Conditions combine route surface metadata with cached weather/snow evidence.</p></article>
@@ -778,7 +775,7 @@
           <article class="panel sensor-chart-card sensor-chart-third"><div class="panel-title"><span>POWER TREND</span><span class="tiny">DEVICE / PHONE BATTERY</span></div><canvas id="batteryChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
         </div>
         <p class="muted sensor-source-note">TAP/Meshtastic telemetry can populate these histories through the FIELD/OS telemetry bridge. Browser-only GNSS does not expose radio C/N0, so GNSS strength uses satellite count and fix accuracy unless the device supplies radio-strength fields.</p>
-        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">CROSS-CHECK</span></div><div class="integrity-grid"><div><b>GNSS FIX</b><span class="good-text">TRUSTED</span></div><div><b>IMU MOTION</b><span>MATCH</span></div><div><b>BARO ALT</b><span>MATCH</span></div><div><b>DRIFT WATCH</b><span class="good-text">CLEAR</span></div></div></article>
+        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">CROSS-CHECK</span></div><div class="integrity-grid"><div><b>GNSS FIX</b><span id="sensorIntegrityGnss">UNKNOWN</span></div><div><b>IMU MOTION</b><span id="sensorIntegrityImu">UNKNOWN</span></div><div><b>BARO ALT</b><span id="sensorIntegrityBaro">UNKNOWN</span></div><div><b>DRIFT WATCH</b><span id="sensorIntegrityDrift">UNKNOWN</span></div></div></article>
       </section>
 
       <section class="view" id="survival" data-view="survival">
@@ -891,11 +888,11 @@
         <article class="panel sos-panel">
           <div class="sos-ring">SOS</div>
           <h3>EMERGENCY MODE</h3>
-          <dl class="readouts large-readouts"><div><dt>POSITION</dt><dd>44.4759 / -73.2121</dd></div><div><dt>ALT</dt><dd>3420 ft</dd></div><div><dt>GNSS</dt><dd>GOOD</dd></div><div><dt>BAT</dt><dd>64%</dd></div></dl>
+          <dl class="readouts large-readouts" aria-live="polite"><div><dt>POSITION</dt><dd id="sosPosition">NO FIX — LAST POSITION NOT VERIFIED</dd></div><div><dt>ALT</dt><dd id="sosAltitude">UNKNOWN</dd></div><div><dt>GNSS</dt><dd id="sosGnss">NO TRUSTED FIX</dd></div><div><dt>BAT</dt><dd id="sosBattery">UNAVAILABLE</dd></div></dl>
           <p class="muted center">Prototype only. FIELD/OS should not replace certified emergency communications.</p>
-          <button id="meshSos" class="sos-button">HOLD TO ARM MESH SOS</button>
+          <button id="meshSos" class="sos-button">HOLD TO PREPARE DEMO SOS</button>
           <textarea id="emergencyNotes" class="terminal-area" placeholder="Emergency notes: injury, group size, shelter, medications/allergies you choose to record..."></textarea>
-          <div class="button-row"><button id="copySos" class="action">COPY SOS PACKET</button><a class="action link-action" href="tel:911">OPEN PHONE / 911</a></div>
+          <div class="button-row"><button id="copySos" class="action">COPY SOS PACKET</button><label for="emergencyRegion">EMERGENCY CALL REGION</label><select id="emergencyRegion" class="terminal-input"><option value="">SELECT YOUR REGION</option><option value="911">US / CANADA (911)</option><option value="112">EU / MANY COUNTRIES (112)</option><option value="999">UK (999)</option><option value="000">AUSTRALIA (000)</option><option value="111">NEW ZEALAND (111)</option></select><a id="emergencyDial" class="action link-action" href="#" aria-disabled="true">SELECT REGION TO CALL</a></div>
           <p class="muted center">Calling 911 or certified satellite SOS is the primary emergency path when available; mesh is supplemental.</p>
         </article>
       </section>
@@ -910,10 +907,10 @@
           <div class="panel-title"><span>DISPLAY THEME</span><span class="tiny">RETRO MODES</span></div>
           <div class="button-row"><button class="action theme-btn" data-theme-choice="green">FIELD GREEN</button><button class="action theme-btn" data-theme-choice="amber">AMBER NAV</button><button class="action theme-btn" data-theme-choice="mono">MONO</button><button class="action theme-btn" data-theme-choice="red">RED NIGHT</button></div>
         </article>
-        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">FUSION WATCH</span></div><dl class="readouts large-readouts"><div><dt>GNSS</dt><dd class="good-text">TRUSTED</dd></div><div><dt>IMU</dt><dd>ONLINE</dd></div><div><dt>BARO</dt><dd>ONLINE</dd></div><div><dt>DR MODE</dt><dd>STANDBY</dd></div></dl></article>
+        <article class="panel"><div class="panel-title"><span>NAV INTEGRITY</span><span class="tiny">FUSION WATCH</span></div><dl class="readouts large-readouts"><div><dt>GNSS</dt><dd id="systemIntegrityGnss">UNKNOWN</dd></div><div><dt>IMU</dt><dd id="systemIntegrityImu">UNKNOWN</dd></div><div><dt>BARO</dt><dd id="systemIntegrityBaro">UNKNOWN</dd></div><div><dt>DR MODE</dt><dd id="systemIntegrityDr">NOT VERIFIED</dd></div></dl></article>
         <article class="panel field-tools-panel"><div class="panel-title"><span>TOUCH CONTROLS</span><span class="tiny">PHONE / FIELD USE</span></div><div class="button-row"><button class="action" id="gloveToggle" aria-pressed="false">GLOVE MODE</button><button class="action" id="onehandToggle" aria-pressed="false">ONE-HANDED MODE</button></div><p class="muted">Glove mode enlarges touch targets. One-handed mode keeps primary tabs and map controls within reach at the bottom of the phone screen.</p></article>
         <article class="panel field-tools-panel"><div class="panel-title"><span>BROWSER FIELD RELIABILITY</span><span class="tiny" id="browserCapabilityScore">CHECKING…</span></div><dl class="readouts"><div><dt>NETWORK</dt><dd id="browserOnlineState">—</dd></div><div><dt>LINK TYPE</dt><dd id="browserNetworkType">—</dd></div><div><dt>DATA SAVER</dt><dd id="browserDataSaver">—</dd></div><div><dt>STORAGE</dt><dd id="browserStoragePersist">—</dd></div><div><dt>BATTERY API</dt><dd id="browserBattery">—</dd></div><div><dt>VISIBILITY</dt><dd id="browserVisibility">—</dd></div><div><dt>ORIENTATION</dt><dd id="browserOrientation">AUTO</dd></div><div><dt>SHARE</dt><dd id="browserShareState">READY</dd></div><div><dt>INSTALL</dt><dd id="browserInstallState">CHECKING</dd></div></dl><div class="button-row"><button class="action" id="browserPersist">PROTECT OFFLINE STORAGE</button><button class="action" id="browserInstall">INSTALL PWA</button><button class="action" id="browserFullscreen">FULLSCREEN FIELD MODE</button><button class="action" id="browserOrientationLock">LOCK PORTRAIT</button><button class="action" id="browserShareMission">SHARE ROUTE SUMMARY</button><button class="action" id="browserCopyCoordinates">COPY CURRENT COORDS</button></div><div id="browserCapabilityList" class="condition-list"></div></article>
-        <article class="panel field-tools-panel"><div class="panel-title"><span>OFFLINE FIELD UTILITY CONSOLE</span><span class="tiny" id="fieldOfflineReadiness">CHECKING…</span></div><div class="grid two-col"><div><label class="field-label">DECIMAL COORDINATE</label><input id="fieldCoordInput" class="terminal-input" placeholder="44.4759, -73.2121"><button id="fieldCoordConvert" class="action">CONVERT TO DMS</button><p id="fieldCoordOutput" class="muted">—</p></div><div><label class="field-label">POINT A</label><input id="fieldPointA" class="terminal-input" placeholder="lat, lon"><label class="field-label">POINT B</label><input id="fieldPointB" class="terminal-input" placeholder="lat, lon"><button id="fieldNavCalculate" class="action">DISTANCE + BEARING</button><p id="fieldNavCalc" class="muted">—</p></div></div><label class="field-label">LOCAL FIELD SCRATCHPAD</label><textarea id="fieldScratch" class="terminal-area" placeholder="Offline notes…"></textarea><div class="button-row"><button id="fieldScratchSave" class="action">SAVE NOTE</button></div><label class="field-label">TIMESTAMP MARK</label><input id="fieldMarkLabel" class="terminal-input" placeholder="Trailhead / cache / observation"><div class="button-row"><button id="fieldAddMark" class="action">ADD POSITION MARK</button><button id="fieldCopyLocationCard" class="action">COPY LOCATION CARD</button></div><pre id="fieldLocationCard" class="muted">—</pre><div id="fieldMarks" class="condition-list"></div><dl class="readouts"><div><dt>STORAGE USE</dt><dd id="fieldStorageUsage">CHECKING…</dd></div><div><dt>UTILITY STATUS</dt><dd id="fieldUtilityState">READY</dd></div></dl></article>
+        <article class="panel field-tools-panel"><div class="panel-title"><span>OFFLINE FIELD UTILITY CONSOLE</span><span class="tiny" id="fieldOfflineReadiness">CHECKING…</span></div><div class="grid two-col"><div><label class="field-label" for="fieldCoordInput">DECIMAL COORDINATE</label><input id="fieldCoordInput" class="terminal-input" placeholder="44.4759, -73.2121"><button id="fieldCoordConvert" class="action">CONVERT TO DMS</button><p id="fieldCoordOutput" class="muted">—</p></div><div><label class="field-label" for="fieldPointA">POINT A</label><input id="fieldPointA" class="terminal-input" placeholder="lat, lon"><label class="field-label" for="fieldPointB">POINT B</label><input id="fieldPointB" class="terminal-input" placeholder="lat, lon"><button id="fieldNavCalculate" class="action">DISTANCE + BEARING</button><p id="fieldNavCalc" class="muted">—</p></div></div><label class="field-label" for="fieldScratch">LOCAL FIELD SCRATCHPAD</label><textarea id="fieldScratch" class="terminal-area" placeholder="Offline notes…"></textarea><div class="button-row"><button id="fieldScratchSave" class="action">SAVE NOTE</button></div><label class="field-label" for="fieldMarkLabel">TIMESTAMP MARK</label><input id="fieldMarkLabel" class="terminal-input" placeholder="Trailhead / cache / observation"><div class="button-row"><button id="fieldAddMark" class="action">ADD POSITION MARK</button><button id="fieldCopyLocationCard" class="action">COPY LOCATION CARD</button></div><pre id="fieldLocationCard" class="muted">—</pre><div id="fieldMarks" class="condition-list"></div><dl class="readouts"><div><dt>STORAGE USE</dt><dd id="fieldStorageUsage">CHECKING…</dd></div><div><dt>UTILITY STATUS</dt><dd id="fieldUtilityState">READY</dd></div></dl></article>
         <article class="panel field-tools-panel"><div class="panel-title"><span>DATA RESILIENCE + LAUNCH PREFLIGHT</span><span class="tiny" id="browserLaunchCheck">NOT RUN</span></div><dl class="readouts"><div><dt>RECOVERY SNAPSHOT</dt><dd id="recoverySnapshotState">NOT SAVED</dd></div><div><dt>PERMISSIONS</dt><dd id="browserPermissionAudit">CHECKING…</dd></div><div><dt>SERVICE WORKER</dt><dd id="browserSwHealth">CHECKING…</dd></div><div><dt>CACHE HEALTH</dt><dd id="browserCacheHealth">CHECKING…</dd></div><div><dt>DATA FRESHNESS</dt><dd id="browserStaleData">CHECKING…</dd></div><div><dt>RECOVERY</dt><dd id="browserRecoveryState">READY</dd></div></dl><div class="button-row"><button id="recoverySnapshot" class="action">SAVE RECOVERY SNAPSHOT</button><button id="recoveryRestore" class="action">RESTORE SNAPSHOT</button><button id="browserRunAudit" class="action">RUN BROWSER AUDIT</button><button id="browserLaunchPreflight" class="action">RUN FIELD PREFLIGHT</button><button id="browserSoftReset" class="action">RESET FIELD UI MODES</button></div><div id="browserLaunchList" class="condition-list"></div><div class="panel-title"><span>DIAGNOSTIC EVENT LOG</span><span class="tiny">LOCAL ONLY</span></div><div id="browserDiagLog" class="condition-list"></div></article>
         <article class="panel"><div class="panel-title"><span>PRIVACY / STORAGE</span><span class="tiny">LOCAL FIRST</span></div><p class="muted">Prototype stores trip plans, checklists, field logs, theme and preferences locally in your browser. External sync remains disabled until explicitly configured.</p><div class="button-row"><button id="wipeLocal" class="action">WIPE LOCAL DATA</button><button id="exportState" class="action">EXPORT STATE</button></div></article>
       </section>
@@ -930,7 +927,7 @@
         <button class="sheet-tab" data-open="track"><span>⋯</span><b>TRACK</b><small>Breadcrumb log</small></button>
         <button class="sheet-tab" data-open="trip"><span>▣</span><b>TRIP</b><small>Plan / check-in</small></button>
         <button class="sheet-tab" data-open="mission"><span>◎</span><b>MISSION</b><small>Pre-trip pack</small></button>
-        <button class="sheet-tab" data-open="survival"><span>✚</span><b>GUIDE</b><small>Offline manual</small></button>
+        <button class="sheet-tab" data-open="weather"><span>☁</span><b>WEATHER</b><small>Forecast / conditions</small></button><button class="sheet-tab" data-open="lost"><span>?</span><b>LOST MODE</b><small>Emergency navigation</small></button><button class="sheet-tab" data-open="survival"><span>✚</span><b>GUIDE</b><small>Offline manual</small></button>
         <button class="sheet-tab" data-open="lorachat"><span>✉</span><b>LORA CHAT</b><small>Mesh messages</small></button>
         <button class="sheet-tab" data-open="loramap"><span>⌖</span><b>LORA MAP</b><small>Nodes / coverage</small></button>
         <button class="sheet-tab" data-open="sensors"><span>◫</span><b>SENSORS</b><small>TAP / environment</small></button>
@@ -961,6 +958,7 @@
   <script defer src="field-intel.js?v=3.83"></script>
   <script defer src="field-ops.js?v=3.83"></script>
   <script defer src="field-tools.js?v=3.83"></script>
+<script defer src="safety-sync.js?v=3.83-hotfix1"></script>
 </body>
 </html>
 
