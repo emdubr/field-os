@@ -643,7 +643,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const first=pieces[0],shortChord=r.meters(first.a,first.b);
  assert.ok(first.endM-first.startM>shortChord*8,'winding geometry must use original accumulated trail length, not shortened display chords');
  assert.ok(Math.abs(first.midM-(first.startM+first.endM)/2)<.001);
- assert.deepEqual(r.routeSlopeDisplayPieces([],120),[]);
+ assert.equal(r.routeSlopeDisplayPieces([],120).length,0,'an empty route has no slope overlay geometry');
  console.log('PASS route slope colors retain original winding-trail mileage after decimation');
 
  assert.ok(w.FIELD_ROUTE_SLOPE,'main map shares the live route planner sustained-grade classifier');
