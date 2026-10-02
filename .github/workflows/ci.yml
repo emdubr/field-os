@@ -20,6 +20,7 @@ jobs:
       - name: Syntax check browser scripts
         run: |
           node --check app.js
+          node --check safety-sync.js
           node --check workstation.js
           node --check map-engine.js
           node --check route-state.js
