@@ -1426,7 +1426,8 @@ async function updateFieldMaps(recenter=false){
   if(window.FIELD_MAP_ENGINE_EXTERNAL&&!useOffline&&navigator.onLine!==false&&fieldMapMode!=='offline'){
     destroyFieldMaps();
     const desiredMode=['osm','topo','satellite'].includes(fieldMapMode)?fieldMapMode:'topo';
-    window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled},recenter);
+    // Passive GPS and overlay refreshes must not reset the map camera.
+    window.FIELD_MAP_ENGINE?.setLayers?.({mode:desiredMode,trails:fieldTrailLayerEnabled},false);
     const src=document.getElementById('offlineMapSource');if(src)src.textContent=fieldOnlineMapLabel(desiredMode);
     return;
   }
