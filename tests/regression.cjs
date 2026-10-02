@@ -7,7 +7,7 @@ w.HTMLElement.prototype.scrollIntoView=()=>{};w.isSecureContext=true;w.matchMedi
 w.addEventListener('error',e=>errors.push(e.error?.stack||e.message));w.FIELD_MAP_ENGINE_EXTERNAL=true;
 const ctx=dom.getInternalVMContext(),run=s=>vm.runInContext(s,ctx),click=id=>d.getElementById(id).click(),tick=()=>new Promise(r=>setTimeout(r,20));
 async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-start<timeout){if(fn())return;await tick()}throw new Error('Timed out: '+d.getElementById('routePlannerStatus').textContent+' '+d.getElementById('routePlannerDiag').textContent+' '+errors.join(' | '))}
-for(const f of ['survival-data.js','route-state.js','runtime.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
+for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
 let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
@@ -950,7 +950,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-fieldfix1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-optcanvas1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
