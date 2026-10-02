@@ -510,6 +510,7 @@
 .map-layer-state{display:flex;justify-content:space-between;gap:5px;padding:3px 1px;border-top:1px dotted color-mix(in srgb,var(--fg2) 16%,transparent);font-size:6.5px;color:var(--dim)}
 .map-layer-state b{margin:0!important;padding:0!important;border:0!important;color:var(--fg)!important;font-size:6.5px!important}
 .native-map-terrain{position:absolute;inset:0;z-index:15;pointer-events:none;will-change:transform}
+.native-map-terrain-tiles{position:absolute;inset:0;pointer-events:none;will-change:transform;transform:translate3d(0,0,0);backface-visibility:hidden}
 .native-map-grid{position:absolute;inset:0;z-index:24;pointer-events:none;display:none;background-image:linear-gradient(rgba(0,88,36,.22) 1px,transparent 1px),linear-gradient(90deg,rgba(0,88,36,.22) 1px,transparent 1px);background-size:64px 64px}
 .native-map-grid.active{display:block}
 .native-satellite-tile{z-index:2;filter:brightness(.90) contrast(1.04) saturate(.95)}
