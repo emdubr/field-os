@@ -408,6 +408,30 @@
     if(!currentBridge?.getPoints)return [];
     return cachedRoute=(currentBridge.getPoints()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
   }
+  // Route arrows repeat every 90 screen pixels. A long route can span
+  // millions of *offscreen* pixels at high zoom; iterating that distance on
+  // every camera frame freezes wheel zoom/pan even though none are visible.
+  // Clip the segment mathematically to the viewport before generating any
+  // arrow positions, while retaining spacing along the ORIGINAL full line.
+  function visibleRouteArrowOffsets(a,b,w,h,phase=0){
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+    if(!Number.isFinite(len)||len<=0)return {offsets:[],phase};
+    const nextPhase=(phase+len)%90;
+    const margin=9;
+    let enter=0,exit=1;
+    const clipAxis=(start,delta,max)=>{
+      if(Math.abs(delta)<1e-12)return start>=-margin&&start<=max+margin;
+      let from=(-margin-start)/delta,to=(max+margin-start)/delta;
+      if(from>to){const temp=from;from=to;to=temp;}
+      enter=Math.max(enter,from);exit=Math.min(exit,to);
+      return enter<=exit;
+    };
+    if(!clipAxis(a.x,dx,w)||!clipAxis(a.y,dy,h))return {offsets:[],phase:nextPhase};
+    const first=90-phase,begin=Math.max(0,Math.ceil((enter*len-first)/90));
+    const visibleEnd=exit*len,offsets=[];
+    for(let at=first+begin*90;at<len&&at<=visibleEnd+1e-6;at+=90)offsets.push(at);
+    return {offsets,phase:nextPhase};
+  }
   function drawOverlay(st,w,h){
     const c=world(st.center.lat,st.center.lon,st.zoom),parts=[];
     const route=plannedRoute();
@@ -458,11 +482,12 @@
         for(let i=1;i<pts.length;i++){
           const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
           if(!len)continue;
-          for(let at=90-distance;at<len;at+=90){
+          const visible=visibleRouteArrowOffsets(a,b,w,h,distance),angle=Math.atan2(dy,dx)*180/Math.PI;
+          for(const at of visible.offsets){
             const x=a.x+dx*at/len,y=a.y+dy*at/len;
-            if(x>=0&&x<=w&&y>=0&&y<=h)parts.push(`<path d="M -5 -5 L 1 0 L -5 5" transform="translate(${x},${y}) rotate(${Math.atan2(dy,dx)*180/Math.PI})" class="planned-route-arrow"/>`);
+            parts.push(`<path d="M -5 -5 L 1 0 L -5 5" transform="translate(${x},${y}) rotate(${angle})" class="planned-route-arrow"/>`);
           }
-          distance=(distance+len)%90;
+          distance=visible.phase;
         }
       }
       [pts[0],...(pts.length>1?[pts[pts.length-1]]:[])].forEach((p,i)=>parts.push(`<g class="planned-route-marker"><title>${i?'Route finish':'Route start'}</title><circle cx="${p.x}" cy="${p.y}" r="12"/><text x="${p.x}" y="${p.y+4}">${i?'E':'S'}</text></g>`));
