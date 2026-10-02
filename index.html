@@ -4,6 +4,34 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#08110b" />
+  <style>
+    /* Honor saved Red Night colors before the deferred app has started. */
+    html[data-boot-theme="red"]{background:#090000;color:#ff7777}
+    html[data-boot-theme="amber"]{background:#100b03;color:#ffd58a}
+    html[data-boot-theme="mono"]{background:#0b0b0b;color:#efefef}
+  </style>
+  <script>
+    (function(){
+      try{
+        var theme=localStorage.getItem('fieldos-v12-theme')||localStorage.getItem('fieldos-theme')||'green';
+        if(['red','amber','mono','green'].includes(theme))document.documentElement.dataset.bootTheme=theme;
+      }catch(e){}
+      // Fail open if any deferred script throws before dismissing the intro.
+      document.addEventListener('DOMContentLoaded',function(){
+        setTimeout(function(){
+          var boot=document.getElementById('boot');
+          if(boot&&!boot.classList.contains('hidden')){
+            boot.classList.add('hidden');boot.setAttribute('aria-hidden','true');
+            var warning=document.createElement('p');
+            warning.id='fieldBootFailure';warning.setAttribute('role','alert');
+            warning.style.cssText='padding:12px;color:#ffd166';
+            warning.textContent='STARTUP DID NOT FINISH. Some modules may be unavailable; do not rely on offline maps, GPS, or emergency features until verified.';
+            var app=document.getElementById('app');if(app)app.prepend(warning);
+          }
+        },2800);
+      },{once:true});
+    })();
+  </script>
 <meta name="description" content="FIELD/OS backcountry mapping and companion interface. Live safety features require a current fix and connected hardware." />
 <meta name="color-scheme" content="dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -954,12 +982,12 @@
   <script defer src="survival-data.js"></script>
   <script defer src="route-state.js?v=3.85"></script>
   <script defer src="runtime.js?v=3.85"></script>
-  <script defer src="track-store.js?v=3.85-opt2"></script>
+  <script defer src="track-store.js?v=3.85-fieldfix1"></script>
   <script defer src="geo-hub.js?v=3.85-opt2"></script>
   <script defer src="map-readiness.js?v=3.85"></script>
-  <script defer src="app.js?v=3.85-opt2"></script>
+  <script defer src="app.js?v=3.85-fieldfix1"></script>
   <script defer src="workstation.js?v=3.85"></script>
-  <script defer src="map-engine.js?v=3.85-terrain1"></script>
+  <script defer src="map-engine.js?v=3.85-fieldfix1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="route-guidance.js?v=3.85"></script>
   <script defer src="route-planner.js?v=3.85"></script>
