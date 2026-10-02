@@ -16,31 +16,37 @@ function storageGet(key){try{return localStorage.getItem(key)}catch(err){console
 function storageSet(key,val){try{localStorage.setItem(key,String(val));return true}catch(err){console.warn('FIELD/OS storage write failed',key,err);return false}}
 function storageRemove(key){try{localStorage.removeItem(key);return true}catch(err){console.warn('FIELD/OS storage remove failed',key,err);return false}}
 function storageKeys(){try{return Object.keys(localStorage)}catch(err){console.warn('FIELD/OS storage unavailable',err);return []}}
-// One-time local migration so older trip/route data is not lost.
-for(const key of storageKeys()){
-  if(key.startsWith(PREV_PREFIX)){
-    const next=STORE_PREFIX+key.slice(PREV_PREFIX.length),val=storageGet(key);
-    if(storageGet(next)==null && val!=null) storageSet(next,val);
+// Migrate only once per storage schema. Copy then verify before deleting an
+// identical, non-track legacy value. Conflicting old values stay untouched.
+// Track keys retain their old copy until IDB migration has also succeeded.
+const LEGACY_MIGRATION_FLAG=STORE_PREFIX+'migration-v3-85';
+function migrateLegacyKeys(){
+ const state=storageGet(LEGACY_MIGRATION_FLAG);
+ if(state?.startsWith('complete'))return;
+ const prefixes=[PREV_PREFIX,V05_PREFIX,LEGACY_PREFIX,DOT12_PREFIX];
+ let failed=false,conflicts=0,completed=0;
+ for(const key of storageKeys()){
+  const oldPrefix=prefixes.find(prefix=>key.startsWith(prefix));
+  if(!oldPrefix)continue;
+  const suffix=key.slice(oldPrefix.length),destination=STORE_PREFIX+suffix,source=storageGet(key);
+  if(source==null)continue;
+  let current=storageGet(destination);
+  if(current==null){
+   if(!storageSet(destination,source)){failed=true;continue}
+   current=storageGet(destination);
   }
+  if(current!==source){conflicts++;continue}
+  if(suffix==='track')continue; // IDB migration may still be in flight.
+  if(storageGet(key)===source&&!storageRemove(key)){failed=true;continue}
+  completed++;
+ }
+ if(!failed){
+  storageSet(LEGACY_MIGRATION_FLAG,conflicts?'complete-with-conflicts:'+conflicts:'complete');
+  if(conflicts)console.warn('FIELD/OS left '+conflicts+' conflicting older records in place; export your data before manual cleanup');
+ }else console.warn('FIELD/OS migration incomplete; original older keys were retained for a future retry');
+ return {failed,conflicts,completed};
 }
-for(const key of storageKeys()){
-  if(key.startsWith(V05_PREFIX)){
-    const next=STORE_PREFIX+key.slice(V05_PREFIX.length),val=storageGet(key);
-    if(storageGet(next)==null && val!=null) storageSet(next,val);
-  }
-}
-for(const key of storageKeys()){
-  if(key.startsWith(LEGACY_PREFIX)){
-    const next=STORE_PREFIX+key.slice(LEGACY_PREFIX.length),val=storageGet(key);
-    if(storageGet(next)==null && val!=null) storageSet(next,val);
-  }
-}
-for(const key of storageKeys()){
-  if(key.startsWith(DOT12_PREFIX)){
-    const next=STORE_PREFIX+key.slice(DOT12_PREFIX.length),val=storageGet(key);
-    if(storageGet(next)==null && val!=null) storageSet(next,val);
-  }
-}
+migrateLegacyKeys();
 
 function closeTabSheet(){
   tabSheet?.classList.remove('open');
