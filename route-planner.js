@@ -829,6 +829,12 @@
       });
     };
     if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(canvas.parentElement||canvas);
+    // The Route chart lives far below the initial viewport. Mobile
+    // content-visibility:auto can skip its layout until the user scrolls to
+    // it, without changing its parent's cached width or firing ResizeObserver.
+    if(typeof IntersectionObserver!=='undefined')new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting))resize();
+    },{rootMargin:'120px'}).observe(canvas);
     window.addEventListener('resize',resize,{passive:true});
     resize();
   }
