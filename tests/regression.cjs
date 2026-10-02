@@ -251,6 +251,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  const longTurnPlan={points:Array.from({length:2001},(_,i)=>({lat:44+i*.00001,lon:-73})),trailSections:Array.from({length:10},(_,i)=>({name:'Section '+i,distanceM:150}))};
  const longCues=w.FIELD_TURNS.generate(longTurnPlan);const secondSection=longCues.find(c=>c.trail==='Section 1');
  assert.ok(secondSection&&secondSection.index>=130&&secondSection.index<=140,'named trail transition should find nearest long-route point');
+ const lateCue=w.FIELD_TURNS.next({lat:44+880*.00001,lon:-73},longTurnPlan),referenceCue=longCues.find(c=>c.distanceM>=lateCue.progressM-20)||longCues.at(-1);
+ assert.equal(lateCue.id,referenceCue.id,'binary next-cue lookup must match first remaining sorted cue');
  w.FIELD_TURNS.generate(turnPlan);
  console.log('PASS feature 27 Turn-by-Turn Trail Instructions generates named-trail and geometry-turn cues with distance-to-next guidance');
  console.log('PASS long-route trail cue nearest-point lookup uses logarithmic search');
