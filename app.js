@@ -1,10 +1,10 @@
-const FIELD_APP_BUILD='3.85-optcanvas2';
-const FIELD_EXPECTED_CACHE='field-os-v3-85-optcanvas2';
+const FIELD_APP_BUILD='3.85-gpxworker1';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-gpxworker1';
 window.FIELD_OS_BUILD=FIELD_APP_BUILD;
 const fieldBuildLabel=document.getElementById('fieldBuildLabel');
 const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
 const fieldReleaseDetails=document.getElementById('fieldReleaseDetails');
-if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · O2';
+if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · G1';
 if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT FIX4 LOADED';
 if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: CHECKING';
 const views = [...document.querySelectorAll('.view')];
@@ -873,11 +873,8 @@ function updateOfflineEstimate(){const dist=routeMiles(),r=Number(document.getEl
 function saveRoutePlan(){const metrics=updateRouteMetrics();routePlan={...routePlan,name:document.getElementById('routeName')?.value.trim()||'FIELD ROUTE',points:routePoints.map(({lat,lon})=>({lat,lon})),gain:metrics.gain,grade:metrics.grade,terrain:metrics.terrain,notes:document.getElementById('routeNotes')?.value||'',savedAt:new Date().toISOString()};saveJSON('routePlan',routePlan);updateReturnGuidance();navigator.vibrate?.(25);addLog(`ROUTE SAVED — ${routePlan.name}; ${metrics.dist.toFixed(2)} mi; +${Math.round(metrics.gain)} ft; ${metrics.label}.`,'ROUTE')}
 function loadRouteFields(){if(document.getElementById('routeName'))document.getElementById('routeName').value=routePlan.name||'FIELD ROUTE 01';if(document.getElementById('routeGain'))document.getElementById('routeGain').value=routePlan.gain??0;if(document.getElementById('routeGrade'))document.getElementById('routeGrade').value=routePlan.grade??0;if(document.getElementById('routeTerrain'))document.getElementById('routeTerrain').value=routePlan.terrain||'maintained';if(document.getElementById('routeNotes'))document.getElementById('routeNotes').value=routePlan.notes||''}
 routeMap?.addEventListener('click',e=>{if(e.target.closest('button,input,select,label,textarea,.route-point'))return;if(routePoints.length>=1000)return alert('Route point limit reached (1000). Simplify or save this route before adding more.');const r=routeMap.getBoundingClientRect(),x=clamp((e.clientX-r.left)/r.width,0,1),y=clamp((e.clientY-r.top)/r.height,0,1),ll=mapXYToLatLon(x,y);routePoints.push({x,y,...ll});drawRoute();navigator.vibrate?.(18)});
-if(routeMap){
-  document.getElementById('undoRoutePoint')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;routePoints.pop();drawRoute()});
-  document.getElementById('reverseRoute')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;routePoints.reverse();drawRoute();addLog('ROUTE REVERSED — start/end swapped.','ROUTE')});
-  document.getElementById('clearRoute')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;if(confirm('Clear the plotted route?')){routePoints=[];drawRoute()}});
-}
+// The obsolete SVG route editor and its unused fallback handlers were removed.
+// The shared route-planner.js owns the live route controls.
 ['routeGain','routeGrade','routeTerrain','corridorRadius','offlineDetail'].forEach(id=>document.getElementById(id)?.addEventListener('input',updateRouteMetrics));
 document.getElementById('routeSaveTop')?.addEventListener('click',e=>{if(e.currentTarget?.dataset.nativeRoute==='1')return;saveRoutePlan();alert('Route saved locally for offline use.')});
 function routeAsGPX(){const name=escapeHTML(document.getElementById('routeName')?.value||routePlan.name||'FIELD ROUTE');return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="FIELD/OS v3.85" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${name}</name><trkseg>${routePoints.map(p=>`<trkpt lat="${p.lat.toFixed(7)}" lon="${p.lon.toFixed(7)}"></trkpt>`).join('')}</trkseg></trk></gpx>`}
@@ -914,6 +911,33 @@ function simplifyGPXPoints(points,limit=500){
  return selected.map(i=>points[i]);
 }
 window.FIELD_GPX_SIMPLIFY=simplifyGPXPoints;
+async function simplifyGPXOffThread(points,limit=500){
+ if(points.length<=limit)return points;
+ if(typeof Worker!=='function')return simplifyGPXPoints(points,limit);
+ return new Promise(resolve=>{
+   let worker=null,settled=false,timeout=null;
+   function finish(value){
+     if(settled)return;settled=true;clearTimeout(timeout);
+     try{worker?.terminate()}catch{}
+     resolve(value||simplifyGPXPoints(points,limit));
+   }
+   try{
+     worker=new Worker('./gpx-worker.js?v=3.85-gpxworker1');
+     worker.onmessage=e=>{
+       const result=e.data;
+       const valid=result?.ok&&Array.isArray(result.points)&&result.points.length>=2&&
+         result.points.length<=limit&&validLatLon(result.points[0])&&validLatLon(result.points.at(-1))&&
+         result.points[0].lat===points[0].lat&&result.points[0].lon===points[0].lon&&
+         result.points.at(-1).lat===points.at(-1).lat&&result.points.at(-1).lon===points.at(-1).lon;
+       finish(valid?result.points:null);
+     };
+     worker.onerror=()=>finish(null);
+     worker.postMessage({points,limit});
+     timeout=setTimeout(()=>finish(null),20000);
+   }catch(error){console.warn('GPX worker unavailable; using local simplifier',error);finish(null)}
+ });
+}
+window.FIELD_GPX_PROCESS=simplifyGPXOffThread;
 document.getElementById('gpxImport')?.addEventListener('change',async e=>{
   const f=e.target.files?.[0]; if(!f) return;
   if(f.size>10*1024*1024){e.target.value='';return alert('GPX file is too large for the mobile planner. Keep it under 10 MB or simplify it first.');}
@@ -930,8 +954,9 @@ document.getElementById('gpxImport')?.addEventListener('change',async e=>{
     }).filter(p=>validLatLon(p));
   }catch(err){ return alert(`Could not parse GPX: ${err.message}`); }
   if(pts.length<2) return alert('No usable GPX track/route points found.');
-  // Keep the UI responsive on very dense tracks while retaining endpoints.
-  if(pts.length>500)pts=simplifyGPXPoints(pts,500);
+  // Offload expensive multi-pass geometry to a worker; still works in browsers
+  // without worker support. Never discard the first/last fix or elevation.
+  if(pts.length>500){fieldNotice('PROCESSING GPX GEOMETRY — preserving trail corners');pts=await simplifyGPXOffThread(pts,500);}
   const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat)),minLon=Math.min(...pts.map(p=>p.lon)),maxLon=Math.max(...pts.map(p=>p.lon)),latRange=Math.max(maxLat-minLat,.0001),lonRange=Math.max(maxLon-minLon,.0001);
   routePoints=pts.map(p=>({...p,x:.08+.84*(p.lon-minLon)/lonRange,y:.08+.84*(maxLat-p.lat)/latRange}));
   const elevationSamples=[];let cumulativeM=0,gainFt=0,lastElevation=null;
