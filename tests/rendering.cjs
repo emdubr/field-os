@@ -99,12 +99,14 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  const gradedPoints=[0,1,2,3].map(i=>({lat:44.4759+i*.0009,lon:-73.2121}));
  const gradeStep=6371000*(.0009*Math.PI/180);
  const gradedSamples=gradedPoints.map((p,i)=>({...p,distanceM:i*gradeStep,elevationFt:500+i*45}));
- w.FIELD_ROUTE_SLOPE={
-   gradeAtDistance(_profile,distanceM){return distanceM<90?2:distanceM<200?10:18},
+ let gradeEvaluations=0,planReads=0;
+ const testClassifier={
+   gradeAtDistance(_profile,distanceM){gradeEvaluations++;return distanceM<90?2:distanceM<200?10:18},
    slopeClass(grade){return {key:grade>=15?'hard':grade>=8?'medium':'easy'}}
  };
+ w.FIELD_ROUTE_SLOPE=testClassifier;
  let currentSamples=null;
- w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){return {elevationProfile:currentSamples}}};
+ w.FIELD_ROUTE_STATE={getPoints(){return gradedPoints},getPlan(){planReads++;return {elevationProfile:currentSamples}}};
  d.dispatchEvent(new w.CustomEvent('fieldos:routechange'));
  assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'route stays neutral before elevation arrives');
  const tileRevisionBeforeProfile=st.tileRevision;
@@ -113,9 +115,38 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  assert.ok(st.overlay.querySelector('.planned-route-slope-medium'),'medium sustained grade draws orange planned route on main map');
  assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'hard sustained grade draws red planned route on main map');
  assert.equal(st.tileRevision,tileRevisionBeforeProfile,'DEM arrival repaints only vectors, not raster tiles');
+ // Grade calculation requires multiple DEM interpolations. Repeating it
+ // hundreds of times per tiny pan and wheel frame is wasted computation:
+ // only the screen projection changes until route/profile metadata changes.
+ const calculated=gradeEvaluations,readAtProfile=planReads;
+ assert.ok(calculated>0,'first DEM arrival classifies slope segments');
+ const routeScreenBefore=st.overlay.querySelector('.planned-route-line').getAttribute('points');
+ for(let pan=1;pan<=18;pan++)engine.setView('homeRealMap',
+   {lat:44.4759,lon:-73.2121+pan*.000012},14+pan*.013);
+ assert.equal(gradeEvaluations,calculated,'pan/fractional zoom must reuse the same slope classifications');
+ assert.equal(planReads,readAtProfile,'camera paints must reuse the same saved profile rather than cloning plan metadata');
+ assert.notEqual(st.overlay.querySelector('.planned-route-line').getAttribute('points'),routeScreenBefore,
+   'cached grade classification must still reproject the route for the latest camera');
+ assert.ok(st.overlay.querySelector('.planned-route-slope-medium'),'medium grade remains after camera movement');
+ assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'hard grade remains after camera movement');
+ // A preexisting saved route may be painted BEFORE route-planner.js publishes
+ // FIELD_ROUTE_SLOPE. The readiness event should color it without tile work.
+ w.FIELD_ROUTE_SLOPE=null;
+ const tilesBeforeClassifier=st.tileRevision;
+ d.dispatchEvent(new w.Event('fieldos:slopeclassifierready'));
+ assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'missing classifier falls back to neutral line');
+ w.FIELD_ROUTE_SLOPE=testClassifier;
+ d.dispatchEvent(new w.Event('fieldos:slopeclassifierready'));
+ assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'late grade classifier restores current saved route colors');
+ assert.equal(st.tileRevision,tilesBeforeClassifier,'classifier activation refreshes SVG only, not map tiles');
+ const afterReady=gradeEvaluations;
  currentSamples=gradedSamples.map((p,i)=>({...p,distanceM:i*gradeStep*3}));
  d.dispatchEvent(new w.CustomEvent('fieldos:routebootstrapchange'));
  assert.equal(st.overlay.querySelectorAll('.planned-route-slope').length,0,'stale elevation profile must not color a different route');
+ currentSamples=gradedSamples.map(p=>({...p,elevationFt:p.elevationFt+100}));
+ d.dispatchEvent(new w.CustomEvent('fieldos:routemetadatachange'));
+ assert.ok(gradeEvaluations>afterReady,'replacing an elevation profile must invalidate cached grade classifications');
+ assert.ok(st.overlay.querySelector('.planned-route-slope-hard'),'matching replacement profile recolors the current route');
  console.log('PASS overview map restores orange/red sustained-grade sections and refuses mismatched DEM data');
 
  // Hidden-map telemetry should not redraw offscreen SVG overlays, but

@@ -401,12 +401,55 @@
   }
 
   let cachedRoute=null,routeBridge=null;
+  // Route geometry, associated DEM and grade classifications only change on
+  // route/metadata events. A camera gesture changes their screen projection,
+  // not their cumulative distance or slope classification.
+  let routePlanBridge=null,routePlanRead=false,cachedElevationSamples=null,routeGradeCache=null;
   function plannedRoute(){
     const currentBridge=window.FIELD_ROUTE_STATE;
-    if(currentBridge!==routeBridge){routeBridge=currentBridge;cachedRoute=null}
+    if(currentBridge!==routeBridge){
+      routeBridge=currentBridge;cachedRoute=null;routeGradeCache=null;
+      routePlanBridge=null;routePlanRead=false;
+    }
     if(cachedRoute)return cachedRoute;
     if(!currentBridge?.getPoints)return [];
     return cachedRoute=(currentBridge.getPoints()||[]).filter(p=>p&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+  }
+  function plannedElevationSamples(){
+    const bridge=window.FIELD_ROUTE_STATE;
+    if(bridge!==routePlanBridge){
+      routePlanBridge=bridge;routePlanRead=false;routeGradeCache=null;
+    }
+    if(!routePlanRead){
+      cachedElevationSamples=bridge?.getPlan?.()?.elevationProfile??null;
+      routePlanRead=true;
+    }
+    return cachedElevationSamples;
+  }
+  function routeGradeSegments(route,samples,grading){
+    if(!grading?.gradeAtDistance||!grading?.slopeClass||!Array.isArray(samples)||samples.length<2||route.length<2)
+      return [];
+    if(routeGradeCache&&routeGradeCache.route===route&&routeGradeCache.samples===samples&&routeGradeCache.grading===grading)
+      return routeGradeCache.segments;
+    const cumulative=new Float64Array(route.length);
+    for(let j=1;j<route.length;j++)cumulative[j]=cumulative[j-1]+metersBetween(route[j-1],route[j]);
+    const total=cumulative.at(-1),sampleTotal=Number(samples.at(-1)?.distanceM);
+    const matches=Number.isFinite(sampleTotal)&&total>10&&Math.abs(sampleTotal-total)/total<.06&&
+      metersBetween(samples[0],route[0])<60&&metersBetween(samples.at(-1),route.at(-1))<60;
+    const segments=[];
+    if(matches){
+      const step=Math.max(1,Math.ceil((route.length-1)/450));
+      for(let start=0;start<route.length-1;start+=step){
+        const end=Math.min(start+step,route.length-1);
+        const grade=grading.gradeAtDistance({samples},(cumulative[start]+cumulative[end])/2);
+        // FLAT (<3%) retains the ordinary route color.
+        if(!Number.isFinite(grade)||Math.abs(grade)<3)continue;
+        const key=grading.slopeClass(grade).key;
+        if(key==='easy'||key==='medium'||key==='hard')segments.push({start,end,key});
+      }
+    }
+    routeGradeCache={route,samples,grading,segments};
+    return segments;
   }
   // Route arrows repeat every 90 screen pixels. A long route can span
   // millions of *offscreen* pixels at high zoom; iterating that distance on
@@ -440,44 +483,16 @@
       const line=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
       if(pts.length>1){
         parts.push(`<polyline points="${line}" class="planned-route-outline"/><polyline points="${line}" class="planned-route-line"/>`);
-        // Use the SAME sustained-grade classifier as Route Planner rather than
-        // a noisy elevation delta between individual DEM samples. Show colors
-        // only when the saved profile matches this exact route's endpoints and
-        // approximate length; otherwise keep the route neutral, not misleading.
-        const samples=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile;
-        const grading=window.FIELD_ROUTE_SLOPE;
-        if(grading&&Array.isArray(samples)&&samples.length>1){
-          const cumulative=[0];
-          for(let j=1;j<route.length;j++)cumulative.push(cumulative[j-1]+metersBetween(route[j-1],route[j]));
-          const total=cumulative.at(-1);
-          const sampleTotal=Number(samples.at(-1)?.distanceM);
-          const match=Number.isFinite(sampleTotal)&&total>10&&Math.abs(sampleTotal-total)/total<.06
-            &&metersBetween(samples[0],route[0])<60&&metersBetween(samples.at(-1),route.at(-1))<60;
-          if(match){
-            const overlayPaths={easy:[],medium:[],hard:[]};
-            const step=Math.max(1,Math.ceil((route.length-1)/450));
-            for(let j=step;j<route.length;j+=step){
-              const end=Math.min(j,route.length-1),start=end-step;
-              const mid=(cumulative[start]+cumulative[end])/2;
-              const grade=grading.gradeAtDistance({samples},mid),cls=grading.slopeClass(grade).key;
-              // FLAT (<3%) remains the normal route color, not a warning.
-              if(Math.abs(grade)<3)continue;
-              const segment=pts.slice(start,end+1).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
-              overlayPaths[cls]?.push(segment);
-            }
-            // Include the final segment when decimation skipped the last point.
-            const last=Math.floor((route.length-1)/step)*step;
-            if(last<route.length-1){
-              const grade=grading.gradeAtDistance({samples},(cumulative[last]+total)/2),cls=grading.slopeClass(grade).key;
-              if(Math.abs(grade)>=3){
-                const segment=pts.slice(last).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
-                overlayPaths[cls]?.push(segment);
-              }
-            }
-            for(const cls of ['easy','medium','hard'])if(overlayPaths[cls].length)
-              parts.push(`<path class="planned-route-slope planned-route-slope-${cls}" d="${overlayPaths[cls].join('')}"/>`);
-          }
+        // Reproject the route on camera movement, but reuse all accumulated
+        // route mileage and DEM classifications until actual route data changes.
+        const overlayPaths={easy:[],medium:[],hard:[]};
+        for(const {start,end,key} of routeGradeSegments(route,plannedElevationSamples(),window.FIELD_ROUTE_SLOPE)){
+          // Do not interpolate the map as straight chords across trail bends.
+          const segment=pts.slice(start,end+1).map((p,k)=>`${k?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('');
+          overlayPaths[key].push(segment);
         }
+        for(const cls of ['easy','medium','hard'])if(overlayPaths[cls].length)
+          parts.push(`<path class="planned-route-slope planned-route-slope-${cls}" d="${overlayPaths[cls].join('')}"/>`);
         let distance=0;
         for(let i=1;i<pts.length;i++){
           const a=pts[i-1],b=pts[i],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
@@ -757,8 +772,10 @@
   let lastElevationProfile=null;
   const redrawNewElevation=()=>{
     const profile=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile??null;
+    routePlanBridge=window.FIELD_ROUTE_STATE;
+    cachedElevationSamples=profile;routePlanRead=true;
     if(profile===lastElevationProfile)return;
-    lastElevationProfile=profile;
+    lastElevationProfile=profile;routeGradeCache=null;
     redrawDataOverlay();
   };
   document.addEventListener('fieldos:routebootstrapchange',redrawNewElevation);
@@ -766,8 +783,14 @@
   // metadata event. Without this, Home/Terrain slope colors appear only
   // after another unrelated camera/route redraw.
   document.addEventListener('fieldos:routemetadatachange',redrawNewElevation);
+  // Native map starts before the planner publishes its shared DEM classifier.
+  // Restore saved-route colors as soon as it becomes available, without
+  // requesting tiles or changing the chosen map camera.
+  document.addEventListener('fieldos:slopeclassifierready',()=>{
+    routeGradeCache=null;redrawDataOverlay();
+  });
   document.addEventListener('fieldos:routechange',()=>{
-    cachedRoute=null;
+    cachedRoute=null;routeGradeCache=null;routePlanRead=false;
     states.forEach(st=>{
       st.routeFitted=false;
       if(!isVisible(st)){const {w,h}=overlaySize(st);drawOverlay(st,w,h)}
