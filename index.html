@@ -748,7 +748,7 @@
       <section class="view" id="track" data-view="track">
         <div class="view-head"><button class="back" data-open="map">← MAP</button><h2>TRACK RECORDER</h2><span></span></div>
         <article class="panel">
-          <div class="panel-title"><span>BREADCRUMB TRACK</span><span class="tiny" id="trackState">STOPPED</span></div>
+          <div class="panel-title"><span>BREADCRUMB TRACK</span><span class="tiny" id="trackState">STOPPED</span></div><div id="trackRecovery" class="field-action-recovery" role="status" aria-live="polite"></div><p id="trackHistoryGap" class="muted" hidden>EARLIER TRACK SAMPLES PRUNED — START POSITION RETAINED, MIDDLE SEGMENT UNAVAILABLE. Do not use a straight line across that gap for return navigation.</p>
           <div class="track-stat-grid"><div><b id="trackDistance">0.00</b><span>MILES</span></div><div><b id="trackPoints">0</b><span>POINTS</span></div><div><b id="trackDuration">00:00:00</b><span>DURATION</span></div><div><b id="trackAccuracy">---</b><span>ACCURACY</span></div></div>
           <div class="button-row"><button id="startTrack" class="action">START GPS TRACK</button><button id="stopTrack" class="action">STOP</button><button id="addDemoTrackPoint" class="action">ADD CURRENT</button></div>
           <p class="muted">On iPhone, continuous recording depends on browser/PWA background limits. The TAP V2 track feed will be more reliable once its data bridge is connected.</p>
