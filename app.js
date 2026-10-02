@@ -1443,10 +1443,11 @@ async function updateFieldMaps(recenter=false){
     return;
   }
   if(diag)diag.textContent='MAP ENGINE READY';
-  const states=[
-    ensureFieldMap('homeRealMap','homeMapFallback','homeMapModeLabel'),
-    ensureFieldMap('realMap','mapFallback','mapModeLabel')
-  ].filter(Boolean);
+  // Instantiate only the visible offline/Leaflet map to avoid duplicate tile fetches.
+  const activeView=document.querySelector('.view.active')?.id;
+  const configs=activeView==='home'?[['homeRealMap','homeMapFallback','homeMapModeLabel']]:
+    activeView==='map'?[['realMap','mapFallback','mapModeLabel']]:[];
+  const states=configs.map(args=>ensureFieldMap(...args)).filter(Boolean);
   if(!states.length)return;
   const trusted=hasTrustedMapPosition();
   const canOnline=navigator.onLine!==false;
