@@ -21,12 +21,12 @@
   <div class="noise-overlay" aria-hidden="true"></div>
   <div class="grid-overlay" aria-hidden="true"></div>
 
-  <div id="boot" class="boot-screen" aria-hidden="true">
+  <div id="boot" class="boot-screen" role="dialog" aria-label="FIELD OS startup" aria-hidden="false">
     <div class="boot-box">
       <div class="boot-title">FIELD/OS <span>SECURE TERMINAL v3.83</span></div>
       <pre id="bootText" class="boot-text">INITIALIZING SECURE SHELL...</pre>
       <div class="boot-bar"><i id="bootFill"></i></div>
-      <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><span class="boot-skip">TAP ANYWHERE TO SKIP</span></div>
+      <div class="boot-foot">RETRO DEMO UI // OFFLINE PWA // TAP V2 INTEGRATION PENDING<br><button id="bootSkip" class="boot-skip" type="button">SKIP INTRO</button></div>
     </div>
   </div>
 
@@ -70,7 +70,7 @@
             <button data-open="nav"><span>TO BASE</span><b id="mobileBaseDist">NO FIX</b><small id="mobileBaseBrg">—</small></button>
             <button data-open="nav"><span>DAYLIGHT</span><b id="mobileDaylight">CALC…</b><small id="mobileSunState">SOLAR</small></button>
             <button data-open="power"><span>PHONE BAT</span><b id="mobileBattery">--%</b><small id="mobilePowerState">LOCAL</small></button>
-            <button data-open="trip"><span>CHECK-IN</span><b id="mobileCheckin">READY</b><small>LOCAL TIMER</small></button>
+            <button data-open="trip"><span>CHECK-IN</span><b id="mobileCheckin">READY</b><small>APP OPEN ONLY</small></button>
           </section>
           <div class="handheld-actions" aria-label="Quick field actions">
             <button data-open="trailreturn">↶ RETURN TRAIL</button><button data-open="nav">⌂ RETURN BASE</button><button data-open="lost">? LOST MODE</button><button class="handheld-sos" data-open="sos">! SOS</button>
@@ -332,10 +332,7 @@
       <section class="view" id="lorachat" data-view="lorachat">
         <div class="view-head"><button class="back" data-open="comms">← COMMS</button><h2>LORA CHAT</h2><button class="ghost" data-open="loramap">MAP</button></div>
         <article class="panel">
-          <div class="panel-title"><span>ENCRYPTED MESH TRAFFIC</span><span class="tiny">LIVE DEMO</span></div>
-          <div class="message"><b>NODE-02</b><span>00:14</span><p>Reached the junction. Holding here.</p></div>
-          <div class="message"><b>RELAY-A</b><span>00:12</span><p>Telemetry nominal. Battery 82%.</p></div>
-          <div class="message unread"><b>NODE-05</b><span>00:04</span><p>Weather moving in from west.</p></div>
+          <div class="panel-title"><span>MESH MESSAGE HISTORY</span><span class="tiny">NO VERIFIED SESSION</span></div><p class="muted">No verified received messages. The transport bridge and encryption status must be confirmed before relying on communications.</p>
         </article>
         <article class="panel unified-inbox-panel">
           <div class="panel-title"><span>UNIFIED COMMUNICATIONS INBOX</span><span class="tiny" id="unifiedInboxState">0 EVENTS</span></div>
@@ -760,9 +757,9 @@
           <div><span>POWER</span><b id="sensorPowerNow">--</b></div>
         </div>
         <div class="sensor-list">
-          <article class="panel sensor-card"><div class="sensor-top"><b>GNSS</b><span class="badge good-badge">GOOD</span></div><p>18 satellites • 3D fix • ±4 m</p><div class="bar"><i style="width:88%"></i></div></article>
-          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1905 IMU</b><span class="badge good-badge">ONLINE</span></div><p>Heading 037° • Pitch +2° • Roll -1°</p><div class="bar"><i style="width:76%"></i></div></article>
-          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1906 ENV</b><span class="badge good-badge">ONLINE</span></div><p>31°F • 64% RH • 898 hPa • trend falling</p><div class="bar"><i style="width:69%"></i></div></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>GNSS</b><span id="cardGnssState">NO FIX</span></div><p id="cardGnssDetail">Location permission and accurate fresh fix required.</p></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1905 IMU</b><span id="cardImuState">NOT CONNECTED</span></div><p id="cardImuDetail">No recent verified hardware telemetry.</p></article>
+          <article class="panel sensor-card"><div class="sensor-top"><b>RAK1906 ENV</b><span id="cardEnvState">NOT CONNECTED</span></div><p id="cardEnvDetail">No recent verified environment telemetry.</p></article>
           <article class="panel sensor-card"><div class="sensor-top"><b>RTC</b><span class="badge warn-badge">PLANNED</span></div><p>RAK12002 • not installed in demo</p><div class="bar"><i style="width:20%"></i></div></article>
           <article class="panel sensor-card"><div class="sensor-top"><b>RADAR / OPTICS</b><span class="badge warn-badge">FUTURE</span></div><p>External device bridge placeholder</p><div class="bar"><i style="width:8%"></i></div></article>
         </div>
@@ -863,9 +860,7 @@
 
       <section class="view" id="power" data-view="power">
         <div class="view-head"><button class="back" data-open="home">← HOME</button><h2>POWER CONTROL</h2><span></span></div>
-        <article class="panel"><div class="panel-title"><span>POWER BUDGET</span><span class="tiny">DEMO ESTIMATE</span></div>
-          <div class="power-gauge"><b id="powerPercent">64%</b><span>PHONE / DEMO</span></div>
-          <dl class="readouts large-readouts"><div><dt>TAP V2</dt><dd>78%</dd></div><div><dt>PHONE</dt><dd>64%</dd></div><div><dt>SENSOR-2</dt><dd>OFFLINE</dd></div><div><dt>EST. RESERVE</dt><dd>18h</dd></div></dl>
+        <article class="panel"><div class="panel-title"><span>POWER BUDGET</span><span class="tiny">DEVICE REPORTED ONLY</span></div><div class="power-gauge"><b id="powerPercent">UNAVAILABLE</b><span>PHONE BATTERY IF BROWSER SUPPORTS IT</span></div><dl class="readouts large-readouts"><div><dt>TAP V2</dt><dd id="tapBatteryState">UNAVAILABLE</dd></div><div><dt>PHONE</dt><dd id="phoneBatteryState">UNAVAILABLE</dd></div><div><dt>SENSOR-2</dt><dd>NOT CONNECTED</dd></div><div><dt>EST. RESERVE</dt><dd>NOT ESTIMATED</dd></div></dl>
         </article>
         <article class="panel"><div class="panel-title"><span>CONSERVATION MODES</span><span class="tiny">LOCAL UI</span></div><div class="button-row"><button class="action power-mode" data-power="normal">NORMAL</button><button class="action power-mode" data-power="low">LOW POWER</button><button class="action power-mode" data-power="emergency">EMERGENCY</button></div><p id="powerModeText" class="muted">Normal refresh and display behavior.</p></article>
         <article class="panel"><div class="panel-title"><span>DISPLAY HOLD</span><span class="tiny">SCREEN WAKE LOCK</span></div><p id="wakeLockStatus" class="muted">OFF — screen may sleep normally.</p><div class="button-row"><button id="toggleWakeLock" class="action">KEEP SCREEN AWAKE</button></div><p class="muted">Uses the browser Screen Wake Lock API when supported. iOS may release it when FIELD/OS is backgrounded.</p></article>
@@ -889,9 +884,9 @@
           <div class="sos-ring">SOS</div>
           <h3>EMERGENCY MODE</h3>
           <dl class="readouts large-readouts" aria-live="polite"><div><dt>POSITION</dt><dd id="sosPosition">NO FIX — LAST POSITION NOT VERIFIED</dd></div><div><dt>ALT</dt><dd id="sosAltitude">UNKNOWN</dd></div><div><dt>GNSS</dt><dd id="sosGnss">NO TRUSTED FIX</dd></div><div><dt>BAT</dt><dd id="sosBattery">UNAVAILABLE</dd></div></dl>
-          <p class="muted center">Prototype only. FIELD/OS should not replace certified emergency communications.</p>
+          <p class="muted center">Prototype only: preparing this SOS does not transmit any emergency message. Use a phone emergency call or certified satellite SOS when available.</p>
           <button id="meshSos" class="sos-button">HOLD TO PREPARE DEMO SOS</button>
-          <textarea id="emergencyNotes" class="terminal-area" placeholder="Emergency notes: injury, group size, shelter, medications/allergies you choose to record..."></textarea>
+          <textarea id="emergencyNotes" class="terminal-area" placeholder="Emergency notes: injury, group size, shelter, medications/allergies you choose to record..."></textarea><p class="muted">These notes are stored unencrypted on this device. Avoid sharing the device or clear the notes when finished.</p>
           <div class="button-row"><button id="copySos" class="action">COPY SOS PACKET</button><label for="emergencyRegion">EMERGENCY CALL REGION</label><select id="emergencyRegion" class="terminal-input"><option value="">SELECT YOUR REGION</option><option value="911">US / CANADA (911)</option><option value="112">EU / MANY COUNTRIES (112)</option><option value="999">UK (999)</option><option value="000">AUSTRALIA (000)</option><option value="111">NEW ZEALAND (111)</option></select><a id="emergencyDial" class="action link-action" href="#" aria-disabled="true">SELECT REGION TO CALL</a></div>
           <p class="muted center">Calling 911 or certified satellite SOS is the primary emergency path when available; mesh is supplemental.</p>
         </article>
@@ -917,7 +912,7 @@
     </main>
 
     <div id="tabSheetBackdrop" class="tab-sheet-backdrop" hidden></div>
-    <aside id="tabSheet" class="tab-sheet" aria-label="More FIELD/OS sections" aria-hidden="true">
+    <aside id="tabSheet" class="tab-sheet" role="dialog" aria-modal="true" aria-label="More FIELD/OS sections" aria-hidden="true">
       <div class="tab-sheet-head"><b>FIELD/OS // MODULES</b><button id="closeTabSheet" class="micro-btn" type="button">CLOSE</button></div>
       <div class="tab-sheet-grid">
         <button class="sheet-tab" data-open="route"><span>⌁</span><b>ROUTE</b><small>Plan / difficulty</small></button>
