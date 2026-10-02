@@ -101,6 +101,28 @@ w.eval(fs.readFileSync('map-engine.js','utf8'));
  engine.stopLiveLocation();
  engine.unmount('realMap');hidden.classList.remove('active');d.getElementById('home').classList.add('active');
  console.log('PASS hidden overlays pause on telemetry and catch up on view activation');
+ // Android/iOS may interrupt a drag or pinch with pointercancel; preserve
+ // its final visible preview instead of restoring the previous camera.
+ let cancelledTaps=0;engine.setTapHandler('homeRealMap',()=>cancelledTaps++);
+ const beforeCancelDrag=engine.getView('homeRealMap');
+ st.onPointerDown({pointerId:401,button:0,clientX:170,clientY:175,preventDefault(){}});
+ st.onPointerMove({pointerId:401,clientX:215,clientY:195});
+ st.onPointerCancel({pointerId:401,clientX:215,clientY:195});
+ const afterCancelDrag=engine.getView('homeRealMap');
+ assert.ok(Math.abs(afterCancelDrag.center.lon-beforeCancelDrag.center.lon)>0.0001,'Cancelled drag commits camera translation');
+ assert.equal(st.pointers.size,0,'Cancelled gesture releases pointers');
+ assert.equal(cancelledTaps,0,'Cancelling a drag cannot tap route editor');
+ const beforeCancelPinch=engine.getView('homeRealMap');
+ st.onPointerDown({pointerId:402,button:0,clientX:140,clientY:160,preventDefault(){}});
+ st.onPointerDown({pointerId:403,button:0,clientX:240,clientY:160,preventDefault(){}});
+ st.onPointerMove({pointerId:403,clientX:280,clientY:160});
+ st.onPointerCancel({pointerId:403,clientX:280,clientY:160});
+ assert.ok(engine.getView('homeRealMap').zoom>beforeCancelPinch.zoom+.4,'Cancelled pinch commits preview zoom');
+ assert.equal(st.pointers.size,0);
+ assert.equal(cancelledTaps,0,'Cancelled pinch cannot trigger map tap');
+ await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
+ engine.setTapHandler('homeRealMap',null);
+ console.log('PASS interrupted mobile drag/pinch preserves camera without phantom taps');
  const tiles=[...st.tiles.values()];engine.unmount('homeRealMap');
  assert.equal(st.tiles.size,0);assert.ok(tiles.every(t=>t.img.onload===null&&t.img.onerror===null));assert.equal(d.getElementById('homeRealMap').childElementCount,0);
  assert.equal(d.getElementById('realMap').childElementCount,0,'Hidden Terrain map should not load duplicate tiles');
