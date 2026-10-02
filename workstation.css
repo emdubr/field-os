@@ -4292,3 +4292,19 @@ select option{background:#010a05;color:var(--crt-green-hot)}
 .guidance-panel{min-width:0;padding:10px}.guidance-row{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.guidance-row small{color:var(--dim)}.guidance-panel details>summary{min-height:44px;padding:12px 0;cursor:pointer}.guidance-panel #junctionRows,.guidance-panel #trailContinuityRows{max-height:350px;overflow:auto}.junction-near{border-color:var(--warn)!important}#junctionInstruction{font-weight:bold;overflow-wrap:anywhere}
 
 .map-readiness-panel dd{overflow-wrap:anywhere}.map-readiness-panel details{padding:12px}.map-readiness-panel summary{cursor:pointer;min-height:44px;padding:10px 0}
+
+/* Desktop wheel zoom must not fade the slope route to 18% opacity between frames. */
+.route-planner-real-map .planner-dom-route-layer.route-zooming{
+  opacity:1!important;
+  transition:none!important;
+}
+/* Planned-route slope colors on both the main map and the route planner.
+   Flat segments keep the neutral route line; colored sections are estimates
+   from the route DEM, not an overall trail safety/difficulty rating. */
+.native-map-overlay .planned-route-slope{
+  fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:6px;
+  pointer-events:none;
+}
+.native-map-overlay .planned-route-slope-easy{stroke:#35ff9c;stroke-width:5px}
+.native-map-overlay .planned-route-slope-medium{stroke:#f28c28;stroke-width:7px}
+.native-map-overlay .planned-route-slope-hard{stroke:#e5484d;stroke-width:8px}
