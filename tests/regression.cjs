@@ -24,6 +24,21 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  for(const btn of d.querySelectorAll('.workstation-nav [data-open]')){btn.click();await tick();assert.equal(d.querySelector('.view.active').id,btn.dataset.open);if(btn.dataset.open!=='home')assert.ok(d.querySelector('.view.active .ws-card-body'),'module details initialized');}
  console.log('PASS all workstation modules initialize and navigation changes active view');
  for(const theme of ['amber','red','mono','green']){d.querySelector(`[data-theme-choice="${theme}"]`).click();await tick();assert.equal(d.body.dataset.theme,theme);assert.equal(w.localStorage.getItem('fieldos-v12-theme'),theme)}
+
+ w.localStorage.removeItem('fieldos-v12-migration-v3-85');
+ w.localStorage.setItem('fieldos-v06-opt-migrated','same-value');
+ w.localStorage.setItem('fieldos-v05-opt-conflict','older-unique-value');
+ w.localStorage.setItem('fieldos-v12-opt-conflict','newer-value');
+ w.localStorage.setItem('fieldos-v04-track','legacy-track-backup');
+ const migration=w.migrateLegacyKeys();
+ assert.equal(migration.failed,false);
+ assert.equal(w.localStorage.getItem('fieldos-v12-opt-migrated'),'same-value');
+ assert.equal(w.localStorage.getItem('fieldos-v06-opt-migrated'),null,'verified identical migrated values may be cleaned up');
+ assert.equal(w.localStorage.getItem('fieldos-v05-opt-conflict'),'older-unique-value','conflicting historical values cannot be discarded');
+ assert.equal(w.localStorage.getItem('fieldos-v04-track'),'legacy-track-backup','IDB migration retains independent recovery source');
+ assert.match(w.localStorage.getItem('fieldos-v12-migration-v3-85'),/^complete/);
+ assert.equal(w.migrateLegacyKeys(),undefined,'repeated launch should skip full migration work');
+ console.log('PASS one-time, copy-verified storage migration preserves conflicts and old track backups');
  console.log('PASS four themes and preference persistence');
  d.getElementById('waypointName').value='QA Base';
  assert.match(d.getElementById('sunState').textContent,/NO VERIFIED LOCATION/,'demo coordinates must not populate solar calculations');
