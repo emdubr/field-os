@@ -463,7 +463,7 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(runtimeJs.includes('window.FIELD_RUNTIME={every,frame,idle,flush'));assert.ok(html.includes(`runtime.js?v=${release}`));assert.ok(swJs.includes(`runtime.js?v=${release}`));
  assert.ok(runtimeJs.includes('(id*37)%Math.max(17,interval)'));console.log('PASS runtime scheduler staggers recurring work instead of aligning timer bursts');
  assert.ok((html.match(/<script defer src=/g)||[]).length>=11);assert.ok(html.indexOf('map-engine.js?v='+release)<html.indexOf('route-planner.js?v='+release));console.log('PASS startup scripts fetch in parallel while preserving dependency order');
- assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,1);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.ok(fieldIntelJs.includes('readinessPollTimer=setTimeout(watch,500)'));assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
+ assert.equal((appJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((fieldIntelJs.match(/setInterval\s*\(/g)||[]).length,0);assert.ok(fieldIntelJs.includes('readinessPollTimer=setTimeout(watch,500)'));assert.equal((workstationJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((mapEngineJs.match(/setInterval\s*\(/g)||[]).length,0);assert.equal((routePlannerJs.match(/setInterval\s*\(/g)||[]).length,0);
  assert.ok(workstationJs.includes("refresh(true)},60000);refresh();"));assert.ok(!workstationJs.includes("},5000);refresh();"));
  assert.match(appJs,/function scheduleReferenceFit\(\)[\s\S]*?requestAnimationFrame/);assert.ok(!appJs.includes("window.addEventListener('resize',fitReferenceConsole"));assert.ok(routePlannerJs.includes('function plannerWatchdog()'));assert.ok(routePlannerJs.includes('if(cancelled||tap.moved||plannerMobilePointers.size||busy)return'));assert.ok(!routePlannerJs.includes('plannerMobilePointers.size||busy||ignoreTarget(e))return'));
  assert.ok(appJs.includes("FIELD_RUNTIME.frame('sensor-charts',drawAllSensorCharts)"));
@@ -474,8 +474,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS workstation refresh is state-driven instead of repainting on every click and keystroke');
  for(const asset of ['styles.css','workstation.css','field-tools.js'])assert.ok(html.includes(`${asset}?v=${release}`));
  assert.ok(appJs.includes(`sw.js?v=${release}`));
- assert.ok(!appJs.slice(appJs.indexOf("if(\'serviceWorker\' in navigator)"),appJs.indexOf("const bootLines=")).includes("location.reload()"));
- assert.ok(swJs.includes(`field-tools.js?v=${release}`));
+ assert.ok(appJs.includes('if(approved){location.reload();return;}'),'worker update reload must require approval');assert.ok(!swJs.includes('}).then(()=>self.skipWaiting())'));
+ assert.ok(swJs.includes(`field-tools.js?v=${release}`));assert.ok(swJs.includes('track-store.js?v=3.84-opt2'));assert.ok(swJs.includes('geo-hub.js?v=3.84-opt2'));
  assert.equal(JSON.parse(manifest).start_url,'./index.html','PWA installs require stable launch URL');
  assert.ok(!html.includes('?v=3.42')&&!appJs.includes('?v=3.42')&&!swJs.includes('?v=3.42'));
  console.log('PASS versioned JS/CSS caches plus stable installed-PWA launch URL');
@@ -822,7 +822,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-84-safety1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-84-opt2'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
