@@ -18,6 +18,11 @@ const server=http.createServer((req,res)=>{
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',r=>r.request().url().startsWith(origin)?r.continue():r.abort());
     await page.goto(origin);await page.waitForTimeout(800);
+     await page.evaluate(()=>{localStorage.setItem('fieldos-v12-track-active','yes');localStorage.setItem('fieldos-v12-track-last-fix',String(Date.now()-30000))});
+     await page.reload();await page.waitForTimeout(800);
+     assert.equal(await page.locator('#resumeTrack').count(),1,'interrupted session should offer manual resume');
+     assert.match(await page.locator('#trackRecovery').innerText(),/Previous recording interrupted/);
+     assert.equal(await page.evaluate(()=>localStorage.getItem('fieldos-v12-track-active')),null,'cannot claim a native recording survived page reload');
     await page.setViewportSize({width:1440,height:900});
     await page.locator('#workspaceSearch').click();
     assert.equal(await page.locator('#workspaceSwitcher').evaluate(e=>e.open),true);

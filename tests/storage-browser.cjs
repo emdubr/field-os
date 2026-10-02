@@ -40,6 +40,20 @@ const server=http.createServer((req,res)=>{
    return {before,snapshot:snap.length,restored:restored.length,cleared:(await FIELD_TRACK_STORE.all()).length};
   });
   assert.deepEqual(after,{before:4,snapshot:3,restored:3,cleared:0});
+  const longTrack=await page.evaluate(async()=>{
+   const start=Date.parse('2026-10-01T00:00:00.000Z');
+   const points=Array.from({length:5010},(_,i)=>({lat:44.1+i*.00001,lon:-73.1+i*.00001,
+     time:new Date(start+i*1000).toISOString(),seq:i,totalMiles:i*.012}));
+   await FIELD_TRACK_STORE.replace(points);
+   const retained=await FIELD_TRACK_STORE.all();
+   return {count:retained.length,start:retained[0],next:retained[1],last:retained.at(-1)};
+  });
+  assert.equal(longTrack.count,5000,'track store bounds older interior samples');
+  assert.equal(longTrack.start.seq,0,'original trailhead must survive compaction');
+  assert.ok(longTrack.next.seq>1,'oldest interior samples may be removed');
+  assert.equal(longTrack.last.seq,5009);
+  assert.ok(longTrack.last.totalMiles>60);
+  console.log('PASS 5010-point IndexedDB track retains original trailhead and cumulative mileage');
   console.log('PASS real browser IndexedDB migration, append-only writes, crash-reload persistence, snapshot restore, clear');
  }finally{await browser?.close();await new Promise(r=>server.close(r));}
 })().catch(err=>{console.error(err);process.exitCode=1;server.close()});

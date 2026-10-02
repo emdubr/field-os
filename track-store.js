@@ -18,7 +18,7 @@
     const time=Number.isFinite(Date.parse(p.time))?new Date(p.time).toISOString():new Date().toISOString();
     const lat=Number(p.lat),lon=Number(p.lon),alt=p.alt==null?null:Number(p.alt);
     return {id:time+'|'+lat.toFixed(7)+'|'+lon.toFixed(7),time,lat,lon,
-      alt:Number.isFinite(alt)?alt:null,accuracy:p.accuracy==null?null:Number(p.accuracy)};
+      alt:Number.isFinite(alt)?alt:null,accuracy:p.accuracy==null?null:Number(p.accuracy),totalMiles:Number.isFinite(Number(p.totalMiles))&&p.totalMiles!=null?Number(p.totalMiles):null,seq:Number.isFinite(Number(p.seq))&&p.seq!=null?Number(p.seq):null};
   }
   function legacy(){
     try{const rows=JSON.parse(localStorage.getItem(LEGACY)||'[]');return Array.isArray(rows)?rows.map(normalize).filter(Boolean):[];}
@@ -56,7 +56,7 @@
     const tx=db.transaction('points','readonly'),finished=done(tx),request=tx.objectStore('points').getAll();
     const rows=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result||[]);request.onerror=()=>reject(request.error)});
     await finished;
-    return rows.slice(-LIMIT);
+    return rows.length>LIMIT?[rows[0],...rows.slice(-(LIMIT-1))]:rows;
   }
   async function write(rows,replace=false){
     if(!db)throw Error('IndexedDB not available');
@@ -70,8 +70,10 @@
     await countDone;
     if(count>LIMIT){
       const excess=count-LIMIT,trim=db.transaction('points','readwrite'),store=trim.objectStore('points');
-      const cur=store.openKeyCursor();let removed=0;
-      cur.onsuccess=()=>{const c=cur.result;if(c&&removed<excess){store.delete(c.primaryKey);removed++;c.continue();}};
+      const cur=store.openKeyCursor();let removed=0,first=true;
+      // The first-ever recorded fix is the trailhead. Trim interior history,
+      // never the first fix. Long-term distance is stored cumulatively.
+      cur.onsuccess=()=>{const c=cur.result;if(!c)return;if(first){first=false;c.continue();return}if(removed<excess){store.delete(c.primaryKey);removed++;c.continue();}};
       await done(trim);
     }
   }
@@ -140,7 +142,8 @@
     })().finally(()=>{flushing=null});
     return flushing;
   }
-  async function all(){await initialized;await flush();let persisted=[];if(db)try{persisted=await read()}catch{}return [...new Map([...persisted,...legacy(),...journalKeys().flatMap(parseJournal),...volatile].map(p=>[p.id,p])).values()].sort((a,b)=>a.id.localeCompare(b.id)).slice(-LIMIT);}
+  async function all(){await initialized;await flush();let persisted=[];if(db)try{persisted=await read()}catch{}const combined=[...new Map([...persisted,...legacy(),...journalKeys().flatMap(parseJournal),...volatile].map(p=>[p.id,p])).values()].sort((a,b)=>a.id.localeCompare(b.id));
+    return combined.length>LIMIT?[combined[0],...combined.slice(-(LIMIT-1))]:combined;}
   async function clear(){
     epoch++;clearTimeout(timer);
     if(flushing)try{await flushing}catch{}
