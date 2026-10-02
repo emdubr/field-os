@@ -879,4 +879,19 @@ assert.ok(fieldIntelJs.includes("['comms','lorachat'].includes(e.detail?.view)")
 assert.ok(fieldIntelJs.includes("['comms','loramap'].includes(e.detail?.view)"));
 assert.ok(workstationCss.includes('v3.81 LORA WORKSPACE SPLIT'));
 console.log('PASS LoRa chat/map split has independent navigation, shared mesh state, and phone-safe styling');
+// Track recording computes total distance incrementally even with its view hidden.
+w.FIELD_OPEN_VIEW('home',{history:false});click('clearTrack');
+const trackLine=d.getElementById('trackLine');const hiddenLine=trackLine.getAttribute('points')||'';
+w.applyFieldGeolocation({coords:{latitude:44.4759,longitude:-73.2121,altitude:100,accuracy:5},timestamp:Date.now()});
+click('addDemoTrackPoint');
+w.applyFieldGeolocation({coords:{latitude:44.4769,longitude:-73.2121,altitude:101,accuracy:5},timestamp:Date.now()});
+click('addDemoTrackPoint');
+const trackSnapshot=w.FIELD_MAP_DATA.track();
+assert.equal(trackSnapshot.length,2);
+assert.ok(w.FIELD_TRACK_STATUS().distanceMiles>.06&&w.FIELD_TRACK_STATUS().distanceMiles<.08,'incremental breadcrumb mileage should reflect two GPS fixes');
+assert.equal(trackLine.getAttribute('points')||'',hiddenLine,'hidden Track view must not redraw full chart on GPS fixes');
+w.FIELD_OPEN_VIEW('track',{history:false});
+assert.ok((trackLine.getAttribute('points')||'').length>0,'Track chart updates immediately on entry');
+click('clearTrack');assert.equal(w.FIELD_TRACK_STATUS().distanceMiles,0);assert.equal(w.FIELD_TRACK_STATUS().points,0);
+console.log('PASS incremental track mileage and offscreen track chart scheduling');
 console.log('PASS single online map engine ownership with Leaflet reserved for PMTiles/fallback');
