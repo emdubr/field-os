@@ -22,7 +22,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  let installation;handlers.install({waitUntil:p=>installation=p});await installation;
  assert.ok(added.some(u=>u.includes('app.js')),'critical application assets precached');
  let activation;handlers.activate({waitUntil:p=>activation=p});await activation;
- assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2'],'activation must remove only old app shells, never map packs');
+ assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2','field-os-v3-85-mobile1'],'activation must remove only old app shells, never map packs');
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
  let activeCache=null;handlers.message({data:{type:'GET_BUILD'},ports:[{postMessage:msg=>activeCache=msg.build}]});
  assert.equal(activeCache,'field-os-v3-85-horizon1','worker reports actual installed shell cache');
