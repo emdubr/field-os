@@ -857,6 +857,10 @@ function routeProfileColors(){
   return routeProfileTheme={line:st.getPropertyValue('--line').trim(),fg:st.getPropertyValue('--fg').trim(),warn:st.getPropertyValue('--warn').trim()};
 }
 function drawRouteProfile(dist,gain,terrain){
+  // The native planner owns the horizontal elevation chart once loaded. The
+  // legacy summary must not overwrite its DEM-grade colors during save/theme
+  // updates, especially after the native route has finished enrichment.
+  if(window.FIELD_ROUTE_PLANNER?.ownsElevationProfile)return;
   const c=routeProfileEl,ctx=routeProfileCtx;if(!c||!ctx)return;
   const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Saved route elevation profile')||{w:c.width,h:c.height},colors=routeProfileColors();
   ctx.clearRect(0,0,w,h);ctx.strokeStyle=colors.line;ctx.lineWidth=1;
