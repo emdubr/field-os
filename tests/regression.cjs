@@ -918,6 +918,11 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
  assert.equal(reduced[0],zigzag[0]);assert.equal(reduced.at(-1),zigzag.at(-1));
  assert.ok(reduced.some(p=>zigzag.indexOf(p)>5&&Math.abs((p.lat-44-zigzag.indexOf(p)*.00001))>.0001),'keeps interior bends');
  console.log('PASS malformed field guide escaping and curvature-aware GPX simplification');
+ const gap=[{lat:44,lon:-73,seq:0},{lat:44.001,lon:-73,seq:15},{lat:44.002,lon:-73,seq:16}];
+ const crossing=w.FIELD_BREADCRUMB.compute(gap,{lat:44.001,lon:-73},0);
+ assert.equal(crossing.unsafeGap,true,'cannot navigate directly across a pruned breadcrumb segment');
+ assert.ok(fieldIntelJs.includes('window.FIELD_MAP_DATA?.track?.()'),'breadcrumb navigation must use live IndexedDB-backed data');
+ console.log('PASS breadcrumb return rejects shortcuts across missing track history');
  assert.equal(errors.length,0,errors.join('\n'));console.log('PASS no runtime exceptions');dom.window.close();
 })().catch(e=>{console.error(e);dom.window.close();process.exitCode=1});
 
