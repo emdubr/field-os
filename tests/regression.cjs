@@ -812,8 +812,27 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
  w.caches={keys:async()=>{cacheScans++;await tick();return ['field-os-test','unrelated-app'];},open:async name=>{opened.push(name);return {keys:async()=>[{},{}]}}};
  const reports=await Promise.all([w.FIELD_BROWSER_RESILIENCE.cacheHealth(),w.FIELD_BROWSER_RESILIENCE.cacheHealth(),w.FIELD_BROWSER_RESILIENCE.cacheHealth()]);
  assert.equal(cacheScans,1);assert.deepEqual(opened,['field-os-test']);assert.equal(reports[0].count,2);
+ w.caches={
+  keys:async()=>['field-os-old','field-os-current'],
+  open:async name=>({
+   keys:async()=>[{},{}],
+   match:async url=>{
+    const parsed=new URL(typeof url==='string'?url:url.url);
+    if(name==='field-os-old')return parsed.pathname.endsWith('/app.js')?{}:null;
+    if(parsed.origin!=='https://test.local')return null;
+    return parsed.pathname.endsWith('/track-store.js')?null:{ok:true};
+   }
+  })
+ };
+ const verifiedCache=await w.FIELD_BROWSER_RESILIENCE.cacheHealth();
+ assert.equal(verifiedCache.verified,true);
+ assert.ok(verifiedCache.missing.some(u=>u.includes('track-store.js')),'missing required IndexedDB module should be reported');
+ assert.ok(verifiedCache.externalMissing.some(u=>u.includes('pmtiles')),'third-party PMTiles must not be marked available offline');
+ assert.match(d.getElementById('browserCacheHealth').textContent,/INCOMPLETE/);
+ assert.match(d.getElementById('browserCacheDetails').textContent,/track-store/);
+
  if(previousCaches===undefined)delete w.caches;else w.caches=previousCaches;
- console.log('PASS concurrent storage-health requests share one scan and ignore unrelated app caches');
+ console.log('PASS concurrent cache scans and exact offline shell/library gap reporting');
  // Track recording computes total distance incrementally even with its view hidden.
  w.FIELD_OPEN_VIEW('home',{history:false});click('clearTrack');
  const trackLine=d.getElementById('trackLine');const hiddenLine=trackLine.getAttribute('points')||'';
