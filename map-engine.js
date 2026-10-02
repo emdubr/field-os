@@ -663,19 +663,20 @@
     }
     liveEnabled=true;localStorage.setItem(STORE_PREFIX+'live-location','on');emitState();updateLabels();
     const d=document.getElementById('mapSourceDiag');if(d)d.textContent='STARTING LIVE LOCATION…';
-    watchId=navigator.geolocation.watchPosition(
-      p=>applyPosition(p),
-      e=>{
-        const d2=document.getElementById('mapSourceDiag');if(d2)d2.textContent='LOCATION ERROR: '+String(e.message||e.code).slice(0,42);
-        updateLocationLabels();
-      },
-      {enableHighAccuracy:true,timeout:15000,maximumAge:1500}
-    );
+    const onPosition=p=>applyPosition(p);
+    const onFailure=e=>{
+      const diagnostic=document.getElementById('mapSourceDiag');
+      if(diagnostic)diagnostic.textContent='LOCATION ERROR: '+String(e.message||e.code).slice(0,42);
+      updateLocationLabels();
+    };
+    watchId=window.FIELD_GEO_HUB?
+      window.FIELD_GEO_HUB.subscribe(onPosition,onFailure,{role:'map'}):
+      navigator.geolocation.watchPosition(onPosition,onFailure,{enableHighAccuracy:true,timeout:15000,maximumAge:1500});
     updateLabels();
   }
 
   function stopLiveLocation(){
-    if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+    if(watchId!=null){if(window.FIELD_GEO_HUB)window.FIELD_GEO_HUB.unsubscribe(watchId);else navigator.geolocation.clearWatch(watchId);watchId=null}
     liveEnabled=false;localStorage.setItem(STORE_PREFIX+'live-location','off');emitState();
     updateLabels();refresh(false);
   }
