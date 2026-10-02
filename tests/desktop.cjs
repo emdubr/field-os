@@ -93,7 +93,7 @@ const server=http.createServer((req,res)=>{
     await page.evaluate(()=>FIELD_ROUTE_STATE.setPoints([
       {lat:44,lon:-73},{lat:44,lon:-72.99},{lat:44.005,lon:-72.99}
     ]));await page.waitForTimeout(110);
-    const overview=await page.locator('#route .ws-route-plot polyline').evaluate(el=>el.getAttribute('points').trim().split(/\\s+/).map(p=>p.split(',').map(Number)));
+    const overview=await page.locator('#route .ws-route-plot polyline').evaluate(el=>el.getAttribute('points').trim().split(/\s+/).map(p=>p.split(',').map(Number)));
     assert.equal(overview.length,3,'horizontal overview preserves the three true route control points');
     const horizontal=overview[1][0]-overview[0][0],vertical=overview[2][1]-overview[1][1];
     const expected=(.01/.005)*Math.cos(44*Math.PI/180);
