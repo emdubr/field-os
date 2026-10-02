@@ -514,8 +514,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(workstationCss.includes('v3.78 ACTIONABLE READINESS'));
  assert.ok(workstationCss.includes('v3.81 MOBILE ROUTE EDITOR'));
  assert.ok(workstationCss.includes('v3.82 UI EFFICIENCY'));
- assert.ok(workstationCss.includes('v3.85 FIELD UI EFFICIENCY'));
- assert.ok(workstationCss.includes('v3.85 ROUTE EDITOR MOBILE RELIABILITY'));
+ assert.ok(workstationCss.includes('v3.84 FIELD UI EFFICIENCY'));
+ assert.ok(workstationCss.includes('v3.84 ROUTE EDITOR MOBILE RELIABILITY'));
  assert.ok(routePlannerJs.includes('const fastMeters='));
  assert.ok(routePlannerJs.includes('routeMetricCache=new Map()'));
  assert.ok(mapEngineJs.includes('deferredPinch:null'));
