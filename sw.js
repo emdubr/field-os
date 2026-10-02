@@ -1,5 +1,5 @@
-const CACHE='field-os-v3-84-safety1';
-const ASSETS=['./','./index.html','./styles.css?v=3.84','./app.js?v=3.84','./workstation.css?v=3.84','./workstation.js?v=3.84','./survival-data.js','./route-state.js?v=3.84','./runtime.js?v=3.84','./map-engine.js?v=3.84','./route-planner.js?v=3.84','./field-intel.js?v=3.84','./field-ops.js?v=3.84','./route-guidance.js?v=3.84','./map-readiness.js?v=3.84','./field-tools.js?v=3.84','./safety-sync.js?v=3.84-hotfix1','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-84-opt2';
+const ASSETS=['./','./index.html','./styles.css?v=3.84','./app.js?v=3.84','./workstation.css?v=3.84','./workstation.js?v=3.84','./survival-data.js','./route-state.js?v=3.84','./runtime.js?v=3.84','./map-engine.js?v=3.84','./route-planner.js?v=3.84','./field-intel.js?v=3.84','./field-ops.js?v=3.84','./route-guidance.js?v=3.84','./map-readiness.js?v=3.84','./field-tools.js?v=3.84','./safety-sync.js?v=3.84-hotfix1','./track-store.js?v=3.84-opt2','./geo-hub.js?v=3.84-opt2','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -14,7 +14,7 @@ self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(async c=>{
     await c.addAll(ASSETS);
     await Promise.all(EXTERNAL_ASSETS.map(url=>c.add(url).catch(()=>null)));
-  }).then(()=>self.skipWaiting())
+  })
 ));
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('field-os-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())
