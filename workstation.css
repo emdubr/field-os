@@ -4350,7 +4350,9 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  body #app.shell>.topbar .clock-wrap #date{font-size:8px!important}
  body #app.shell .screen{min-width:0!important;padding:5px max(7px,env(safe-area-inset-right,0px)) 8px max(7px,env(safe-area-inset-left,0px))!important}
  body #app.shell .view.active:not(#home)>.view-head{
-   position:sticky!important;top:var(--mobile-topbar-h)!important;
+   /* A sticky offset inside the nested mobile view creates a second,
+      invisible 52px row below the now-restored real app header. */
+   position:relative!important;top:0!important;
    display:grid!important;z-index:85!important;min-height:44px!important;
    margin:0 0 7px!important;padding:5px 7px!important;
    background:var(--bg)!important;color:var(--fg)!important;
