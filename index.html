@@ -669,7 +669,7 @@
             <div class="route-grade-badge" id="routeDifficulty">PLOT ROUTE</div>
             <dl class="readouts large-readouts route-elevation-readouts"><div><dt>DISTANCE</dt><dd id="routeDistance">0.00 mi</dd></div><div><dt>GAIN</dt><dd id="routeGainOut">---</dd></div><div><dt>LOSS</dt><dd id="routeLossOut">---</dd></div><div><dt>ELEV RANGE</dt><dd id="routeElevRange">---</dd></div><div><dt>EST. TIME</dt><dd id="routeTime">---</dd></div><div><dt>POINTS</dt><dd id="routePointCount">0</dd></div></dl>
             <div class="elevation-profile-wrap">
-              <canvas id="routeProfile" width="720" height="220" class="chart elevation-profile-chart"></canvas>
+              <canvas id="routeProfile" width="720" height="220" class="chart elevation-profile-chart" role="img" aria-label="Route elevation profile when available">Route elevation graph</canvas>
               <i id="routeProfileHoverLine" class="route-profile-hover-line"></i>
               <div id="routeProfileHover" class="route-profile-hover" role="status"></div>
             </div>
@@ -801,7 +801,7 @@
           <article class="panel sensor-card"><div class="sensor-top"><b>RADAR / OPTICS</b><span class="badge warn-badge">FUTURE</span></div><p>External device bridge placeholder</p><div class="bar"><i style="width:8%"></i></div></article>
         </div>
         <div class="sensor-dashboard-grid">
-          <article class="panel sensor-chart-card sensor-chart-wide"><div class="panel-title"><span>PRESSURE TREND</span><span class="tiny">LAST 60 SAMPLES</span></div><canvas id="pressureChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
+          <article class="panel sensor-chart-card sensor-chart-wide"><div class="panel-title"><span>PRESSURE TREND</span><span class="tiny">LAST 60 SAMPLES</span></div><canvas id="pressureChart" width="900" height="220" class="chart sensor-chart" role="img" aria-label="Verified pressure history; not available without real pressure telemetry">Pressure history graph</canvas></article>
           <article class="panel sensor-chart-card sensor-chart-half"><div class="panel-title"><span>GNSS SIGNAL / FIX</span><span class="tiny">SATELLITES + ACCURACY</span></div><canvas id="gnssSignalChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
           <article class="panel sensor-chart-card sensor-chart-half"><div class="panel-title"><span>MESH LINK QUALITY</span><span class="tiny">RSSI + SNR + NODES</span></div><canvas id="meshSignalChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
           <article class="panel sensor-chart-card sensor-chart-third"><div class="panel-title"><span>ENVIRONMENT</span><span class="tiny">TEMP + HUMIDITY</span></div><canvas id="environmentChart" width="900" height="220" class="chart sensor-chart"></canvas></article>
@@ -985,12 +985,13 @@
   <script defer src="track-store.js?v=3.85-fieldfix1"></script>
   <script defer src="geo-hub.js?v=3.85-opt2"></script>
   <script defer src="map-readiness.js?v=3.85"></script>
-  <script defer src="app.js?v=3.85-fieldfix1"></script>
+  <script defer src="canvas-utils.js?v=3.85-optcanvas1"></script>
+  <script defer src="app.js?v=3.85-optcanvas1"></script>
   <script defer src="workstation.js?v=3.85"></script>
   <script defer src="map-engine.js?v=3.85-fieldfix1"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script defer src="route-guidance.js?v=3.85"></script>
-  <script defer src="route-planner.js?v=3.85-gpsfix3"></script>
+  <script defer src="route-planner.js?v=3.85-optcanvas1"></script>
   <script defer src="field-intel.js?v=3.85-fieldfix1"></script>
   <script defer src="field-ops.js?v=3.85"></script>
   <script defer src="field-tools.js?v=3.85-opt3"></script>
