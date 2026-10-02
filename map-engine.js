@@ -423,8 +423,17 @@
     const track=bridgeTrack(),trackStep=Math.max(1,Math.ceil(track.length/1500));
     const trackPts=track.filter((_,i)=>i%trackStep===0);
     if(trackPts.length>1){
-      const line=trackPts.map(p=>{const q=world(p.lat,p.lon,st.zoom);return `${(q.x-c.x+w/2).toFixed(1)},${(q.y-c.y+h/2).toFixed(1)}`}).join(' ');
-      parts.push(`<polyline points="${line}" class="native-track-line"/>`);
+      const gap=!!trackPts[1].gapBefore,trackLinePoints=gap?trackPts.slice(1):trackPts;
+      if(gap){
+        // The trailhead stays available, but never draw an imaginary shortcut
+        // across deleted history; it is unsafe to treat that line as breadcrumbs.
+        const first=world(trackPts[0].lat,trackPts[0].lon,st.zoom),mx=first.x-c.x+w/2,my=first.y-c.y+h/2;
+        parts.push(`<circle class="native-track-trailhead" cx="${mx}" cy="${my}" r="7"><title>Saved trailhead; middle of recording was pruned. Do not follow a line across this gap.</title></circle>`);
+      }
+      if(trackLinePoints.length>1){
+        const line=trackLinePoints.map(p=>{const q=world(p.lat,p.lon,st.zoom);return `${(q.x-c.x+w/2).toFixed(1)},${(q.y-c.y+h/2).toFixed(1)}`}).join(' ');
+        parts.push(`<polyline points="${line}" class="native-track-line"/>`);
+      }
     }
     for(const wp of bridgeWaypoints().slice(0,200)){
       const q=world(wp.lat,wp.lon,st.zoom),x=q.x-c.x+w/2,y=q.y-c.y+h/2;
