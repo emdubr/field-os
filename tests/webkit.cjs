@@ -57,6 +57,12 @@ const server=http.createServer((req,res)=>{
         panel=document.querySelector('#map .module-grid > .panel');
       return {headerBottom:header.bottom,titleTop:title.top,
         visibility:panel?getComputedStyle(panel).contentVisibility:null,
+        screenTop:document.getElementById('screen').getBoundingClientRect().top,
+        screenPadding:getComputedStyle(document.getElementById('screen')).paddingTop,
+        viewTop:document.getElementById('map').getBoundingClientRect().top,
+        viewPadding:getComputedStyle(document.getElementById('map')).paddingTop,
+        statusDisplay:getComputedStyle(document.querySelector('#app > .status-strip')).display,
+        statusHeight:document.querySelector('#app > .status-strip').getBoundingClientRect().height,
         overflow:document.documentElement.scrollWidth-innerWidth};
     });
     assert.ok(Math.abs(layout.titleTop-layout.headerBottom)<=13,'map title must not leave a phantom top-bar gap: '+JSON.stringify(layout));
