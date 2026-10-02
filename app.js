@@ -3,10 +3,10 @@ const tabButtons = [...document.querySelectorAll('.tab-btn[data-tab-for]')];
 const moreTabs = document.getElementById('moreTabs');
 const tabSheet = document.getElementById('tabSheet');
 const tabSheetBackdrop = document.getElementById('tabSheetBackdrop');
-const moreViewNames = new Set(['route','trailreturn','breadcrumb','waypoints','track','trip','mission','survival','weather','lorachat','loramap','sensors','log','power','system','sos']);
+const moreViewNames = new Set(['route','trailreturn','breadcrumb','waypoints','track','trip','mission','survival','weather','lost','lorachat','loramap','sensors','log','power','system','sos']);
 const DEMO_POS = {lat:44.4759, lon:-73.2121, alt:3420};
 let currentNavPosition={...DEMO_POS, source:'DEMO GNSS'};
-let currentAccuracy=4;
+let currentAccuracy=Infinity;
 const STORE_PREFIX = 'fieldos-v12-';
 const PREV_PREFIX = 'fieldos-v06-';
 const V05_PREFIX = 'fieldos-v05-';
@@ -56,10 +56,10 @@ function toggleTabSheet(force){
   tabSheet.setAttribute('aria-hidden',String(!willOpen));
   if(tabSheetBackdrop){if(willOpen)tabSheetBackdrop.removeAttribute('hidden');else tabSheetBackdrop.setAttribute('hidden','')}
   moreTabs.setAttribute('aria-expanded',String(willOpen));
-  document.body.classList.toggle('sheet-open',willOpen);
+  document.body.classList.toggle('sheet-open',willOpen);if(willOpen)document.getElementById('closeTabSheet')?.focus({preventScroll:true});else moreTabs?.focus({preventScroll:true});
 }
 function syncNavigationState(name){
-  tabButtons.forEach(b=>{
+  tabButtons.forEach(b=>{if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',b.querySelector('small')?.textContent||b.dataset.tabFor||'Navigation');
     const active=b.dataset.tabFor===name;
     b.classList.toggle('active',active);
     if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
@@ -134,10 +134,11 @@ window.addEventListener('hashchange',()=>{
   if(views.some(v=>v.dataset.view===target))openView(target,{history:false});
 });
 
-moreTabs?.addEventListener('click',()=>toggleTabSheet());
+moreTabs?.setAttribute('aria-label','More modules');moreTabs?.addEventListener('click',()=>toggleTabSheet());
+document.querySelectorAll('article[data-open]').forEach(article=>{article.tabIndex=0;article.setAttribute('role',article.querySelector('button,a,input,select,textarea')?'group':'button');article.setAttribute('aria-label',article.querySelector('.terminal-title')?.textContent?.trim()||'Open '+article.dataset.open);article.addEventListener('keydown',e=>{if(e.target===article&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openView(article.dataset.open);}});});
 document.getElementById('closeTabSheet')?.addEventListener('click',()=>closeTabSheet());
 tabSheetBackdrop?.addEventListener('click',()=>closeTabSheet());
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTabSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&tabSheet?.classList.contains('open')){e.preventDefault();closeTabSheet();}if(e.key==='Tab'&&tabSheet?.classList.contains('open')){const els=[...tabSheet.querySelectorAll('button:not([disabled]),a[href],input:not([disabled])')].filter(x=>x.getClientRects().length||x.offsetParent!==null);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 {
   const initialHash=location.hash.replace(/^#/,'');
   const initial=views.some(v=>v.dataset.view===initialHash)?initialHash:(document.querySelector('.view.active')?.dataset.view||'home');
@@ -618,12 +619,12 @@ if('serviceWorker' in navigator){
   });
 }
 
-const bootLines=['FIELD/OS SECURE FIELD CONSOLE v3.83','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
+const bootLines=['FIELD/OS FIELD CONSOLE v3.83','MOUNTING OFFLINE MAP CORE...','LOADING NAVIGATION FUSION BUS...','VERIFYING LOCAL SURVIVAL LIBRARY...','MOUNTING TRIP / LOG STORAGE...','READY // STANDALONE DEMO'];
 const boot=document.getElementById('boot'), bootText=document.getElementById('bootText'), bootFill=document.getElementById('bootFill');
 let lineIndex=0,progress=0;if(bootText)bootText.textContent='';
-function dismissBoot(){if(!boot)return;clearInterval(bootTimer);bootFill && (bootFill.style.width='100%');boot.classList.add('hidden')}
-const bootTimer=setInterval(()=>{if(lineIndex<bootLines.length){bootText.textContent+=`${bootLines[lineIndex]}\n`;lineIndex++}progress=Math.min(progress+20,100);if(bootFill)bootFill.style.width=`${progress}%`;if(progress>=100){clearInterval(bootTimer);setTimeout(()=>boot?.classList.add('hidden'),140)}},110);
-boot?.addEventListener('click',dismissBoot,{once:true});
+function dismissBoot(){if(!boot)return;clearInterval(bootTimer);bootFill && (bootFill.style.width='100%');boot.classList.add('hidden');boot.setAttribute('aria-hidden','true')}
+const bootTimer=setInterval(()=>{if(lineIndex<bootLines.length){bootText.textContent+=`${bootLines[lineIndex]}\n`;lineIndex++}progress=Math.min(progress+20,100);if(bootFill)bootFill.style.width=`${progress}%`;if(progress>=100){clearInterval(bootTimer);setTimeout(()=>{boot?.classList.add('hidden');boot?.setAttribute('aria-hidden','true')},140)}},110);
+boot?.addEventListener('click',dismissBoot,{once:true});document.getElementById('bootSkip')?.addEventListener('click',dismissBoot);
 
 // v0.7 Route planner / Return-to-Trail / Return-to-Base
 const routeMap=document.getElementById('routeMap');
@@ -1609,7 +1610,7 @@ function applyFieldGeolocation(p,source='PHONE GNSS'){
   currentNavPosition={lat:p.coords.latitude,lon:p.coords.longitude,alt:Number.isFinite(p.coords.altitude)?p.coords.altitude*3.28084:null,source};
   window.FIELD_CURRENT_POSITION={...currentNavPosition,accuracy:p.coords.accuracy??null,heading:p.coords.heading??null,timestamp:Number.isFinite(p.timestamp)?p.timestamp:Date.now()};
   try{localStorage.setItem('fieldos-v12-last-position',JSON.stringify(window.FIELD_CURRENT_POSITION))}catch{}
-  currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:currentAccuracy;
+  currentAccuracy=Number.isFinite(p.coords.accuracy)?p.coords.accuracy:Infinity;
   fieldLiveSpeed=Number.isFinite(p.coords.speed)?p.coords.speed*2.236936:null;
   fieldLiveHeading=Number.isFinite(p.coords.heading)?p.coords.heading:null;
   lastFixAt=Number.isFinite(p.timestamp)?p.timestamp:Date.now();fixAge=0;refreshFixAge();
