@@ -730,12 +730,17 @@
   // Repaint the overlay when that profile arrives, without refitting the
   // camera or triggering another raster tile render.
   let lastElevationProfile=null;
-  document.addEventListener('fieldos:routebootstrapchange',()=>{
+  const redrawNewElevation=()=>{
     const profile=window.FIELD_ROUTE_STATE?.getPlan?.()?.elevationProfile??null;
     if(profile===lastElevationProfile)return;
     lastElevationProfile=profile;
     redrawDataOverlay();
-  });
+  };
+  document.addEventListener('fieldos:routebootstrapchange',redrawNewElevation);
+  // app.js takes over FIELD_ROUTE_STATE on the web and emits a different
+  // metadata event. Without this, Home/Terrain slope colors appear only
+  // after another unrelated camera/route redraw.
+  document.addEventListener('fieldos:routemetadatachange',redrawNewElevation);
   document.addEventListener('fieldos:routechange',()=>{
     cachedRoute=null;
     states.forEach(st=>{

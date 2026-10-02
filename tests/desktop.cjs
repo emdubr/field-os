@@ -77,11 +77,35 @@ const server=http.createServer((req,res)=>{
     assert.ok(await page.locator('#gloveToggle').evaluate(e=>e.closest('article').getBoundingClientRect().height<350),'Touch settings must not stretch to the height of the utility console');
     await page.evaluate(()=>openView('route'));await page.waitForTimeout(50);
     assert.ok(await page.locator('.route-elevation-panel').evaluate(e=>e.getBoundingClientRect().width/e.parentElement.getBoundingClientRect().width>.95),'Elevation uses full workspace width');
+    const profileDesktop=await page.locator('#routeProfile').evaluate(c=>({width:c.getBoundingClientRect().width,height:c.getBoundingClientRect().height,wrap:c.parentElement.getBoundingClientRect().width}));
+    assert.ok(profileDesktop.width>300&&profileDesktop.width<=profileDesktop.wrap+1,'Desktop horizontal profile fills its own card without clipping');
+    assert.ok(profileDesktop.height>=215&&profileDesktop.height<=225,'Desktop horizontal overview has stable readable height');
+    await page.setViewportSize({width:390,height:844});await page.waitForTimeout(140);
+    const profileMobile=await page.locator('#routeProfile').evaluate(c=>({width:c.getBoundingClientRect().width,height:c.getBoundingClientRect().height,wrap:c.parentElement.getBoundingClientRect().width,prepared:Number(c.dataset.fieldCssWidth)||0,scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
+    assert.ok(profileMobile.width>180&&profileMobile.width<=profileMobile.wrap+1,'Phone horizontal profile stays inside its wrapper');
+    assert.ok(profileMobile.height>=185&&profileMobile.height<=195,'Phone profile has fixed height instead of stretched intrinsic canvas');
+    assert.ok(Math.abs(profileMobile.prepared-profileMobile.width)<=3,'Horizontal canvas re-renders at the new responsive width: '+JSON.stringify({mobile:profileMobile,desktop:profileDesktop}));
+    assert.ok(profileMobile.scroll<=profileMobile.viewport+1,'Horizontal chart must not create a sideways-scrolling page');
+    await page.setViewportSize({width:1440,height:900});await page.waitForTimeout(130);
+    console.log('PASS horizontal route overview sizes and re-renders correctly on desktop and phone');
+    // The secondary horizontal route schematic must preserve real map shape,
+    // rather than independently stretching N/S and E/W to fill its panel.
+    await page.evaluate(()=>FIELD_ROUTE_STATE.setPoints([
+      {lat:44,lon:-73},{lat:44,lon:-72.99},{lat:44.005,lon:-72.99}
+    ]));await page.waitForTimeout(110);
+    const overview=await page.locator('#route .ws-route-plot polyline').evaluate(el=>el.getAttribute('points').trim().split(/\s+/).map(p=>p.split(',').map(Number)));
+    assert.equal(overview.length,3,'horizontal overview preserves the three true route control points');
+    const horizontal=overview[1][0]-overview[0][0],vertical=overview[2][1]-overview[1][1];
+    const expected=(.01/.005)*Math.cos(44*Math.PI/180);
+    assert.ok(horizontal>0&&vertical<0&&Math.abs(horizontal/-vertical-expected)<.08,'overview uses uniform Web Mercator scale and route orientation');
+    const text=await page.locator('#route .ws-route-plot').getAttribute('aria-label');
+    assert.match(text,/uniform map scale/,'schematic describes projection limits');
+    console.log('PASS horizontal route schematic matches map bearing and aspect, not stretched independent axes');
     await page.evaluate(()=>{
-      FIELD_ROUTE_STATE.setPoints(Array.from({length:1000},(_,i)=>({lat:44+i/100000,lon:-73+i/100000})));
+      FIELD_ROUTE_STATE.setPoints(Array.from({length:1000},(_,i)=>({lat:44+i/100000+(i===501?.006:0),lon:-73+i/100000})));
     });await page.waitForTimeout(100);
     const count=await page.locator('#route .ws-route-plot polyline').evaluate(e=>e.points.numberOfItems);
-    assert.ok(count<=601&&count>1);assert.equal(await page.evaluate(()=>FIELD_ROUTE_STATE.getPoints().length),1000);
+    assert.ok(count<=601&&count>=4,'bounded schematic retains the sharp turn in a 1,000-point route');assert.equal(await page.evaluate(()=>FIELD_ROUTE_STATE.getPoints().length),1000);
     const stable=await page.evaluate(async()=>{
       const old=document.querySelector('#route .ws-route-plot');
       for(let i=0;i<30;i++)document.dispatchEvent(new Event('input',{bubbles:true}));

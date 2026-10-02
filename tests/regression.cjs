@@ -10,7 +10,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -324,6 +324,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS route overlays on both maps, reverse and clear synchronization');
  assert.ok(appJs.includes('let routeMileageCache=null'));assert.ok(appJs.includes('const mileage=routeMileageProfile()'));assert.ok(appJs.includes('routeMileageCache=null;'));console.log('PASS main route watch reuses cached cumulative mileage instead of rewalking the route');
  console.log('PASS direct routing, distance, missing elevation, reverse, undo, clear persistence');
+ assert.equal(w.FIELD_ROUTE_PLANNER.ownsElevationProfile,true,'native planner explicitly owns the horizontal elevation graph');
+ assert.match(d.getElementById('routeProfile').getAttribute('aria-label'),/unavailable until a current route profile loads/,'clearing the route removes stale horizontal elevation geometry');
  const g=r.buildGraph([{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98},{lat:44.02,lon:-72.98}],tags:{highway:'path'}}]);
  const a=r.nearestNode(g,{lat:44.0001,lon:-72.995}),b=r.nearestNode(g,{lat:44.0001,lon:-72.99}),routeResult=r.shortestPath(g,a.id,b.id),path=routeResult.path;assert.ok(Array.isArray(path)&&path.length>=2);assert.equal(routeResult.limitHit,false);assert.ok(a.d<12&&b.d<12);const pathM=path.slice(1).reduce((sum,p,i)=>sum+r.meters(path[i],p),0);assert.ok(pathM>390&&pathM<410);
  assert.equal(r.nearestNode(g,{lat:0,lon:0}),null);assert.equal(r.samplePolyline([{lat:44,lon:-73},{lat:44.01,lon:-73}],80)[0].distanceM,0);
@@ -340,6 +342,42 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  d.getElementById('routeSnapMode').value='trail';r.addAnchor({lat:44.0001,lon:-72.995});r.addAnchor({lat:44.0001,lon:-72.99});try{await waitFor(()=>{const plan=w.FIELD_ROUTE_STATE.getPlan();return /SNAPPED TO OSM TRAILS/.test(d.getElementById('routePlannerStatus').textContent)&&Array.isArray(plan.elevationProfile)&&plan.elevationProfile.length>1},5000)}catch(err){const plan=w.FIELD_ROUTE_STATE.getPlan();throw new Error('Trail routing test: '+err.message+'; status='+d.getElementById('routePlannerStatus').textContent+'; build='+plan.routeBuildState+'; points='+plan.points?.length+'; samples='+plan.elevationProfile?.length+'; diagnostic='+d.getElementById('routePlannerDiag')?.textContent+'; mock elevation calls='+elevationFetches+'; recent errors='+errors.slice(-3).join(' | '))};
  assert.match(d.getElementById('routePlannerStatus').textContent,/SNAPPED TO OSM TRAILS/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().elevationProfile.length>1);assert.match(d.getElementById('routeGainOut').textContent,/0 ft/);assert.ok(w.FIELD_ROUTE_STATE.getPlan().trailIntelligence);
  console.log('PASS snapped route with elevation success, saved profile, and post-enrichment trail intelligence');
+ // The former app.js chart used the same canvas and silently replaced the
+ // native orange/red grade graph whenever a route was saved or theme changed.
+ const graph=d.getElementById('routeProfile'),savedPrepare=w.FIELD_CANVAS.prepare;
+ let legacyPaints=0;
+ w.FIELD_CANVAS.prepare=(el,ctx,label)=>{
+   if(el===graph&&label==='Saved route elevation profile')legacyPaints++;
+   return savedPrepare(el,ctx,label);
+ };
+ try{
+   r.saveCurrentRoute();
+   assert.equal(legacyPaints,0,'saving a native route must not overwrite horizontal grade overview with legacy chart');
+   d.querySelector('[data-theme-choice="amber"]').click();await tick();
+   assert.equal(legacyPaints,0,'changing the theme must not overwrite native horizontal elevation');
+ }finally{w.FIELD_CANVAS.prepare=savedPrepare}
+ assert.match(graph.getAttribute('aria-label'),/Trail elevation profile/,'native chart retains ownership after route save');
+ // Hover should interpolate exact distance instead of snapping to a sparse
+ // elevation-sampling point, which can be hundreds of meters away.
+ const currentPlan=w.FIELD_ROUTE_STATE.getPlan();
+ const oldRect=graph.getBoundingClientRect;
+ graph.getBoundingClientRect=()=>({left:0,top:0,width:360,height:190,right:360,bottom:190});
+ const points=w.FIELD_ROUTE_STATE.getPoints(),synthetic={samples:[
+   {distanceM:0,elevationFt:500},{distanceM:1000,elevationFt:700},{distanceM:2000,elevationFt:900}
+ ],gainFt:400,lossFt:0,minFt:500,maxFt:900,maxGrade:8};
+ r.debugProfile(points,synthetic);
+ graph.dataset.fieldCssWidth='360';
+ const hover=new w.Event('pointermove',{bubbles:true});
+ Object.defineProperty(hover,'clientX',{value:52+(360-52-14)*.25});
+ graph.dispatchEvent(hover);
+ assert.match(d.getElementById('routeProfileHover').textContent,/0\.31 MI COMPLETE/,'horizontal cursor resolves continuous mileage between DEM samples');
+ assert.match(d.getElementById('routeProfileHover').textContent,/ELEV 600 FT/,'horizontal cursor interpolates height at its exact mileage');
+ r.debugProfile(points,null,'loading');
+ assert.match(graph.getAttribute('aria-label'),/unavailable until a current route profile loads/,'loading a replacement route clears the old colored profile immediately');
+ assert.equal(d.querySelector('.planner-dom-route-layer')?.classList.contains('has-slope-overlay'),false,'new route must not display previous route slope colors');
+ r.debugProfile(points,{samples:currentPlan.elevationProfile,gainFt:currentPlan.elevationGainFt||0,lossFt:currentPlan.elevationLossFt||0,minFt:currentPlan.elevationMinFt||0,maxFt:currentPlan.elevationMaxFt||0,maxGrade:currentPlan.elevationMaxGrade||0});
+ graph.getBoundingClientRect=oldRect;
+ console.log('PASS horizontal overview uses one renderer, interpolated cursor and stale-profile clearing');
  const topologyPlan=w.FIELD_ROUTE_STATE.getPlan();assert.equal(topologyPlan.junctions.length,1);assert.equal(topologyPlan.junctions[0].degree,3);
  w.FIELD_GUIDANCE.render();assert.match(d.getElementById('junctionRows').textContent,/Side Trail/);assert.match(d.getElementById('trailContinuityRows').textContent,/Long Trail/);
  r.saveCurrentRoute();const savedTopologyId=d.getElementById('savedRouteSelect').value;
@@ -465,8 +503,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-mobile1'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-mobile1'"));
+ assert.ok(html.includes('app.js?v=3.85-horizon1'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-horizon1'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
@@ -968,7 +1006,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-mobile1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-horizon1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));

@@ -31,7 +31,7 @@
   let plannerRouteRedrawFrame=0;
   let plannerHoverFrame=0,pendingHoverPoint=null;
   let plannerZooming=false;
-  let activeElevationProfile=null;
+  let activeElevationProfile=null,activeElevationState='empty';
   let plannerAnchorLayer=null;
   let plannerSnapLayer=null;
   let plannerDirectionLayer=null;
@@ -777,7 +777,7 @@
     };
     const update=e=>{
       const profile=activeElevationProfile,samples=profile?.samples||[];
-      if(samples.length<2||!tip)return;
+      if(samples.length<2||!tip){clear();return;}
 
       const rect=canvas.getBoundingClientRect();
       const cssW=Number(canvas.dataset.fieldCssWidth)||canvas.width;
@@ -790,24 +790,23 @@
       const totalM=samples.at(-1)?.distanceM||0;
       const target=ratio*totalM;
 
-      let idx=0,best=Infinity;
-      for(let n=0;n<samples.length;n++){
-        const d=Math.abs((samples[n].distanceM||0)-target);
-        if(d<best){best=d;idx=n}
-      }
-      const p=samples[idx];
-      const gradeValue=gradeAtDistance(profile,p.distanceM||target);
+      // Use the exact cursor distance rather than jumping to whichever
+      // coarse DEM sample happens to be nearest. Elevation is interpolated;
+      // grade uses the same sustained-fit estimate as the colored route.
+      const elevationFt=profileElevationAt(samples,target);
+      const gradeValue=gradeAtDistance(profile,target);
       const cls=slopeClass(gradeValue);
-      const done=(p.distanceM||0)/1609.344;
-      const remaining=Math.max(0,(totalM-(p.distanceM||0))/1609.344);
+      const done=target/1609.344;
+      const remaining=Math.max(0,(totalM-target)/1609.344);
 
-      tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(p.elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
+      tip.innerHTML=`<b>${done.toFixed(2)} MI COMPLETE</b><span>ELEV ${Math.round(elevationFt).toLocaleString()} FT</span><span>SLOPE ${gradeValue>=0?'+':''}${gradeValue.toFixed(1)}% · ${cls.label}</span><span>${remaining.toFixed(2)} MI TO GO</span>`;
       tip.className=`route-profile-hover slope-${cls.key} active`;
-      if(rect.width<=760){
-        const tipW=Math.min(260,Math.max(150,rect.width-12));
-        const leftPx=clamp(x-tipW/2,6,Math.max(6,rect.width-tipW-6));
-        tip.style.left=`${leftPx}px`;
-      }else tip.style.left=`${x}px`;
+      // Keep the readout fully visible even when the cursor is at either end
+      // of a horizontal chart. The wrapper clips overflowing children.
+      const tipW=Math.min(rect.width<=760?260:230,Math.max(150,rect.width-12));
+      const leftPx=clamp(x-tipW/2,6,Math.max(6,rect.width-tipW-6));
+      tip.style.left=`${leftPx}px`;
+      tip.style.transform='none';
       if(line){line.classList.add('active');line.style.left=`${x}px`}
     };
 
@@ -816,6 +815,28 @@
     canvas.addEventListener('pointerup',()=>setTimeout(clear,900),{passive:true});
     canvas.addEventListener('pointerleave',clear);
     canvas.addEventListener('pointercancel',clear);
+    // Redraw after the horizontal overview changes width (responsive sidebar,
+    // phone rotation, reopened Route tab). Otherwise its old canvas bitmap
+    // simply stretches and the cursor no longer aligns with the grade line.
+    let resizeFrame=0;
+    const resize=()=>{
+      if(resizeFrame)return;
+      resizeFrame=requestAnimationFrame(()=>{
+        resizeFrame=0;
+        const box=canvas.getBoundingClientRect();
+        if(box.width<40||box.height<40)return;
+        redrawHorizontalProfile();
+      });
+    };
+    if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(canvas.parentElement||canvas);
+    // The Route chart lives far below the initial viewport. Mobile
+    // content-visibility:auto can skip its layout until the user scrolls to
+    // it, without changing its parent's cached width or firing ResizeObserver.
+    if(typeof IntersectionObserver!=='undefined')new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting))resize();
+    },{rootMargin:'120px'}).observe(canvas);
+    window.addEventListener('resize',resize,{passive:true});
+    resize();
   }
 
   function bindControls(){
@@ -1861,17 +1882,37 @@
     </tr>`).join('');
   }
 
+  // The profile canvas has one authoritative renderer. In particular, clear
+  // obsolete elevation geometry as soon as a new route is requested.
+  function drawEmptyHorizontalProfile(state='empty'){
+    const c=$('routeProfile');if(!c)return;
+    const ctx=c.getContext('2d');if(!ctx)return;
+    const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Route elevation unavailable until a current route profile loads')||{w:c.width,h:c.height};
+    ctx.clearRect(0,0,w,h);
+    const color=getComputedStyle(document.body).getPropertyValue('--dim').trim()||'#a6adab';
+    ctx.fillStyle=color;ctx.font=`${Math.min(14,Math.max(11,Math.round(w/27)))}px monospace`;
+    const message=state==='loading'?'LOADING ELEVATION FOR CURRENT ROUTE…':
+      state==='unavailable'?'ELEVATION UNAVAILABLE — ROUTE STILL VISIBLE':'PLOT A ROUTE TO VIEW ELEVATION';
+    ctx.fillText(message,Math.max(10,Math.min(24,w*.04)),Math.max(24,h/2),Math.max(10,w-20));
+    $('routeProfileHover')?.classList.remove('active');
+    $('routeProfileHoverLine')?.classList.remove('active');
+  }
+  function redrawHorizontalProfile(){
+    if(activeElevationProfile?.samples?.length>1)
+      drawElevationProfile(activeElevationProfile,routeDistanceMiles(state()?.getPoints?.()||[]));
+    else drawEmptyHorizontalProfile(activeElevationState);
+  }
   function drawElevationProfile(profile,distMi){
     const c=$('routeProfile');if(!c||!profile?.samples?.length)return;
     const ctx=c.getContext('2d');if(!ctx)return;
     const {w,h}=window.FIELD_CANVAS?.prepare(c,ctx,'Trail elevation profile; hover for distance and grade')||{w:c.width,h:c.height},st=getComputedStyle(document.body);
     const fg=st.getPropertyValue('--fg2').trim()||'#72e58e',line=st.getPropertyValue('--line').trim()||'#245537',warn=st.getPropertyValue('--warn').trim()||'#ffd166';
     ctx.clearRect(0,0,w,h);
-    const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),span=Math.max(40,max-min);
+    const vals=profile.samples.map(p=>p.elevationFt),min=Math.min(...vals),max=Math.max(...vals),topElev=Math.max(max,min+40),span=topElev-min;
     const left=52,right=14,top=34,bottom=28,plotW=w-left-right,plotH=h-top-bottom;
     ctx.strokeStyle=line;ctx.lineWidth=1;ctx.fillStyle=fg;ctx.font='13px monospace';
     for(let i=0;i<=4;i++){
-      const y=top+plotH*i/4,e=max-span*i/4;
+      const y=top+plotH*i/4,e=topElev-span*i/4;
       ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
       ctx.fillText(`${Math.round(e)}`,4,y+4);
     }
@@ -1900,8 +1941,11 @@
       ctx.lineWidth=cls.key==='hard'?6:5;
       ctx.beginPath();ctx.moveTo(xy[i-1].x,xy[i-1].y);ctx.lineTo(xy[i].x,xy[i].y);ctx.stroke();
     }
-    ctx.fillStyle=fg;ctx.font='18px monospace';
-    ctx.fillText(`${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`,left,22);
+    // On a narrow horizontal overview, never clip the title into the chart.
+    ctx.fillStyle=fg;ctx.font=`${w<480?12:16}px monospace`;
+    const heading=w<480?`${distMi.toFixed(2)} mi · +${Math.round(profile.gainFt)} ft`:
+      `${distMi.toFixed(2)} mi // +${Math.round(profile.gainFt)} ft / -${Math.round(profile.lossFt)} ft`;
+    ctx.fillText(heading,left,22,Math.max(1,w-left-right));
     renderElevationBreakdown(profile,distMi);
   }
 
@@ -1912,7 +1956,7 @@
     set('routeDistance',distText);set('plannerRouteDistance',distText);
     set('routePointCount',String(pts.length));set('plannerRoutePoints',String(pts.length));
     if(profile){
-      activeElevationProfile=profile;
+      activeElevationProfile=profile;activeElevationState='ready';
       const gain=Math.round(profile.gainFt),loss=Math.round(profile.lossFt),min=Math.round(profile.minFt),max=Math.round(profile.maxFt);
       const gainText=`${gain.toLocaleString()} ft`,lossText=`${loss.toLocaleString()} ft`,rangeText=`${min.toLocaleString()}–${max.toLocaleString()} ft`;
       set('routeGainOut',gainText);set('plannerRouteGain',gainText);
@@ -1928,7 +1972,7 @@
       drawElevationProfile(profile,dist);
       refreshDomRouteLayer();
     }else{
-      activeElevationProfile=null;
+      activeElevationProfile=null;activeElevationState=elevationState;
       const hasRoute=pts.length>1;
       const loading=elevationState==='loading'&&hasRoute;
       const unavailable=elevationState==='unavailable'&&hasRoute;
@@ -1938,6 +1982,8 @@
       set('routeElevRange',placeholder);set('plannerRouteElevRange',placeholder);
       set('plannerElevationSource',loading?'ELEVATION // LOADING DEM…':unavailable?'ELEVATION // UNAVAILABLE':'ELEVATION // WAITING FOR ROUTE');
       renderElevationBreakdown(null,dist);
+      redrawHorizontalProfile();
+      refreshDomRouteLayer();
     }
     return dist;
   }
@@ -2086,6 +2132,9 @@
       if(initialized&&plannerMap){
         plannerMap.invalidateSize(false);
         overlay(state()?.getPoints?.()||[]);
+        // Reopening Route after a layout or orientation change can restore a
+        // previously hidden canvas. Refresh its actual CSS-size backing then.
+        redrawHorizontalProfile();
         return;
       }
       const ok=activate();
@@ -2096,8 +2145,11 @@
   }
 
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='route')setTimeout(kickPlanner,0)});
-  document.addEventListener('fieldos:routechange',()=>{if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}});
-  document.addEventListener('fieldos:themechange',()=>{if(initialized)overlay()});
+  document.addEventListener('fieldos:routechange',()=>{
+    if(initialized){if(!busy)loadAnchors();overlay(state()?.getPoints?.()||[])}
+    else if(window.FIELD_ROUTE_PLANNER?.ownsElevationProfile)restoreHorizontalProfile();
+  });
+  document.addEventListener('fieldos:themechange',()=>{if(initialized){overlay();redrawHorizontalProfile();}});
   document.addEventListener('click',e=>{
     if(e.target.closest?.('[data-open="route"]'))setTimeout(kickPlanner,60);
   },true);
@@ -2122,6 +2174,30 @@
 
   // Share sustained DEM grade classes with the Home/Terrain overview.
   window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
-  window.FIELD_ROUTE_PLANNER={activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
+  window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
+
+  // The horizontal elevation overview must work even when the optional
+  // Leaflet/CDN route map has not finished loading (or cannot load offline).
+  // Its listeners and responsive size cannot depend on map initialization.
+  function restoreHorizontalProfile(){
+    const pts=state()?.getPoints?.()||[],plan=state()?.getPlan?.()||{};
+    const samples=validElevationSamples(plan.elevationProfile);
+    const total=routeDistanceMiles(pts)*1609.344,profileDist=samples.at(-1)?.distanceM;
+    const endpointsMatch=samples.length>1&&pts.length>1&&
+      (!valid(samples[0])||meters(samples[0],pts[0])<60)&&
+      (!valid(samples.at(-1))||meters(samples.at(-1),pts.at(-1))<60);
+    if(endpointsMatch&&total>10&&Number.isFinite(profileDist)&&Math.abs(profileDist-total)/total<.06){
+      activeElevationProfile={samples,gainFt:Number(plan.elevationGainFt)||0,lossFt:Number(plan.elevationLossFt)||0,
+        minFt:Number(plan.elevationMinFt)||0,maxFt:Number(plan.elevationMaxFt)||0,maxGrade:Number(plan.elevationMaxGrade)||0};
+      activeElevationState='ready';
+    }else{
+      activeElevationProfile=null;
+      activeElevationState=pts.length>1?'unavailable':'empty';
+    }
+    redrawHorizontalProfile();
+  }
+  bindElevationProfileHover();
+  restoreHorizontalProfile();
+  document.addEventListener('fieldos:routemetadatachange',()=>{if(!initialized)restoreHorizontalProfile()});
 })();
 
