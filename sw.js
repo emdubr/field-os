@@ -14,7 +14,7 @@ self.addEventListener('install',e=>e.waitUntil(
   caches.open(CACHE).then(async c=>{
     await c.addAll(ASSETS);
     await Promise.all(EXTERNAL_ASSETS.map(url=>c.add(url).catch(()=>null)));
-  }).then(()=>self.skipWaiting())
+  })
 ));
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('field-os-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())
