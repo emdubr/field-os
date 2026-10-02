@@ -2,12 +2,14 @@
    Coalesces recurring UI work and suspends visible-only polling while backgrounded. */
 (()=>{
   if(window.FIELD_RUNTIME)return;
-  const tasks=new Map(),frames=new Map();let taskId=0,timer=0;
-  const now=()=>Date.now();
+  const tasks=new Map(),frames=new Map();let taskId=0,timer=0,power='normal';
+  // Monotonic clock avoids delayed/duplicated tasks after phone clock corrections.
+  const now=()=>typeof performance?.now==='function'?performance.now():Date.now();
+  const effectiveMs=task=>task.visibleOnly&&power!=='normal'?Math.max(task.interval,power==='emergency'?10000:5000):task.interval;
   function clearTimer(){if(timer){clearTimeout(timer);timer=0}}
   function runnable(){return [...tasks.values()].filter(task=>!task.visibleOnly||!document.hidden)}
-  function arm(){clearTimer();const list=runnable();if(!list.length)return;const t=now(),next=Math.min(...list.map(task=>task.nextAt));timer=setTimeout(tick,Math.max(16,Math.min(60000,next-t)))}
-  function tick(){timer=0;const t=now();for(const task of tasks.values()){if(task.visibleOnly&&document.hidden)continue;if(t<task.nextAt)continue;task.nextAt=t+task.interval;try{task.fn(t)}catch(err){setTimeout(()=>{throw err},0)}}arm()}
+  function arm(){clearTimer();const list=runnable();if(!list.length)return;const t=now(),next=Math.min(...list.map(task=>task.nextAt));timer=setTimeout(tick,Math.max(16,Math.min(2147483647,next-t)))}
+  function tick(){timer=0;const t=now();for(const task of tasks.values()){if(task.visibleOnly&&document.hidden)continue;if(t<task.nextAt)continue;task.nextAt=t+effectiveMs(task);try{task.fn(t)}catch(err){setTimeout(()=>{throw err},0)}}arm()}
   function every(fn,interval,options={}){
     interval=Math.max(100,Number(interval)||1000);
     const id=++taskId,t=now(),phase=Math.min(interval-16,Math.max(0,(id*37)%Math.max(17,interval)));
@@ -15,6 +17,7 @@
     arm();
     return ()=>{tasks.delete(id);arm()};
   }
+  function setPowerMode(next){power=['low','emergency'].includes(next)?next:'normal';const t=now();for(const task of tasks.values())task.nextAt=Math.min(task.nextAt,t+effectiveMs(task));arm()}
   function frame(key,fn){key=String(key||fn);if(frames.has(key))return;const id=requestAnimationFrame(()=>{frames.delete(key);if(!document.hidden)fn()});frames.set(key,id)}
   function idle(fn,timeout=800){if('requestIdleCallback' in window)return requestIdleCallback(()=>fn(),{timeout});return setTimeout(fn,0)}
   function flush(){const t=now();for(const task of tasks.values())if(!(task.visibleOnly&&document.hidden))task.nextAt=Math.min(task.nextAt,t);tick()}
@@ -50,5 +53,5 @@
     const template=document.createElement('template');template.innerHTML=html;
     reconcile(el,template.content);markup.set(el,html);
   }
-  window.FIELD_RUNTIME={every,frame,idle,flush,patch,get size(){return tasks.size}};
+  window.FIELD_RUNTIME={every,frame,idle,flush,patch,setPowerMode,get size(){return tasks.size}};
 })();
