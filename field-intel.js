@@ -794,7 +794,7 @@
   document.addEventListener('fieldos:telemetry',e=>{const h=Number(e.detail?.heading),s=Number(e.detail?.speedMps);if(Number.isFinite(h))dr.heading=h;if(Number.isFinite(s))dr.speedMps=Math.max(0,s)});
   document.addEventListener('fieldos:viewchange',e=>{if(e.detail?.view==='nav')renderDr()});
   window.FIELD_RUNTIME.every(()=>{if(document.visibilityState==='visible'&&(dr.active||dr.armed))updateDr()},1000);window.FIELD_RUNTIME.idle(()=>{if(drVisible())renderDr()},500);
-  window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,state:dr};
+  window.FIELD_DR={estimate:estimateDr,project:projectPoint,arm:armDr,reset:resetDr,update:updateDr,render:renderDr,state:dr};
 
   // Feature 06 — stripped-down breadcrumb navigation.
   let breadcrumbIndex=null,breadcrumbReversed=false;
