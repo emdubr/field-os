@@ -122,12 +122,19 @@ const server=http.createServer((req,res)=>{
       const r=selector=>document.querySelector(selector).getBoundingClientRect();
       const sheet=document.querySelector('#tabSheet');sheet.scrollTop=90;
       return {sheet:r('#tabSheet'),head:r('#tabSheet .tab-sheet-head'),close:r('#closeTabSheet'),
-        expanded:document.querySelector('#moreTabs').getAttribute('aria-expanded')};
+        expanded:document.querySelector('#moreTabs').getAttribute('aria-expanded'),
+        hasOpen:sheet.classList.contains('open'),visibility:getComputedStyle(sheet).visibility,
+        transform:getComputedStyle(sheet).transform,pointer:getComputedStyle(sheet).pointerEvents,
+        closeVisibility:getComputedStyle(document.querySelector('#closeTabSheet')).visibility};
     });
+    console.log('WebKit More geometry '+width+'x'+height+' '+JSON.stringify(more));
     assert.equal(more.expanded,'true','landscape More panel opens');
+    assert.equal(more.hasOpen,true,'More must retain open class after a sheet scroll');
+    assert.equal(more.visibility,'visible','More drawer must be CSS visible when expanded');
+    assert.equal(more.closeVisibility,'visible','More close control must be visible');
     assert.ok(more.sheet.top>=-2&&more.close.top>=more.sheet.top-2&&more.close.bottom<=height,
       'short landscape screen must retain reachable sheet close control: '+JSON.stringify(more));
-    await page.locator('#closeTabSheet').click();
+    await page.locator('#closeTabSheet').click({timeout:3000});
     console.log('PASS WebKit landscape '+width+'x'+height+' responsive map, sticky dock, readable controls and More close');
   }
   await page.setViewportSize({width:390,height:844});
