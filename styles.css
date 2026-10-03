@@ -855,3 +855,23 @@ body:has(#fieldActionNotice:not(:empty)) .field-update-notice{
     bottom:calc(var(--mobile-dock-h,70px) + 26dvh + env(safe-area-inset-bottom,0px))
   }
 }
+
+/* Complete theme token coverage for controls left green by legacy !important. */
+body[data-theme] .terminal-panel{background:var(--panel)!important;border-color:var(--line)!important}
+body[data-theme] .panel-title,body[data-theme] .window-title{
+  background:linear-gradient(90deg,var(--theme-soft),var(--theme-faint))!important;
+  border-color:var(--line)!important;color:var(--fg)!important;
+}
+body[data-theme] :is(.action,.ghost,.micro-btn,.tiny-button,.terminal-button,.sheet-tab){
+  background:var(--panel2)!important;border-color:var(--line)!important;color:var(--fg)!important;
+}
+body[data-theme] .tab-btn:not(.active){
+  background:var(--panel2)!important;border-color:var(--line)!important;color:var(--fg)!important;
+}
+body[data-theme] .tab-btn.active{
+  background:var(--fg2)!important;border-color:var(--fg2)!important;color:var(--bg)!important;
+}
+body[data-theme] .danger-lite{background:var(--panel2)!important;border-color:var(--danger)!important;color:var(--danger)!important}
+body[data-theme] .view:not(#home)>.view-head button{
+  color:var(--bg)!important;border-color:var(--bg)!important;background:transparent!important;
+}
