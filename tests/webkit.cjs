@@ -141,9 +141,11 @@ const server=http.createServer((req,res)=>{
     console.log('PASS WebKit landscape '+width+'x'+height+' responsive map, sticky dock, readable controls and More close');
   }
   await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>openView('map'));
+  await page.locator('#routeCorridorPadding').scrollIntoViewIfNeeded();
   const palette=await page.evaluate(()=>{
     const themes={};const body=document.body,old=body.dataset.theme;
-    const ring=document.querySelector('.sos-ring'),input=document.querySelector('.terminal-input');
+    const ring=document.querySelector('.sos-ring'),input=document.getElementById('routeCorridorPadding');
     for(const theme of ['green','amber','mono','red']){
       body.dataset.theme=theme;
       const probe=document.createElement('span');
