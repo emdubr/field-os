@@ -10,7 +10,7 @@ async function waitFor(fn,timeout=2500){const start=Date.now();while(Date.now()-
 for(const f of ['survival-data.js','route-state.js','runtime.js','canvas-utils.js','map-readiness.js','route-guidance.js','app.js','workstation.js','map-engine.js'])vm.runInContext(fs.readFileSync(dir+'/'+f,'utf8'),ctx,{filename:f});
 let mapClick,plannerDragStart,plannerPanCount=0;const chain=()=>({addTo(){return this},clearLayers(){},on(event,fn){if(event==='click')mapClick=fn;return this},setView(){return this},fitBounds(){return this},invalidateSize(){return this},getSize(){return {x:800,y:600}},getZoom(){return 14},bindTooltip(){return this},setOpacity(){return this},setLatLng(){return this},setRadius(){return this},setStyle(){return this},panTo(){plannerPanCount++;return this},createPane(){return {style:{}}},getContainer(){return d.getElementById('routePlannerMap')||d.body},latLngToContainerPoint(ll){return {x:(Number(ll?.[1])||0)*10+800,y:-(Number(ll?.[0])||0)*10+600}}});
 w.L={map:()=>{const m=chain(),on=m.on;m.on=function(event,fn){if(event==='dragstart')plannerDragStart=fn;return on.call(this,event,fn)};return m},tileLayer:chain,layerGroup:chain,polyline:chain,circleMarker:chain,circle:chain,marker:chain,svg:chain,divIcon:o=>o||{}};
-let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('  function gradeAtDistance(profile,distanceM){','  function gradeAtDistance(profile,distanceM){window.__testGradeCalls=(window.__testGradeCalls||0)+1;');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,routeSlopeDisplayPieces,debugSlopeCache:(profile,pts)=>{const previous=activeElevationProfile;activeElevationProfile=profile;window.__testGradeCalls=0;drawDomRouteLayer(pts);const initial=window.__testGradeCalls;drawDomRouteLayer(pts);const afterPan=window.__testGradeCalls;activeElevationProfile={...profile,samples:profile.samples.map(p=>({...p,elevationFt:p.elevationFt+40}))};drawDomRouteLayer(pts);const afterProfile=window.__testGradeCalls;const edited=pts.map((p,i)=>i===Math.floor(pts.length/2)?{...p,lon:p.lon+.0002}:p);drawDomRouteLayer(edited);const afterRoute=window.__testGradeCalls;activeElevationProfile=previous;drawDomRouteLayer(state()?.getPoints?.()||[]);return {initial,afterPan,afterProfile,afterRoute};},debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
+let planner=fs.readFileSync(dir+'/route-planner.js','utf8');planner=planner.replace('  function gradeAtDistance(profile,distanceM){','  function gradeAtDistance(profile,distanceM){window.__testGradeCalls=(window.__testGradeCalls||0)+1;');planner=planner.replace('window.FIELD_ROUTE_PLANNER={','window.TEST_ROUTER={buildGraph,nearestNode,shortestPath,meters,samplePolyline,fetchElevationProfile,profileElevationAt,elevationDetail,cloneRoutingGraph,routeLeg,addAnchor,clearAll,displayTrailSections,junctionWarningsForPath,combinedJunctionWarnings,gradeAtDistance,slopeClass,reverse,undo,saveCurrentRoute,loadSelectedRoute,routeSlopeDisplayPieces,enableContinuousPlannerZoom,debugSlopeCache:(profile,pts)=>{const previous=activeElevationProfile;activeElevationProfile=profile;window.__testGradeCalls=0;drawDomRouteLayer(pts);const initial=window.__testGradeCalls;drawDomRouteLayer(pts);const afterPan=window.__testGradeCalls;activeElevationProfile={...profile,samples:profile.samples.map(p=>({...p,elevationFt:p.elevationFt+40}))};drawDomRouteLayer(pts);const afterProfile=window.__testGradeCalls;const edited=pts.map((p,i)=>i===Math.floor(pts.length/2)?{...p,lon:p.lon+.0002}:p);drawDomRouteLayer(edited);const afterRoute=window.__testGradeCalls;activeElevationProfile=previous;drawDomRouteLayer(state()?.getPoints?.()||[]);return {initial,afterPan,afterProfile,afterRoute};},debugProfile:applyRouteStats,debugSlopeRender:(profile,pts)=>{const original=activeElevationProfile;activeElevationProfile=profile;drawDomRouteLayer(pts);const classes=[...plannerDomRouteSvg.querySelectorAll(".route-dom-slope")].map(p=>p.getAttribute("class"));activeElevationProfile=original;drawDomRouteLayer(state()?.getPoints?.()||[]);return classes}};window.FIELD_ROUTE_PLANNER={');vm.runInContext(planner,ctx,{filename:'route-planner.js'});vm.runInContext(fs.readFileSync(dir+'/field-intel.js','utf8'),ctx,{filename:'field-intel.js'});vm.runInContext(fs.readFileSync(dir+'/field-ops.js','utf8'),ctx,{filename:'field-ops.js'});
 vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'field-tools.js'});
 (async()=>{
  await tick();
@@ -324,6 +324,47 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  console.log('PASS route overlays on both maps, reverse and clear synchronization');
  assert.ok(appJs.includes('let routeMileageCache=null'));assert.ok(appJs.includes('const mileage=routeMileageProfile()'));assert.ok(appJs.includes('routeMileageCache=null;'));console.log('PASS main route watch reuses cached cumulative mileage instead of rewalking the route');
  console.log('PASS direct routing, distance, missing elevation, reverse, undo, clear persistence');
+ // Isolate the production Leaflet wheel handler from mocked tile networking.
+ // Ten quick mouse-wheel events previously caused dozens of setZoomAround
+ // calls and every call triggered a tile/opacity lifecycle. Exactly ONE
+ // Leaflet camera commit is allowed per continuous wheel burst.
+ const testWheelHost=d.createElement('div'),testMapPane=d.createElement('div');
+ testMapPane.className='leaflet-map-pane';testWheelHost.appendChild(testMapPane);d.body.appendChild(testWheelHost);
+ let actualZoom=14,zoomCommits=0,scrollDisabled=false;
+ const zoomHandlers=[];
+ const fakeZoomMap={
+   scrollWheelZoom:{disable(){scrollDisabled=true}},
+   getContainer(){return testWheelHost},getPane(){return testMapPane},
+   getZoom(){return actualZoom},getMinZoom(){return 2},getMaxZoom(){return 19},
+   getSize(){return {divideBy(){return {x:200,y:160}}}},
+   mouseEventToContainerPoint(e){return {x:e.clientX,y:e.clientY}},
+   containerPointToLayerPoint(p){return p},
+   setZoomAround(_point,next){zoomCommits++;actualZoom=next;zoomHandlers.forEach(fn=>fn())},
+   on(name,fn){if(name==='zoomend')zoomHandlers.push(fn)}
+ };
+ r.enableContinuousPlannerZoom(fakeZoomMap);
+ assert.equal(scrollDisabled,true,'native Leaflet wheel handler must be disabled to avoid duplicate camera updates');
+ for(let i=0;i<10;i++)testWheelHost.dispatchEvent(new w.WheelEvent('wheel',
+   {bubbles:true,cancelable:true,deltaY:-60,clientX:200,clientY:160}));
+ await new Promise(resolve=>w.requestAnimationFrame(resolve));
+ assert.equal(zoomCommits,0,'wheel frames must only preview; never retile Leaflet during a burst');
+ if('scale' in testMapPane.style)
+   assert.ok(Number(testMapPane.style.scale)>1,'preview zoom uses the map-pane compositor without rerendering tiles');
+ await new Promise(resolve=>setTimeout(resolve,175));
+ assert.equal(zoomCommits,1,'one continuous desktop wheel burst commits exactly one real map zoom');
+ assert.ok(actualZoom>15&&actualZoom<17,'all wheel deltas accumulate instead of saturating or being dropped');
+ assert.equal(testMapPane.style.scale||'','', 'compositor preview clears after the map camera commits');
+ testWheelHost.dispatchEvent(new w.WheelEvent('wheel',
+   {bubbles:true,cancelable:true,deltaY:70,clientX:200,clientY:160}));
+ actualZoom=12;zoomHandlers.forEach(fn=>fn());
+ await new Promise(resolve=>setTimeout(resolve,175));
+ assert.equal(zoomCommits,1,'an external map zoom cancels a pending wheel commit instead of overriding it');
+ testWheelHost.remove();
+ assert.match(routePlannerJs,/fadeAnimation:false/,'Leaflet tile fade must not flash the map white at zoom transitions');
+ assert.match(routePlannerJs,/keepBuffer:3,updateWhenZooming:false/,'basemap retains already decoded tiles during zoom previews');
+ assert.ok(routePlannerJs.includes('plannerMap.removeLayer(topo)'), 'a failed optional topo server must stop receiving future requests');
+ console.log('PASS desktop planner compositor wheel preview commits once per burst, handles external zoom, and avoids repeated tile fade');
+
  assert.equal(w.FIELD_ROUTE_PLANNER.ownsElevationProfile,true,'native planner explicitly owns the horizontal elevation graph');
  assert.match(d.getElementById('routeProfile').getAttribute('aria-label'),/unavailable until a current route profile loads/,'clearing the route removes stale horizontal elevation geometry');
  const g=r.buildGraph([{type:'way',id:1,nodes:[1,2,3],geometry:[{lat:44,lon:-73},{lat:44,lon:-72.98},{lat:44.02,lon:-72.98}],tags:{highway:'path'}}]);
