@@ -143,24 +143,35 @@ const server=http.createServer((req,res)=>{
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>openView('map'));
   await page.locator('#routeCorridorPadding').scrollIntoViewIfNeeded();
-  const palette=await page.evaluate(()=>{
-    const themes={};const body=document.body,old=body.dataset.theme;
-    const ring=document.querySelector('.sos-ring'),input=document.getElementById('routeCorridorPadding');
-    for(const theme of ['green','amber','mono','red']){
-      body.dataset.theme=theme;
+  // WebKit may defer inherited custom-property recalculation until the next
+  // rendering opportunity; exercise real sequential theme switches rather
+  // than changing all four body attributes in one JavaScript task.
+  const oldTheme=await page.evaluate(()=>document.body.dataset.theme);
+  const palette={};
+  for(const mode of ['green','amber','mono','red']){
+    await page.evaluate(theme=>{document.body.dataset.theme=theme},mode);
+    await page.waitForTimeout(90);
+    palette[mode]=await page.evaluate(()=>{
       const probe=document.createElement('span');
       probe.style.cssText='color:var(--danger);border:1px solid var(--line)';
       document.body.appendChild(probe);
-      themes[theme]={
+      const ring=document.querySelector('.sos-ring'),
+        input=document.getElementById('routeCorridorPadding');
+      const result={
         danger:getComputedStyle(probe).color,sos:getComputedStyle(ring).borderTopColor,
         border:getComputedStyle(probe).borderTopColor,
         inputBorder:getComputedStyle(input).borderTopColor,
-        inputBackground:getComputedStyle(input).backgroundColor
+        inputBackground:getComputedStyle(input).backgroundColor,
+        bodyTheme:document.body.dataset.theme,
+        bodyLine:getComputedStyle(document.body).getPropertyValue('--line').trim(),
+        inputLine:getComputedStyle(input).getPropertyValue('--line').trim()
       };
-      probe.remove();
-    }
-    body.dataset.theme=old||'green';return themes;
-  });
+      probe.remove();return result;
+    });
+    assert.equal(palette[mode].bodyTheme,mode,'theme switch must reach body');
+    console.log('PASS WebKit theme '+mode+': '+JSON.stringify(palette[mode]));
+  }
+  await page.evaluate(theme=>{document.body.dataset.theme=theme},oldTheme||'green');
   for(const [mode,theme] of Object.entries(palette)){
     assert.equal(theme.sos,theme.danger,mode+' SOS ring must be danger red, not theme accent');
     assert.equal(theme.inputBorder,theme.border,mode+' input border must follow theme border');
