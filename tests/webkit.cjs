@@ -124,6 +124,7 @@ const server=http.createServer((req,res)=>{
       return {sheet:r('#tabSheet'),head:r('#tabSheet .tab-sheet-head'),close:r('#closeTabSheet'),
         expanded:document.querySelector('#moreTabs').getAttribute('aria-expanded'),
         hasOpen:sheet.classList.contains('open'),visibility:getComputedStyle(sheet).visibility,
+        display:getComputedStyle(sheet).display,
         transform:getComputedStyle(sheet).transform,pointer:getComputedStyle(sheet).pointerEvents,
         closeVisibility:getComputedStyle(document.querySelector('#closeTabSheet')).visibility};
     });
@@ -132,6 +133,8 @@ const server=http.createServer((req,res)=>{
     assert.equal(more.hasOpen,true,'More must retain open class after a sheet scroll');
     assert.equal(more.visibility,'visible','More drawer must be CSS visible when expanded');
     assert.equal(more.closeVisibility,'visible','More close control must be visible');
+    assert.notEqual(more.display,'none','desktop breakpoint must not hide phone landscape More drawer');
+    assert.ok(more.sheet.width>=width-4&&more.close.width>=40,'More drawer and close need real onscreen geometry');
     assert.ok(more.sheet.top>=-2&&more.close.top>=more.sheet.top-2&&more.close.bottom<=height,
       'short landscape screen must retain reachable sheet close control: '+JSON.stringify(more));
     await page.locator('#closeTabSheet').click({timeout:3000});
