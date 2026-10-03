@@ -1,10 +1,10 @@
-const FIELD_APP_BUILD='3.85-desktop1';
-const FIELD_EXPECTED_CACHE='field-os-v3-85-desktop1';
+const FIELD_APP_BUILD='3.85-plwheel1';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-plwheel1';
 window.FIELD_OS_BUILD=FIELD_APP_BUILD;
 const fieldBuildLabel=document.getElementById('fieldBuildLabel');
 const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
 const fieldReleaseDetails=document.getElementById('fieldReleaseDetails');
-if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · D1';
+if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · PW1';
 if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT MOBILE1 LOADED';
 if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: CHECKING';
 const views = [...document.querySelectorAll('.view')];

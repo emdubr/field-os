@@ -432,20 +432,57 @@
   function enableContinuousPlannerZoom(map){
     if(!map||map._fieldContinuousWheel)return;
     map._fieldContinuousWheel=true;map.scrollWheelZoom?.disable?.();
-    const el=map.getContainer();let target=map.getZoom(),raf=0,anchor=null,last=0;
+    const el=map.getContainer(),pane=map.getPane?.('mapPane')||el.querySelector('.leaflet-map-pane');
+    // Leaflet's setZoomAround used to run at 60 fps here. Every frame fired
+    // a real zoom lifecycle and could rebuild/fade remote raster tiles while
+    // the mouse wheel was still spinning: the source of repeated pale flashes.
+    // Preview the WHOLE map pane, plus our separate DOM route overlay, on the
+    // compositor. Commit exactly one real Leaflet zoom after the burst ends.
+    const canPreview=!!pane&&('scale' in pane.style);
+    let target=map.getZoom(),raf=0,timer=0,anchor=null,layerAnchor=null,settling=false;
+    const clearPreview=()=>{
+      if(raf){cancelAnimationFrame(raf);raf=0}
+      if(canPreview){pane.style.scale='';pane.style.transformOrigin='';}
+      if(plannerDomRouteSvg){plannerDomRouteSvg.style.scale='';plannerDomRouteSvg.style.transformOrigin='';}
+    };
     const frame=()=>{
-      raf=0;const now=performance.now(),current=map.getZoom(),diff=target-current;
-      if(Math.abs(diff)<.002){if(Math.abs(diff)>0)map.setZoomAround(anchor||map.getSize().divideBy(2),target,{animate:false});return;}
-      const dt=Math.min(32,Math.max(8,now-(last||now-16)));last=now;
-      map.setZoomAround(anchor||map.getSize().divideBy(2),current+diff*(1-Math.exp(-dt/55)),{animate:false});
-      raf=requestAnimationFrame(frame);
+      raf=0;
+      if(!canPreview||!anchor)return;
+      const scale=Math.pow(2,target-map.getZoom());
+      pane.style.transformOrigin=`${layerAnchor.x}px ${layerAnchor.y}px`;
+      pane.style.scale=String(scale);
+      if(plannerDomRouteSvg?.isConnected){
+        plannerDomRouteSvg.style.transformOrigin=`${anchor.x}px ${anchor.y}px`;
+        plannerDomRouteSvg.style.scale=String(scale);
+      }
+    };
+    const settle=()=>{
+      clearTimeout(timer);timer=0;clearPreview();
+      const diff=target-map.getZoom();
+      if(Math.abs(diff)>.002){
+        settling=true;
+        try{map.setZoomAround(anchor||map.getSize().divideBy(2),target,{animate:false})}
+        finally{settling=false;}
+      }
+      target=map.getZoom();setDomRouteZooming(false);
     };
     el.addEventListener('wheel',e=>{
-      if(e.ctrlKey)return;e.preventDefault();anchor=map.mouseEventToContainerPoint(e);
-      const dy=Math.max(-120,Math.min(120,e.deltaY));target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/420));
-      last=performance.now();if(!raf)raf=requestAnimationFrame(frame);
+      if(e.ctrlKey)return;
+      e.preventDefault();
+      anchor=map.mouseEventToContainerPoint(e);
+      layerAnchor=map.containerPointToLayerPoint?.(anchor)||anchor;
+      const dy=Math.max(-120,Math.min(120,e.deltaY));
+      target=Math.max(map.getMinZoom(),Math.min(map.getMaxZoom(),target-dy/420));
+      setDomRouteZooming(true);
+      if(!raf)raf=requestAnimationFrame(frame);
+      clearTimeout(timer);timer=setTimeout(settle,135);
     },{passive:false});
-    map.on('zoomend',()=>{if(!raf)target=map.getZoom()});
+    map.on('zoomend',()=>{
+      if(settling)return;
+      if(timer){clearTimeout(timer);timer=0;clearPreview();setDomRouteZooming(false)}
+      target=map.getZoom();
+    });
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&timer)settle()});
   }
 
   function bindMobilePlannerTap(map,el){
@@ -524,7 +561,7 @@
       doubleClickZoom:false,
       tap:true,
       zoomAnimation:true,
-      fadeAnimation:true,
+      fadeAnimation:false,
       markerZoomAnimation:true,
       zoomSnap:0,
       zoomDelta:.25,
@@ -540,14 +577,14 @@
     });
 
     const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      maxZoom:19,
+      maxZoom:19,keepBuffer:3,updateWhenZooming:false,
       attribution:'© OpenStreetMap contributors'
     });
     if(navigator.onLine!==false)osm.addTo(plannerMap);
 
     const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
       subdomains:'abc',
-      maxZoom:17,
+      maxZoom:17,keepBuffer:3,updateWhenZooming:false,
       opacity:.93,
       attribution:'OpenTopoMap'
     });
@@ -567,13 +604,15 @@
       topoErrors++;
       if(topoErrors>=3&&!plannerBaseFallbackActive){
         plannerBaseFallbackActive=true;
-        topo.setOpacity(0);
+        // Opacity zero alone continued fetching every broken topo tile on
+        // each zoom. Remove the failed optional layer; OSM stays underneath.
+        plannerMap.removeLayer(topo);
         status('TOPO TILES UNAVAILABLE -- USING OSM BASEMAP','ready');
       }
     });
 
     const hiking=L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',{
-      maxZoom:18,
+      maxZoom:18,keepBuffer:3,updateWhenZooming:false,
       opacity:.72,
       attribution:'Waymarked Trails'
     });
