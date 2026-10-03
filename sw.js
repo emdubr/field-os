@@ -1,6 +1,6 @@
 /* FIELD/OS installed-app cache. User data/maps live outside this disposable shell cache. */
-const CACHE='field-os-v3-85-desktop1';
-const ASSETS=['./','./index.html','./styles.css?v=3.85-fieldfix1','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-desktop1','./workstation.css?v=3.85-gradeview1','./workstation.js?v=3.85-gradeview1','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-desktop1','./route-planner.js?v=3.85-gcache1','./field-intel.js?v=3.85-fieldfix1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-opt3','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-85-cssfix1';
+const ASSETS=['./','./index.html','./styles.css?v=3.85-cssfix1','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-cssfix1','./workstation.css?v=3.85-cssfix1','./workstation.js?v=3.85-gradeview1','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-desktop1','./route-planner.js?v=3.85-gcache1','./field-intel.js?v=3.85-fieldfix1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-opt3','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -21,7 +21,7 @@ const FALLBACK_ASSETS=[
 const EXTERNAL_ALLOWED=new Set([...EXTERNAL_ASSETS,...FALLBACK_ASSETS]);
 const CRITICAL=ASSETS.filter(path=>!['./','./manifest.webmanifest','./icon.svg'].includes(path));
 const OFFLINE_TIMEOUT_MS=3500;
-const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile|horizon|gradeview|arrow|gcache|desktop)[A-Za-z0-9_-]+)?$/.test(k);
+const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile|horizon|gradeview|arrow|gcache|desktop|cssfix)[A-Za-z0-9_-]+)?$/.test(k);
 const offlineResponse=()=>typeof Response==='function'
   ?new Response('FIELD/OS resource unavailable offline',{status:503,statusText:'Offline',headers:{'Content-Type':'text/plain; charset=utf-8'}})
   :Response.error();
