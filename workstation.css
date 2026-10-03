@@ -4469,3 +4469,9 @@ body:has(#fieldActionNotice:not(:empty)) .field-update-notice{
   body #app.shell #home .detailed-sensors .sensor-lines,
   body #app.shell #home .nav-stats{font-size:10px!important;line-height:1.25!important}
 }
+
+/* 768–800px portrait tablet: use the screen, not both screen and shell, for dock clearance. */
+@media (orientation:portrait) and (min-width:768px) and (max-width:800px){
+  body #app.shell{padding-bottom:0!important}
+  body #app.shell .screen{padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px) + 12px)!important}
+}
