@@ -544,8 +544,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-desktop1'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-desktop1'"));
+ assert.ok(html.includes('app.js?v=3.85-plwheel1'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-plwheel1'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
@@ -1070,7 +1070,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-desktop1'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-plwheel1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));
