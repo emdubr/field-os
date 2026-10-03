@@ -4480,7 +4480,7 @@ body:has(#fieldActionNotice:not(:empty)) .field-update-notice{
    for short landscape screens to keep CLOSE reachable without an animation delay. */
 @media (orientation:landscape) and (max-width:1000px) and (max-height:600px){
   body #app.shell #tabSheet{
-    position:fixed!important;left:0!important;right:0!important;
+    display:block!important;position:fixed!important;left:0!important;right:0!important;
     bottom:var(--mobile-dock-h,64px)!important;width:100%!important;max-width:100%!important;
     max-height:calc(100dvh - var(--mobile-topbar-h,52px) - var(--mobile-dock-h,64px) - 8px)!important;
     transform:translateY(110%)!important;visibility:hidden!important;
@@ -4491,4 +4491,12 @@ body:has(#fieldActionNotice:not(:empty)) .field-update-notice{
   }
   body #app.shell #tabSheet .tab-sheet-head{position:sticky!important;top:0!important;z-index:5!important}
   body #app.shell #closeTabSheet{min-height:44px!important}
+}
+
+/* The 768px desktop breakpoint hides every drawer by default. Restore the
+   mobile More drawer and backdrop specifically on short landscape phones. */
+@media (orientation:landscape) and (min-width:768px) and (max-width:1000px) and (max-height:600px){
+  body #app.shell #tabSheetBackdrop:not([hidden]){display:block!important;position:fixed!important;z-index:10001!important}
+  body #app.shell #tabSheetBackdrop[hidden]{display:none!important}
+  body #app.shell #tabSheet{display:block!important;z-index:10002!important}
 }
