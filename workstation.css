@@ -4361,6 +4361,7 @@ select option{background:#010a05;color:var(--crt-green-hot)}
  body #app.shell .view.active:not(#home)>.view-head h2{font-size:11px!important;overflow-wrap:anywhere!important}
  body #app.shell .tabbar{
    display:grid!important;position:fixed!important;inset:auto 0 0 0!important;
+   transform:none!important;
    grid-template-columns:repeat(5,minmax(0,1fr))!important;
    width:100%!important;max-width:100%!important;
    height:var(--mobile-dock-h)!important;min-height:var(--mobile-dock-h)!important;
