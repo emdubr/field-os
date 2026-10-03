@@ -19,8 +19,8 @@ assert.match(css,/body:has\(#fieldActionNotice:not\(:empty\)\) \.field-update-no
 assert.match(css,/#home \.detail-console::after\{content:none!important\}/);
 for(const [f,text] of [['index.html',html],['sw.js',sw]])for(const asset of ['styles.css','workstation.css','app.js'])
  assert.ok(text.includes(asset+'?v=3.85-cssfix2'),f+' not cache-busting '+asset);
-assert.match(app,/FIELD_APP_BUILD='3.85-cssfix1'/);
-assert.match(app,/FIELD_EXPECTED_CACHE='field-os-v3-85-cssfix1'/);
-assert.match(sw,/const CACHE='field-os-v3-85-cssfix1'/);
+assert.match(app,/FIELD_APP_BUILD='3.85-cssfix2'/);
+assert.match(app,/FIELD_EXPECTED_CACHE='field-os-v3-85-cssfix2'/);
+assert.match(sw,/const CACHE='field-os-v3-85-cssfix2'/);
 assert.match(sw,/plwheel\|cssfix/,'worker must clean up older disposable shells');
 console.log('PASS CSS landscape guard, theme, SOS, sticky layout, readability, notice and PWA version invariants');
