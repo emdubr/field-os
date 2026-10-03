@@ -87,6 +87,98 @@ const server=http.createServer((req,res)=>{
   assert.ok(horizontal.actual>180&&Math.abs(horizontal.actual-horizontal.prepared)<4,'offline WebKit route overview uses its actual phone width: '+JSON.stringify(horizontal));
   assert.ok(horizontal.height>=185&&horizontal.height<=195,'offline WebKit route overview preserves usable fixed chart height');
   console.log('PASS Safari-class horizontal elevation overview renders without external Leaflet');
+  // Mobile landscape must use the native responsive layout, not the obsolete
+  // 1500px desktop workspace whose JS scaling is disabled below 1001px.
+  for(const [width,height] of [[667,375],[844,390],[932,430]]){
+    await page.setViewportSize({width,height});
+    await page.evaluate(()=>{openView('home');window.scrollTo(0,0)});
+    await page.waitForTimeout(150);
+    const phone=await page.evaluate(()=>{
+      const style=selector=>getComputedStyle(document.querySelector(selector));
+      const rect=selector=>document.querySelector(selector).getBoundingClientRect();
+      return {
+        console:rect('#home .detail-console'),header:rect('#app > .topbar'),
+        headerDisplay:style('#app > .topbar').display,headerPosition:style('#app > .topbar').position,
+        consolePosition:style('#home .detail-console').position,
+        consoleTransform:style('#home .detail-console').transform,
+        dockPosition:style('#app .tabbar').position,dock:rect('#app .tabbar'),
+        smallFont:parseFloat(style('.handheld-status small').fontSize),
+        actionFont:parseFloat(style('.handheld-actions button').fontSize),
+        overflow:document.documentElement.scrollWidth-innerWidth,viewport:innerWidth
+      };
+    });
+    assert.equal(phone.consolePosition,'relative','landscape phone must not keep absolute desktop console: '+JSON.stringify(phone));
+    assert.ok(phone.console.width<=phone.viewport+2,'landscape home must fit actual phone width: '+JSON.stringify(phone));
+    assert.equal(phone.consoleTransform,'none','phone landscape must not depend on a JS fit transform');
+    assert.equal(phone.headerDisplay,'flex','landscape phone keeps visible top header');
+    assert.equal(phone.headerPosition,'sticky','landscape header can stick during scroll');
+    assert.equal(phone.dockPosition,'fixed','landscape nav must not scroll out of view');
+    assert.ok(phone.dock.right<=width+2&&phone.dock.left>=-2,'landscape dock stays onscreen');
+    assert.ok(phone.smallFont>=9&&phone.actionFont>=11,'field labels/buttons must stay readable');
+    assert.ok(phone.overflow<=2,'landscape must not create horizontal document overflow');
+    await page.locator('#moreTabs').click();
+    await page.waitForTimeout(210);
+    const more=await page.evaluate(()=>{
+      const r=selector=>document.querySelector(selector).getBoundingClientRect();
+      const sheet=document.querySelector('#tabSheet');sheet.scrollTop=90;
+      return {sheet:r('#tabSheet'),head:r('#tabSheet .tab-sheet-head'),close:r('#closeTabSheet'),
+        expanded:document.querySelector('#moreTabs').getAttribute('aria-expanded'),
+        hasOpen:sheet.classList.contains('open'),visibility:getComputedStyle(sheet).visibility,
+        display:getComputedStyle(sheet).display,
+        transform:getComputedStyle(sheet).transform,pointer:getComputedStyle(sheet).pointerEvents,
+        closeVisibility:getComputedStyle(document.querySelector('#closeTabSheet')).visibility};
+    });
+    console.log('WebKit More geometry '+width+'x'+height+' '+JSON.stringify(more));
+    assert.equal(more.expanded,'true','landscape More panel opens');
+    assert.equal(more.hasOpen,true,'More must retain open class after a sheet scroll');
+    assert.equal(more.visibility,'visible','More drawer must be CSS visible when expanded');
+    assert.equal(more.closeVisibility,'visible','More close control must be visible');
+    assert.notEqual(more.display,'none','desktop breakpoint must not hide phone landscape More drawer');
+    assert.ok(more.sheet.width>=width-4&&more.close.width>=40,'More drawer and close need real onscreen geometry');
+    assert.ok(more.sheet.top>=-2&&more.close.top>=more.sheet.top-2&&more.close.bottom<=height,
+      'short landscape screen must retain reachable sheet close control: '+JSON.stringify(more));
+    await page.locator('#closeTabSheet').click({timeout:3000});
+    console.log('PASS WebKit landscape '+width+'x'+height+' responsive map, sticky dock, readable controls and More close');
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>openView('map'));
+  await page.locator('#routeCorridorPadding').scrollIntoViewIfNeeded();
+  // WebKit may defer inherited custom-property recalculation until the next
+  // rendering opportunity; exercise real sequential theme switches rather
+  // than changing all four body attributes in one JavaScript task.
+  const oldTheme=await page.evaluate(()=>document.body.dataset.theme);
+  const palette={};
+  for(const mode of ['green','amber','mono','red']){
+    await page.evaluate(theme=>{document.body.dataset.theme=theme},mode);
+    await page.waitForTimeout(90);
+    palette[mode]=await page.evaluate(()=>{
+      const probe=document.createElement('span');
+      probe.style.cssText='color:var(--danger);border:1px solid var(--line)';
+      document.body.appendChild(probe);
+      const ring=document.querySelector('.sos-ring'),
+        input=document.getElementById('routeCorridorPadding');
+      const result={
+        danger:getComputedStyle(probe).color,sos:getComputedStyle(ring).borderTopColor,
+        border:getComputedStyle(probe).borderTopColor,
+        inputBorder:getComputedStyle(input).borderTopColor,
+        inputBackground:getComputedStyle(input).backgroundColor,
+        bodyTheme:document.body.dataset.theme,
+        bodyLine:getComputedStyle(document.body).getPropertyValue('--line').trim(),
+        inputLine:getComputedStyle(input).getPropertyValue('--line').trim()
+      };
+      probe.remove();return result;
+    });
+    assert.equal(palette[mode].bodyTheme,mode,'theme switch must reach body');
+    console.log('PASS WebKit theme '+mode+': '+JSON.stringify(palette[mode]));
+  }
+  await page.evaluate(theme=>{document.body.dataset.theme=theme},oldTheme||'green');
+  for(const [mode,theme] of Object.entries(palette)){
+    assert.equal(theme.sos,theme.danger,mode+' SOS ring must be danger red, not theme accent');
+    assert.equal(theme.inputBorder,theme.border,mode+' input border must follow theme border');
+  }
+  assert.notEqual(palette.green.inputBackground,palette.mono.inputBackground,'Mono inputs must not be green');
+  assert.notEqual(palette.green.inputBackground,palette.amber.inputBackground,'Amber inputs must not be green');
+  console.log('PASS Safari-class palette changes preserve danger red and actual themed form controls');
   assert.deepEqual(fatal,[],fatal.join('\n'));
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve))}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close()});
