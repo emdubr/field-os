@@ -22,5 +22,5 @@ for(const [f,text] of [['index.html',html],['sw.js',sw]])for(const asset of ['st
 assert.match(app,/FIELD_APP_BUILD='3.85-cssfix1'/);
 assert.match(app,/FIELD_EXPECTED_CACHE='field-os-v3-85-cssfix1'/);
 assert.match(sw,/const CACHE='field-os-v3-85-cssfix1'/);
-assert.match(sw,/desktop\|cssfix/,'worker must clean up older disposable shells');
+assert.match(sw,/plwheel\|cssfix/,'worker must clean up older disposable shells');
 console.log('PASS CSS landscape guard, theme, SOS, sticky layout, readability, notice and PWA version invariants');
