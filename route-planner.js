@@ -2305,9 +2305,16 @@
     let request;
     try{request=offlineRouteBounds()}catch(err){return {ready:false,reason:err.message||String(err)}}
     const {points}=request,records=await savedTrailNetworks();
-    const record=records.find(rec=>rec?.box&&Array.isArray(rec.elements)&&rec.elements.length>0&&
-      points.every(p=>covers(rec.box,p,p)));
-    if(!record)return {ready:false,reason:'No saved trail network covers every route point. Download while online.'};
+    records.sort((a,b)=>Number(b.created||0)-Number(a.created||0));
+    let record=null;
+    for(const entry of records){
+      if(!entry?.box||!Array.isArray(entry.elements)||!points.every(p=>covers(entry.box,p,p)))continue;
+      try{
+        const graph=buildGraph(entry.elements);
+        if(graph.nodes.size>1&&graph.segments.length){record=entry;break;}
+      }catch{}
+    }
+    if(!record)return {ready:false,reason:'No valid saved walkable trail network covers every route point. Download while online.'};
     const ageHours=Math.max(0,Math.floor((Date.now()-Number(record.created||0))/3600000));
     return {ready:true,reason:'Saved OSM trail geometry covers this planned corridor. Geometry is '+ageHours+' hours old.',ageHours,source:'SAVED OSM'};
   }
@@ -2356,7 +2363,10 @@
     }finally{if(button)button.disabled=false}
   }
   $('preloadTrailNetwork')?.addEventListener('click',()=>{
-    void cacheOfflineTrailRoute().catch(error=>console.warn('FIELD/OS offline trail preparation:',error?.message||error));
+    void cacheOfflineTrailRoute().catch(error=>{
+      offlineGraphIndicator('PRE-TRIP TRAIL PREP BLOCKED — '+String(error?.message||error).slice(0,130));
+      console.warn('FIELD/OS offline trail preparation:',error?.message||error);
+    });
   });
   $('checkTrailNetwork')?.addEventListener('click',()=>{
     void offlineTrailCoverage().then(result=>offlineGraphIndicator(result.reason))
