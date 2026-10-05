@@ -277,6 +277,15 @@
             <div class="button-row"><button id="checkRouteOffline" class="action" type="button">CHECK ROUTE COVERAGE</button><button id="activateRouteOffline" class="action" type="button">USE COVERING PACK</button></div><div><label class="field-label" for="routeCorridorTemplate">PMTILES CORRIDOR PROVIDER TEMPLATE</label><input id="routeCorridorTemplate" class="terminal-input" inputmode="url" placeholder="https://provider.example/route.pmtiles?bbox={bbox}" /><p id="routeCorridorProviderState" class="muted">Use a provider that permits generated PMTiles downloads. Tokens: {bbox}, {west}, {south}, {east}, {north}.</p><div class="button-row"><button id="saveRouteCorridorTemplate" class="action" type="button">SAVE PROVIDER TEMPLATE</button><button id="downloadRouteCorridor" class="action" type="button">DOWNLOAD ROUTE CORRIDOR</button></div></div>
           </div>
           <p class="muted">Checks whether a saved PMTiles archive covers the complete planned route plus the selected safety buffer. It does not bulk-download OpenStreetMap raster tiles.</p>
+          <div class="route-offline-trail-prep">
+            <div class="panel-title"><span>DOWNLOAD WALKABLE TRAIL GEOMETRY</span><span class="tiny">PREPARE WHILE ONLINE</span></div>
+            <p class="muted">Separately save the OpenStreetMap walking network for this planned route. This supports new snapped route legs offline inside the saved area; it does not download basemap imagery, elevations, weather or live trail closures. Limit: routes within a 14-mile-by-14-mile region.</p>
+            <div class="button-row">
+              <button id="preloadTrailNetwork" class="action" type="button">SAVE TRAILS FOR OFFLINE</button>
+              <button id="checkTrailNetwork" class="action" type="button">VERIFY SAVED TRAILS</button>
+            </div>
+            <p class="muted" id="routeTrailNetworkStatus" role="status" aria-live="polite">NOT CHECKED — PLAN A ROUTE FIRST</p>
+          </div>
         </article>
         <article class="panel field-tools-panel map-readiness-panel">
           <div class="panel-title"><span>MAP SOURCE / STORAGE</span><span class="tiny" id="mapNetworkState">CHECKING SOURCE</span></div>
@@ -1001,7 +1010,7 @@
   <script defer src="map-engine.js?v=3.85-desktop1"></script>
   <script defer src="vendor/leaflet/leaflet.js"></script>
   <script defer src="route-guidance.js?v=3.85"></script>
-  <script defer src="route-planner.js?v=3.85-airplane1"></script>
+  <script defer src="route-planner.js?v=3.85-trailcache1"></script>
   <script defer src="field-intel.js?v=3.85-airplane1"></script>
   <script defer src="field-ops.js?v=3.85"></script>
   <script defer src="field-tools.js?v=3.85-airplane1"></script>
