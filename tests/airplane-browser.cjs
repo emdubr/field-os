@@ -82,8 +82,28 @@ function littleArchive(){
   console.log('PASS offline PWA reload with no network, browser IndexedDB vector tile and complete local renderer');
   await page.evaluate(()=>{localStorage.removeItem('fieldos-v12-map-pack')});
   await page.reload({waitUntil:'load',timeout:20000});
+  const recovered=await page.evaluate(async()=>await FIELD_AIRPLANE_CHECK.run());
+  assert.equal(recovered.ready,true,'the app should recover an intact saved archive when its selection is lost');
+  console.log('PASS recovery from missing selection while a usable regional map survives in IndexedDB');
+  // A real no-map scenario removes both the active selection and the stored
+  // archive; an absent selection alone is not evidence that coverage is lost.
+  await page.evaluate(async()=>{
+    const db=await new Promise((resolve,reject)=>{
+      const req=indexedDB.open('fieldos-offline-maps-v1',1);
+      req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+    });
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('packs','readwrite');
+      tx.objectStore('packs').delete('airplane-fixture');
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+    db.close();
+    localStorage.removeItem('fieldos-v12-map-pack');
+  });
+  await page.reload({waitUntil:'load',timeout:20000});
   const absent=await page.evaluate(async()=>await FIELD_AIRPLANE_CHECK.run());
-  assert.equal(absent.ready,false,'missing map selection must not be reported ready during airplane mode');
-  console.log('PASS honest warning when phone has no active regional map');
+  assert.equal(absent.ready,false,'missing archive must never report offline readiness');
+  assert.equal(absent.rows.find(x=>x.name==='SAVED REGIONAL MAP')?.ok,false);
+  console.log('PASS honest warning when neither a selected map nor a stored regional archive exists');
  }finally{await browser?.close();await new Promise(r=>server.close(r))}
 })().catch(err=>{console.error(err);process.exitCode=1;server.close()});
