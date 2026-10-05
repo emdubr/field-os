@@ -102,3 +102,49 @@ records, render labels as text, and report write failures without crashing.
 Validation covers the switcher's keyboard/pointer/empty-result/focus behavior,
 all 18 modules at six viewport widths, 5,000-place search and invalidation,
 malformed mark storage, storage-quota failure, and concurrent cache checks.
+
+
+## iPhone: prepare FIELD/OS before losing service (3.85 offline milestone)
+
+FIELD/OS now ships its Leaflet, PMTiles and Protomaps renderer locally. That
+makes an installed app start without cell service **after the app has been
+installed and its offline cache is verified**. It does not include map coverage
+for the entire world by default.
+
+While your iPhone is online:
+
+1. Open FIELD/OS in Safari, use **Share → Add to Home Screen**, launch the
+   installed app once, and check that its offline worker controls the page.
+2. Open **Map → Offline OSM Map Packs**. Download or import a **regional MVT
+   (vector) PMTiles** file that is permitted for offline storage and is under
+   this browser build's 250 MB per-pack limit. Raster PMTiles will be rejected
+   because the local renderer cannot currently display them.
+3. Activate that pack and check that its bounds cover your entire planned
+   route plus your intended safety buffer using **Check Route Coverage**.
+4. Create and **save your planned route online**. For routes contained within
+   a 14-by-14-mile area, choose **Save Trails for Offline** in the Map tab.
+   This separately downloads and saves nearby walkable OpenStreetMap geometry
+   in IndexedDB, so you may be able to snap new route legs within that
+   covered region without Overpass. Use **Verify Saved Trails** to check its
+   presence. A basemap is not the same as a routing network.
+5. Choose **Verify Offline Files + Map** on the Map tab. It checks the app
+   cache, renderer, MVT file and three actual stored tiles along your route.
+   It also reports whether the optional trail network is saved. It does not
+   verify every map tile or promise that any route is safe.
+6. **Rehearse on your actual device:** turn on Airplane Mode, fully close and
+   reopen the installed app, open Home/Map/Route, check the entire planned
+   route and GPS position, and verify all locally needed information. Leave
+   ample iPhone storage. Re-run checks after editing your route or map pack.
+
+Saved forecasts and trail geometry may become stale. New routing outside the
+saved network, new basemap coverage, fresh hazards/weather and online messaging
+need connectivity and/or separate hardware. Web background GNSS recording
+may be suspended by iOS. FIELD/OS is not a substitute for a dedicated
+emergency/satellite device or established wilderness navigation practices.
+
+**Tests:** The CI browser suite installs the service worker, seeds an MVT
+PMTiles map in real IndexedDB, disables all network access, restarts the app,
+mounts the actual offline map, reads route tiles and verifies truthful missing
+archive behavior. The trail prefetch follow-up additionally simulates an
+OpenStreetMap network download and tests its persistence after Airplane Mode
+restart. These simulations are not physical-device certification.

@@ -26,7 +26,7 @@ function worker({saved=[],network={},failedAdds=[]}={}){
     },
     caches:{
       open:async()=>cache,
-      keys:async()=>['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1','field-os-map-pack-northeast'],
+      keys:async()=>['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1','field-os-v3-85-airplane1','field-os-map-pack-northeast'],
       delete:async name=>{deleted.push(name);return true},
       match:async()=>{throw Error('Old unrelated cache must not satisfy pinned vendor requests')}
     }
@@ -83,7 +83,7 @@ function worker({saved=[],network={},failedAdds=[]}={}){
     assert.ok(!w.adds.some(x=>x.includes('https://')),'installation must not wait for unreachable external CDNs');
     assert.deepEqual(w.requests,[],'no external network dependency during worker install');
     await w.run('activate');
-    assert.deepEqual(w.deleted,['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1'],
+    assert.deepEqual(w.deleted,['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1','field-os-v3-85-airplane1'],
       'activation removes only old app shells, never separately saved map packs');
     console.log('PASS fully same-origin vendor precache and protected downloaded map packs');
   }

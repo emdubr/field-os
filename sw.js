@@ -1,6 +1,6 @@
 /* FIELD/OS installed-app cache. User data/maps live outside this disposable shell cache. */
-const CACHE='field-os-v3-85-airplane1';
-const ASSETS=['./','./index.html','./styles.css?v=3.85-cssfix2','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-airplane1','./workstation.css?v=3.85-cssfix2','./workstation.js?v=3.85-gradeview1','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-desktop1','./route-planner.js?v=3.85-airplane1','./field-intel.js?v=3.85-airplane1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-airplane1','./offline-check.js?v=3.85-airplane1','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js','./vendor/leaflet/images/marker-icon.png','./vendor/leaflet/images/marker-icon-2x.png','./vendor/leaflet/images/marker-shadow.png','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
+const CACHE='field-os-v3-85-trailcache1';
+const ASSETS=['./','./index.html','./styles.css?v=3.85-cssfix2','./canvas-utils.js?v=3.85-optcanvas2','./app.js?v=3.85-trailcache1','./workstation.css?v=3.85-cssfix2','./workstation.js?v=3.85-gradeview1','./survival-data.js','./route-state.js?v=3.85','./runtime.js?v=3.85-fieldfix1','./map-engine.js?v=3.85-desktop1','./route-planner.js?v=3.85-trailcache1','./field-intel.js?v=3.85-airplane1','./field-ops.js?v=3.85','./route-guidance.js?v=3.85','./map-readiness.js?v=3.85','./field-tools.js?v=3.85-airplane1','./offline-check.js?v=3.85-trailcache1','./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js','./vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js','./vendor/leaflet/images/marker-icon.png','./vendor/leaflet/images/marker-icon-2x.png','./vendor/leaflet/images/marker-shadow.png','./vendor/leaflet/images/layers.png','./vendor/leaflet/images/layers-2x.png','./safety-sync.js?v=3.85-hotfix1','./track-store.js?v=3.85-fieldfix1','./geo-hub.js?v=3.85-opt2','./manifest.webmanifest','./icon.svg'];
 const EXTERNAL_ASSETS=[
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
   'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
@@ -29,7 +29,7 @@ const VENDOR_ALTERNATES=new Map(VENDOR_PAIRS.flatMap(([primary,backup])=>[[prima
 const EXTERNAL_ALLOWED=new Set([...EXTERNAL_ASSETS,...FALLBACK_ASSETS]);
 const CRITICAL=ASSETS.filter(path=>!['./','./manifest.webmanifest','./icon.svg'].includes(path));
 const OFFLINE_TIMEOUT_MS=3500;
-const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile|horizon|gradeview|arrow|gcache|desktop|plwheel|cssfix|offvendor|airplane)[A-Za-z0-9_-]+)?$/.test(k);
+const shellCacheName=k=>/^field-os-v\d+(?:-\d+)*(?:-(?:opt|safety|fieldfix|gpsfix|wheel|mobile|horizon|gradeview|arrow|gcache|desktop|plwheel|cssfix|offvendor|airplane|trailcache)[A-Za-z0-9_-]+)?$/.test(k);
 const offlineResponse=()=>typeof Response==='function'
   ?new Response('FIELD/OS resource unavailable offline',{status:503,statusText:'Offline',headers:{'Content-Type':'text/plain; charset=utf-8'}})
   :Response.error();

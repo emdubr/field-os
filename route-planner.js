@@ -2281,10 +2281,103 @@
 
   if(routeVisible())setTimeout(kickPlanner,0);
 
+  // Optional pre-trip network pack: one bounded corridor of walkable OSM ways,
+  // saved in the existing IndexedDB trail network store independently of tiles.
+  // Coverage means saved geometry exists in these bounds; it is not a promise
+  // that every trail is connected, open, legal or safe.
+  function offlineRouteBounds(){
+    const points=(state()?.getPoints?.()||[]).filter(valid);
+    if(points.length<2)throw rpError('RP-231','Plan and save a route before downloading an offline trail network.');
+    const latitudes=points.map(p=>Number(p.lat)),longitudes=points.map(p=>Number(p.lon));
+    const minLat=Math.min(...latitudes),maxLat=Math.max(...latitudes),
+      minLon=Math.min(...longitudes),maxLon=Math.max(...longitudes);
+    const mid=(minLat+maxLat)*.5*Math.PI/180;
+    const width=(maxLon-minLon)*69*Math.max(.2,Math.cos(mid)),height=(maxLat-minLat)*69;
+    if(width>14||height>14)throw rpError('RP-232','This route spans more than 14 miles in one direction. Split it into smaller sections to save offline trails safely.');
+    const latPad=1.3/69,lonPad=1.3/(69*Math.max(.2,Math.cos(mid)));
+    return {points,box:{s:Math.max(-85,minLat-latPad),n:Math.min(85,maxLat+latPad),
+      w:Math.max(-180,minLon-lonPad),e:Math.min(180,maxLon+lonPad)}};
+  }
+  const offlineGraphIndicator=message=>{
+    const el=$('routeTrailNetworkStatus');if(el)el.textContent=message;
+  };
+  async function offlineTrailCoverage(){
+    let request;
+    try{request=offlineRouteBounds()}catch(err){return {ready:false,reason:err.message||String(err)}}
+    const {points}=request,records=await savedTrailNetworks();
+    records.sort((a,b)=>Number(b.created||0)-Number(a.created||0));
+    let record=null;
+    for(const entry of records){
+      if(!entry?.box||!Array.isArray(entry.elements)||!points.every(p=>covers(entry.box,p,p)))continue;
+      try{
+        const graph=buildGraph(entry.elements);
+        if(graph.nodes.size>1&&graph.segments.length){record=entry;break;}
+      }catch{}
+    }
+    if(!record)return {ready:false,reason:'No valid saved walkable trail network covers every route point. Download while online.'};
+    const ageHours=Math.max(0,Math.floor((Date.now()-Number(record.created||0))/3600000));
+    return {ready:true,reason:'Saved OSM trail geometry covers this planned corridor. Geometry is '+ageHours+' hours old.',ageHours,source:'SAVED OSM'};
+  }
+  async function cacheOfflineTrailRoute(){
+    if(busy)throw rpError('RP-233','Finish the current route calculation before downloading its trail network.');
+    if(navigator.onLine===false)throw rpError('RP-234','No network connection. Download trail geometry while online, before the hike.');
+    const {points,box}=offlineRouteBounds();
+    const cached=await offlineTrailCoverage();
+    if(cached.ready){offlineGraphIndicator('SAVED NETWORK READY // '+cached.ageHours+'H OLD');return cached;}
+    const button=$('preloadTrailNetwork');
+    if(button)button.disabled=true;
+    offlineGraphIndicator('DOWNLOADING WALKABLE TRAILS // CONNECT ONLINE');
+    try{
+      const query=queryFor(box),failures=[];
+      let elements=null;
+      // Serial fallback is intentional: avoid hammering three public OSM
+      // Overpass servers simultaneously for a voluntary pre-trip download.
+      for(const endpoint of OVERPASS_ENDPOINTS){
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),23000);
+        try{
+          const response=await fetch(endpoint+'?data='+encodeURIComponent(query),
+            {signal:controller.signal,cache:'no-store'});
+          if(!response.ok)throw Error('HTTP '+response.status);
+          const json=await response.json();
+          const candidate=json?.elements;
+          if(!Array.isArray(candidate)||candidate.length<1)throw Error('No walkable trail geometry in this region');
+          const graph=buildGraph(candidate);
+          if(graph.nodes.size<2||graph.segments.length<1)throw Error('No connected walkable segments');
+          if(candidate.length>12000||JSON.stringify(candidate).length>4*1024*1024)
+            throw rpError('RP-235','Trail corridor exceeds the offline storage safety cap. Choose a shorter route.');
+          elements=candidate;break;
+        }catch(error){
+          if(error?.code==='RP-235')throw error;
+          failures.push(String(error?.message||error).slice(0,90));
+        }finally{clearTimeout(timer)}
+      }
+      if(!elements)throw rpError('RP-236','Could not download this region from trail-data servers. '+failures.at(-1));
+      await persistTrailNetwork(bboxKey(box),box,elements);
+      const result=await offlineTrailCoverage();
+      if(!result.ready)throw rpError('RP-237','Trail network could not be verified in local storage. Try again while online and check iPhone free space.');
+      offlineGraphIndicator('SAVED TRAIL GEOMETRY // VERIFIED IN THIS BROWSER');
+      return result;
+    }catch(error){
+      offlineGraphIndicator('DOWNLOAD / LOCAL SAVE FAILED — '+String(error?.message||error).slice(0,105));
+      throw error;
+    }finally{if(button)button.disabled=false}
+  }
+  $('preloadTrailNetwork')?.addEventListener('click',()=>{
+    void cacheOfflineTrailRoute().catch(error=>{
+      offlineGraphIndicator('PRE-TRIP TRAIL PREP BLOCKED — '+String(error?.message||error).slice(0,130));
+      console.warn('FIELD/OS offline trail preparation:',error?.message||error);
+    });
+  });
+  $('checkTrailNetwork')?.addEventListener('click',()=>{
+    void offlineTrailCoverage().then(result=>offlineGraphIndicator(result.reason))
+      .catch(error=>offlineGraphIndicator('NETWORK CHECK ERROR — '+String(error?.message||error)));
+  });
+  document.addEventListener('fieldos:routechange',()=>offlineGraphIndicator('ROUTE EDITED // RECHECK LOCAL TRAILS'));
+
   // Share sustained DEM grade classes with the Home/Terrain overview.
   window.FIELD_ROUTE_SLOPE={gradeAtDistance,slopeClass};
   document.dispatchEvent(new Event('fieldos:slopeclassifierready'));
-  window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
+  window.FIELD_ROUTE_PLANNER={ownsElevationProfile:true,activate,recalculate,replaceRoute,offlineTrailCoverage,cacheOfflineTrailRoute,map:()=>plannerMap,addControlPoint:p=>addAnchor(p),get anchors(){return anchors.map(p=>({...p}))}};
 
   // The horizontal elevation overview must work even when the optional
   // Leaflet/CDN route map has not finished loading (or cannot load offline).

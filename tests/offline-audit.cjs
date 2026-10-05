@@ -15,7 +15,7 @@ const code=fs.readFileSync(path.join(root,'field-tools.js'),'utf8');
   };
   const cache={match,keys:async()=>['app shell']};
   Object.defineProperty(w,'caches',{configurable:true,value:{
-   keys:async()=>['field-os-v3-85-airplane1'],open:async()=>cache
+   keys:async()=>['field-os-v3-85-trailcache1'],open:async()=>cache
   }});
   Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:{
    get controller(){return controlled},getRegistration:async()=>({scope:'https://field.test/field-os/'})

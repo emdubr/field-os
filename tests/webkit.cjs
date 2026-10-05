@@ -150,7 +150,17 @@ const server=http.createServer((req,res)=>{
   const palette={};
   for(const mode of ['green','amber','mono','red']){
     await page.evaluate(theme=>{document.body.dataset.theme=theme},mode);
-    await page.waitForTimeout(90);
+    // Theme surfaces animate between palettes. Measure the settled computed
+    // value instead of sampling halfway through a Safari color transition.
+    await page.waitForFunction(()=>{
+      const input=document.getElementById('routeCorridorPadding');
+      const probe=document.createElement('span');
+      probe.style.color='var(--line)';
+      document.body.appendChild(probe);
+      const expected=getComputedStyle(probe).color;
+      probe.remove();
+      return !!input&&getComputedStyle(input).borderTopColor===expected;
+    },null,{timeout:1500});
     palette[mode]=await page.evaluate(()=>{
       const probe=document.createElement('span');
       probe.style.cssText='color:var(--danger);border:1px solid var(--line)';

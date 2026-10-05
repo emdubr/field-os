@@ -5,10 +5,10 @@
  */
 (() => {
  'use strict';
- const EXPECTED='field-os-v3-85-airplane1';
+ const EXPECTED='field-os-v3-85-trailcache1';
  const ESSENTIAL=[
    './index.html','./styles.css?v=3.85-cssfix2','./workstation.css?v=3.85-cssfix2',
-   './app.js?v=3.85-airplane1','./route-planner.js?v=3.85-airplane1',
+   './app.js?v=3.85-trailcache1','./route-planner.js?v=3.85-trailcache1',
    './vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js',
    './vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js'
  ];
@@ -124,12 +124,22 @@
        samples.length?readCount+'/'+samples.length+' sampled '+(route.length>=2?'route locations':'pack center')+
          ' have readable offline tiles.': 'No route or valid map center to sample.');
    }else add('ACTUAL LOCAL MAP TILES',false,'No local tile samples could be read.');
+   // A basemap archive and walking-network data are separate downloads.
+   // Existing saved routes remain usable without this network, but NEW trail
+   // snapping within the downloaded region cannot be promised unless saved.
+   if(route.length>=2){
+     let trails=null;
+     try{trails=await window.FIELD_ROUTE_PLANNER?.offlineTrailCoverage?.()}catch{}
+     add('OFFLINE TRAIL GEOMETRY',trails?.ready===true,
+       trails?.ready?trails.reason:
+       'Download and verify walkable trails before departure if you plan to edit snapped routes without cell service.');
+   }
    let persisted=null;
    try{persisted=await navigator.storage?.persisted?.()}catch{}
    add('STORAGE RETENTION',persisted===true,
      persisted===true?'Browser granted persistent storage.':
        'Storage may be evicted. Keep a backup and check iPhone free space.');
-   const critical=rows.filter(x=>!['STORAGE RETENTION'].includes(x.name));
+   const critical=rows.filter(x=>!['STORAGE RETENTION','OFFLINE TRAIL GEOMETRY'].includes(x.name));
    return {ready:critical.every(x=>x.ok),rows,pack:pack?.name||'',packId:pack?.id||'',routeSignature:routeSignature(),samples:readCount,
      samplingOnly:true,persistent:persisted===true,vendor:VENDOR};
  }

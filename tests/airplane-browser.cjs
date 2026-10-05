@@ -42,13 +42,31 @@ function littleArchive(){
   await page.goto(origin+'/',{waitUntil:'load',timeout:20000});
   await page.waitForFunction(()=>!!navigator.serviceWorker?.controller,{timeout:15000});
   const online=await page.evaluate(async()=>{
-   const cache=await caches.open('field-os-v3-85-airplane1');
+   const cache=await caches.open('field-os-v3-85-trailcache1');
    const required=['vendor/leaflet/leaflet.js','vendor/leaflet/leaflet.css',
     'vendor/pmtiles/pmtiles.js','vendor/protomaps-leaflet/protomaps-leaflet.js'];
    return Promise.all(required.map(async file=>[file,!!await cache.match(new URL(file,location.href).href)]));
   });
   assert.ok(online.every(row=>row[1]),'offline worker must cache every local renderer: '+JSON.stringify(online));
   console.log('PASS installed worker cached all four same-origin mapping assets');
+  // Prepare walkable OSM geometry ONLINE through the same UI function used by
+  // the Map pre-trip button, then confirm IndexedDB survives Airplane Mode.
+  const trailElements=[{type:'way',id:777,nodes:[100,101,102],
+    geometry:[{lat:44.47,lon:-73.22},{lat:44.475,lon:-73.215},{lat:44.48,lon:-73.21}],
+    tags:{highway:'path',name:'Saved Test Trail'}}];
+  const trailDownloads=[];
+  await page.route(/^https:\/\/overpass\./,route=>{
+    trailDownloads.push(route.request().url());
+    return route.fulfill({status:200,contentType:'application/json',
+      body:JSON.stringify({elements:trailElements})});
+  });
+  await page.evaluate(()=>FIELD_ROUTE_STATE.setPoints([
+    {lat:44.47,lon:-73.22},{lat:44.48,lon:-73.21}
+  ]));
+  const storedTrails=await page.evaluate(async()=>await FIELD_ROUTE_PLANNER.cacheOfflineTrailRoute());
+  assert.equal(storedTrails.ready,true,'planned route must store a verified walkable network');
+  assert.equal(trailDownloads.length,1,'pre-trip geometry should use one successful Overpass response');
+  console.log('PASS pre-trip trail download and confirmed durable IndexedDB walking network');
   const bytes=[...littleArchive()];
   await page.evaluate(async array=>{
    const file=new File([new Uint8Array(array)],'fixture-vector.pmtiles',{type:'application/octet-stream'});
@@ -75,10 +93,15 @@ function littleArchive(){
   await page.waitForFunction(()=>document.getElementById('boot')?.classList.contains('hidden'),{timeout:12000});
   const check=await page.evaluate(async()=>await FIELD_AIRPLANE_CHECK.run());
   assert.equal(check.ready,true,'real offline install + stored regional fixture must pass: '+JSON.stringify(check.rows));
-  assert.equal(check.samples,1,'the browser must read an actual tile from IndexedDB through the local PMTiles library');
+  assert.equal(check.samples,3,'all three sampled planned-route positions must read the local PMTiles archive');
+  assert.equal(check.rows.find(x=>x.name==='COMPLETE ROUTE EXTENT')?.ok,true);
+  assert.equal(check.rows.find(x=>x.name==='OFFLINE TRAIL GEOMETRY')?.ok,true,
+    'a downloaded trail network must remain available after the phone restarts in airplane mode');
   assert.equal(check.rows.find(x=>x.name==='FIRST-PARTY OFFLINE FILES')?.ok,true);
   assert.equal(check.rows.find(x=>x.name==='OFFLINE MAP RENDERER')?.ok,true);
   assert.deepEqual(external,[],'reloading offline app and verifying a stored pack must not attempt CDN requests');
+  assert.equal((await page.evaluate(async()=>await FIELD_ROUTE_PLANNER.offlineTrailCoverage())).ready,true,
+    'preloaded trails must be readable while navigator.onLine is false');
   console.log('PASS offline PWA reload with no network, browser IndexedDB vector tile and complete local renderer');
   // Raw tile reads are not enough: exercise the actual interactive Map view
   // while Chromium is offline and assert Leaflet has attached this local pack.
