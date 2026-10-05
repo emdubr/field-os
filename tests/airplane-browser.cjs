@@ -42,7 +42,7 @@ function littleArchive(){
   await page.goto(origin+'/',{waitUntil:'load',timeout:20000});
   await page.waitForFunction(()=>!!navigator.serviceWorker?.controller,{timeout:15000});
   const online=await page.evaluate(async()=>{
-   const cache=await caches.open('field-os-v3-85-airplane1');
+   const cache=await caches.open('field-os-v3-85-trailcache1');
    const required=['vendor/leaflet/leaflet.js','vendor/leaflet/leaflet.css',
     'vendor/pmtiles/pmtiles.js','vendor/protomaps-leaflet/protomaps-leaflet.js'];
    return Promise.all(required.map(async file=>[file,!!await cache.match(new URL(file,location.href).href)]));
