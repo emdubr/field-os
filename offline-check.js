@@ -35,7 +35,7 @@
    if(!bound(p,header))return {ok:false,reason:'Position is outside the pack bounds.'};
    // Sparse PMTiles legitimately omit some cells (e.g. oceans). This is a
    // sample, never a claim that every tile along a route was inspected.
-   const z0=Math.min(Math.max(0,Math.floor(header.maxZoom)),12);
+   const z0=Math.max(Math.floor(header.minZoom),Math.min(Math.max(0,Math.floor(header.maxZoom)),12));
    for(let z=z0;z>=Math.max(0,Math.floor(header.minZoom));z--){
      const {x,y}=mapTileXY(p,z);
      try{
@@ -46,6 +46,11 @@
    return {ok:false,reason:'Could not read a map tile at the sampled position.'};
  }
  let inflight=null;
+ function routeSignature(){
+   const route=window.FIELD_ROUTE_STATE?.getPoints?.()||[];
+   const sample=route.length>=2?[route[0],route[Math.floor(route.length/2)],route.at(-1)]:route;
+   return route.length+':'+sample.map(p=>[Number(p.lat).toFixed(5),Number(p.lon).toFixed(5)].join(',')).join(';');
+ }
  async function inspect(){
    const rows=[],add=(name,ok,detail)=>{rows.push({name,ok,detail});return ok};
    const worker=navigator.serviceWorker?.controller;
@@ -109,7 +114,7 @@
      persisted===true?'Browser granted persistent storage.':
        'Storage may be evicted. Keep a backup and check iPhone free space.');
    const critical=rows.filter(x=>!['STORAGE RETENTION'].includes(x.name));
-   return {ready:critical.every(x=>x.ok),rows,pack:pack?.name||'',samples:readCount,
+   return {ready:critical.every(x=>x.ok),rows,pack:pack?.name||'',packId:pack?.id||'',routeSignature:routeSignature(),samples:readCount,
      samplingOnly:true,persistent:persisted===true,vendor:VENDOR};
  }
  function paint(result){
@@ -126,11 +131,11 @@
    label('offlineFlightStatus','CHECKING LOCAL FILES + ARCHIVE…');
    const btn=document.getElementById('runOfflineFlightCheck');
    if(btn)btn.disabled=true;
-   inflight=inspect().then(result=>{paint(result);return result})
+   inflight=inspect().then(result=>{window.FIELD_AIRPLANE_CHECK.last=result;paint(result);document.dispatchEvent(new CustomEvent('fieldos:airplanecheck'));return result})
      .catch(error=>{label('offlineFlightStatus','CHECK FAILED — '+String(error?.message||error));throw error})
      .finally(()=>{if(btn)btn.disabled=false;inflight=null});
    return inflight;
  }
  document.getElementById('runOfflineFlightCheck')?.addEventListener('click',()=>{void run().catch(()=>{})});
- window.FIELD_AIRPLANE_CHECK={run,inspect,archiveHeader,mapTileXY,samplePoint,requiredFiles:ESSENTIAL};
+ window.FIELD_AIRPLANE_CHECK={run,inspect,archiveHeader,mapTileXY,samplePoint,routeSignature,requiredFiles:ESSENTIAL,last:null,isCurrent(){const checked=this.last;return !!(checked?.ready&&checked.routeSignature===routeSignature()&&checked.packId)}};
 })();
