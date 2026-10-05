@@ -1400,8 +1400,8 @@ async function ensureOfflineMapLibraries(){
     ['./vendor/pmtiles/pmtiles.js','https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js','https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'],
     ['./vendor/protomaps-leaflet/protomaps-leaflet.js','https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js','https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js']
   ];
-  for(const urls of groups){
-    if((urls[0].includes('/pmtiles@')&&typeof pmtiles!=='undefined')||(urls[0].includes('protomaps-leaflet')&&typeof protomapsL!=='undefined'))continue;
+  for(const [index,urls] of groups.entries()){
+    if((index===0&&typeof pmtiles!=='undefined')||(index===1&&typeof protomapsL!=='undefined'))continue;
     for(const src of urls){try{await loadFieldAsset('script',{src});break}catch{}}
   }
   return typeof pmtiles!=='undefined'&&typeof protomapsL!=='undefined';
