@@ -8,11 +8,22 @@
  const EXPECTED='field-os-v3-85-airplane1';
  const ESSENTIAL=[
    './index.html','./styles.css?v=3.85-cssfix2','./workstation.css?v=3.85-cssfix2',
-   './app.js?v=3.85-airplane1','./route-planner.js?v=3.85-plwheel1',
+   './app.js?v=3.85-airplane1','./route-planner.js?v=3.85-airplane1',
    './vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js',
    './vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js'
  ];
  const VENDOR=['./vendor/leaflet/leaflet.js','./vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js'];
+ function currentShellFiles(){
+   const files=new Set(ESSENTIAL);
+   // Check every actual first-party script and stylesheet used by this build,
+   // not just a handful of expected resources.
+   for(const el of document.querySelectorAll('script[src],link[rel="stylesheet"][href]')){
+     const raw=el.getAttribute('src')||el.getAttribute('href');
+     if(!raw)continue;
+     try{const url=new URL(raw,location.href);if(url.origin===location.origin)files.add(url.href)}catch{}
+   }
+   return [...files];
+ }
  const label=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value};
  const bound=(p,b)=>p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))&&
    Number(p.lon)>=b.minLon&&Number(p.lon)<=b.maxLon&&
@@ -58,7 +69,7 @@
    let shell=false;
    if(sw&&'caches' in window)try{
      const cache=await caches.open(EXPECTED),missing=[];
-     for(const url of ESSENTIAL){
+     for(const url of currentShellFiles()){
        const absolute=new URL(url,location.href).href;
        if(!await cache.match(absolute)&&!await cache.match(url))missing.push(url);
      }
