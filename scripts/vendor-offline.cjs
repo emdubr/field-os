@@ -50,7 +50,9 @@ const notices=[
 for(const name of licenses){
  const dir=path.join(root,'node_modules',name);
  const filename=['LICENSE','LICENSE.md','LICENSE.txt'].find(f=>fs.existsSync(path.join(dir,f)));
- if(!filename)throw Error('Missing required attribution/license file for '+name);
- notices.push('## '+name+' / '+filename,'',fs.readFileSync(path.join(dir,filename),'utf8'),'');
+ if(!filename&&name!=='pmtiles')throw Error('Missing required attribution/license file for '+name);
+ const licenseText=filename?fs.readFileSync(path.join(dir,filename),'utf8'):
+  fs.readFileSync(path.join(root,'scripts/vendor-licenses/PMTiles-LICENSE'),'utf8');
+ notices.push('## '+name+' / '+(filename||'PMTiles upstream BSD-3 license'),'',licenseText,'');
 }
 fs.writeFileSync(path.join(root,'vendor','LICENSES.md'),notices.join('\n'));
