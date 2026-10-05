@@ -4,7 +4,7 @@ const root=path.resolve(__dirname,'..');
 const files=[
  ['vendor/leaflet/leaflet.js',75000],
  ['vendor/leaflet/leaflet.css',7500],
- ['vendor/pmtiles/pmtiles.js',25000],
+ ['vendor/pmtiles/pmtiles.js',15000],
  ['vendor/protomaps-leaflet/protomaps-leaflet.js',40000],
  ['vendor/leaflet/images/marker-icon.png',100]
 ];
