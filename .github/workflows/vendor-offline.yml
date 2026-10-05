@@ -5,6 +5,7 @@ on:
       - feat/iphone-airplane-offline-20261004
     paths:
       - .github/workflows/vendor-offline.yml
+      - scripts/vendor-offline.cjs
   workflow_dispatch:
 
 permissions:
