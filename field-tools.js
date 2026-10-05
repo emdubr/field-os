@@ -189,8 +189,11 @@ async function permissions(){const names=['geolocation','notifications'];const o
      if(!raw)continue;
      try{const url=new URL(raw,base);if(url.origin===location.origin)own.add(url.href);else external.add(url.href)}catch{}
    }
-   external.add('https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js');
-   external.add('https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js');
+   // First-party vector rendering is mandatory for an iPhone with no signal;
+   // optional CDN versions are legacy fallbacks, not offline prerequisites.
+   for(const file of ['./vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js',
+     './vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js',
+     './offline-check.js?v=3.85-airplane1'])own.add(new URL(file,base).href);
    return {own:[...own].map(u=>new URL(u,base).href),external:[...external]};
  }
  function cacheHealth(){
