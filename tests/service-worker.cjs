@@ -35,18 +35,18 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  for(const asset of ['styles.css','workstation.css','route-state.js','runtime.js','app.js','workstation.js','map-engine.js','route-planner.js','field-intel.js','field-ops.js','route-guidance.js','map-readiness.js','field-tools.js'])assert.ok(swText.includes(`${asset}?v=${version}`),`service worker version drift: ${asset}`);
  const request=async(path,mode='same-origin')=>{let promise;handlers.fetch({request:{method:'GET',mode,url:new URL(path,location.href).href},respondWith:p=>promise=p,waitUntil(){}});return await promise};
 
- const first=await request(`./field-tools.js?v=${version}-offvendor1`);
+ const first=await request(`./field-tools.js?v=${version}-airplane1`);
  assert.equal(first,cached,'cached first-party scripts must load without a network request');
  assert.equal(network,0,'no cellular request for an installed app');
  exactShell=false;offline=true;
- assert.equal(await request(`./field-tools.js?v=${version}-offvendor1`),cached,'uncached exact URL should still recover by safe shell version fallback');
+ assert.equal(await request(`./field-tools.js?v=${version}-airplane1`),cached,'uncached exact URL should still recover by safe shell version fallback');
  assert.equal(network,1);
  offline=false;
  const page=await request('./','navigate');assert.equal(page,cached,'offline-installed shell should be cache-first even online');
  assert.equal(network,1);
  offline=true;assert.equal(await request('./','navigate'),cached);
  hang=true;offline=false;const began=Date.now();
- const slow=await request(`./field-tools.js?v=${version}-offvendor1`);
+ const slow=await request(`./field-tools.js?v=${version}-airplane1`);
  assert.equal(slow,cached,'failed dynamic script fetch must recover via shell fallback');
  assert.ok(Date.now()-began<250,'weak network must not hang the shell');
  hang=false;offline=true;
