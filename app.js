@@ -1,5 +1,5 @@
 const FIELD_APP_BUILD='3.85-offvendor1';
-const FIELD_EXPECTED_CACHE='field-os-v3-85-cssfix2';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-offvendor1';
 window.FIELD_OS_BUILD=FIELD_APP_BUILD;
 const fieldBuildLabel=document.getElementById('fieldBuildLabel');
 const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
