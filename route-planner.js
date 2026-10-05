@@ -55,7 +55,7 @@
   let lastDirectionGeometryKey='';
   const SAVED_ROUTES_KEY='fieldos-v12-saved-routes';
   const GAIA_LAYER_KEY='fieldos-v12-gaia-route-layer';
-  const plannerShouldOffline=()=>navigator.onLine===false||localStorage.getItem('fieldos-v12-map-source')==='offline';
+  const plannerShouldOffline=()=>{if(navigator.onLine===false)return true;try{return localStorage.getItem('fieldos-v12-map-source')==='offline'}catch{return false}};
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
