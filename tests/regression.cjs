@@ -544,8 +544,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-offvendor1'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-offvendor1'"));
+ assert.ok(html.includes('app.js?v=3.85-airplane1'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-airplane1'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
