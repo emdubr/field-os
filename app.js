@@ -1,11 +1,11 @@
-const FIELD_APP_BUILD='3.85-offvendor1';
-const FIELD_EXPECTED_CACHE='field-os-v3-85-offvendor1';
+const FIELD_APP_BUILD='3.85-airplane1';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-airplane1';
 window.FIELD_OS_BUILD=FIELD_APP_BUILD;
 const fieldBuildLabel=document.getElementById('fieldBuildLabel');
 const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
 const fieldReleaseDetails=document.getElementById('fieldReleaseDetails');
-if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · OV1';
-if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT OFFVENDOR1 LOADED';
+if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · AIR1';
+if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT AIRPLANE1 LOADED';
 if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: CHECKING';
 const views = [...document.querySelectorAll('.view')];
 const tabButtons = [...document.querySelectorAll('.tab-btn[data-tab-for]')];
@@ -1386,8 +1386,8 @@ async function ensureFieldMapLibraries(){
   if(typeof L!=='undefined')return true;
   if(fieldMapLibPromise)return fieldMapLibPromise;
   fieldMapLibPromise=(async()=>{
-    const cssUrls=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'];
-    const jsUrls=['https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
+    const cssUrls=['./vendor/leaflet/leaflet.css','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'];
+    const jsUrls=['./vendor/leaflet/leaflet.js','https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
     for(const href of cssUrls){try{await loadFieldAsset('link',{rel:'stylesheet',href});break}catch{}}
     for(const src of jsUrls){try{await loadFieldAsset('script',{src});if(typeof L!=='undefined')break}catch{}}
     return typeof L!=='undefined';
@@ -1397,8 +1397,8 @@ async function ensureFieldMapLibraries(){
 async function ensureOfflineMapLibraries(){
   if(typeof pmtiles!=='undefined'&&typeof protomapsL!=='undefined')return true;
   const groups=[
-    ['https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js','https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'],
-    ['https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js','https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js']
+    ['./vendor/pmtiles/pmtiles.js','https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js','https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'],
+    ['./vendor/protomaps-leaflet/protomaps-leaflet.js','https://cdn.jsdelivr.net/npm/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js','https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js']
   ];
   for(const urls of groups){
     if((urls[0].includes('/pmtiles@')&&typeof pmtiles!=='undefined')||(urls[0].includes('protomaps-leaflet')&&typeof protomapsL!=='undefined'))continue;
@@ -1468,8 +1468,15 @@ async function saveFieldMapPackBlob(blob,name,source='import'){
   const file=blob instanceof File?blob:new File([blob],safeName,{type:'application/octet-stream'});
   const archive=new pmtiles.PMTiles(new pmtiles.FileSource(file));
   const header=await archive.getHeader();
+  // Protomaps currently renders MVT vector PMTiles only; rejecting a raster
+  // archive here prevents a misleading saved-pack/ready state on an iPhone.
+  if(Number(header.tileType)!==1)throw new Error('This PMTiles archive is not an MVT vector map. Choose a vector PMTiles regional pack; raster archives cannot render in the offline map yet.');
+  if(!Number.isFinite(header.minZoom)||!Number.isFinite(header.maxZoom)||header.minZoom>header.maxZoom||
+     ![header.minLon,header.minLat,header.maxLon,header.maxLat].every(Number.isFinite)||
+     header.minLat>=header.maxLat||header.minLon>=header.maxLon)
+    throw new Error('PMTiles archive has invalid zoom levels or geographic bounds.');
   const id='map-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
-  const rec={id,name:safeName,size:file.size,blob:file,created:new Date().toISOString(),source,minZoom:header.minZoom,maxZoom:header.maxZoom,bounds:[header.minLon,header.minLat,header.maxLon,header.maxLat],center:[header.centerLat,header.centerLon,header.centerZoom]};
+  const rec={id,name:safeName,size:file.size,blob:file,created:new Date().toISOString(),source,tileType:header.tileType,validated:true,minZoom:header.minZoom,maxZoom:header.maxZoom,bounds:[header.minLon,header.minLat,header.maxLon,header.maxLat],center:[header.centerLat,header.centerLon,header.centerZoom]};
   await fieldMapDb('readwrite',s=>s.put(rec));
   fieldActivePackId=rec.id;fieldActivePackRecord=rec;storageSet(STORE_PREFIX+'map-pack',rec.id);
   if(navigator.onLine===false||fieldMapMode==='offline'){fieldMapMode='offline';storageSet(STORE_PREFIX+'map-source','offline');}
