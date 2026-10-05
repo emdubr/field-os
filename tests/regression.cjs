@@ -992,7 +992,7 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
     const parsed=new URL(typeof url==='string'?url:url.url);
     if(name==='field-os-old')return parsed.pathname.endsWith('/app.js')?{}:null;
     if(parsed.origin!=='https://test.local')return null;
-    return parsed.pathname.endsWith('/track-store.js')?null:{ok:true};
+    return parsed.pathname.endsWith('/track-store.js')||parsed.pathname.endsWith('/vendor/pmtiles/pmtiles.js')?null:{ok:true};
    }
   })
  };
@@ -1001,7 +1001,8 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
  const verifiedCache=await w.FIELD_BROWSER_RESILIENCE.cacheHealth();
  assert.equal(verifiedCache.verified,true,'cache audit requires a controlling service worker');
  assert.ok(verifiedCache.missing.some(u=>u.includes('track-store.js')),'missing required IndexedDB module should be reported');
- assert.ok(verifiedCache.externalMissing.some(u=>u.includes('pmtiles')),'third-party PMTiles must not be marked available offline');
+ assert.ok(verifiedCache.missing.some(u=>u.includes('/vendor/pmtiles/pmtiles.js')),'missing first-party PMTiles must block offline readiness');
+ assert.ok(!verifiedCache.externalMissing.some(u=>u.includes('pmtiles')),'legacy CDN map bundles are not required for first-party offline mode');
  assert.match(d.getElementById('browserCacheHealth').textContent,/INCOMPLETE/);
  assert.match(d.getElementById('browserCacheDetails').textContent,/track-store/);
 
