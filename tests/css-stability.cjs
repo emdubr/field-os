@@ -18,10 +18,10 @@ assert.match(css,/\.tab-sheet-head\{position:sticky;top:0;z-index:3\}/);
 assert.match(css,/body:has\(#fieldActionNotice:not\(:empty\)\) \.field-update-notice/);
 assert.match(css,/#home \.detail-console::after\{content:none!important\}/);
 for(const [f,text] of [['index.html',html],['sw.js',sw]])for(const asset of ['app.js'])
- assert.ok(text.includes(asset+'?v=3.85-airplane1'),f+' not cache-busting '+asset);
-assert.match(app,/FIELD_APP_BUILD='3.85-airplane1'/);
-assert.match(app,/FIELD_EXPECTED_CACHE='field-os-v3-85-airplane1'/);
-assert.match(sw,/const CACHE='field-os-v3-85-airplane1'/);
+ assert.ok(text.includes(asset+'?v=3.85-trailcache1'),f+' not cache-busting '+asset);
+assert.match(app,/FIELD_APP_BUILD='3.85-trailcache1'/);
+assert.match(app,/FIELD_EXPECTED_CACHE='field-os-v3-85-trailcache1'/);
+assert.match(sw,/const CACHE='field-os-v3-85-trailcache1'/);
 assert.match(sw,/plwheel\|cssfix/,'worker must clean up older disposable shells');
 console.log('PASS CSS landscape guard, theme, SOS, sticky layout, readability, notice and PWA version invariants');
 
@@ -30,5 +30,5 @@ for(const local of ['vendor/leaflet/leaflet.css','vendor/leaflet/leaflet.js',
  assert.ok(sw.includes('./'+local),'service worker must include first-party '+local);
 }
 assert.match(html,/id="runOfflineFlightCheck"/);
-assert.ok(html.includes('offline-check.js?v=3.85-airplane1'));
-assert.ok(sw.includes("'./offline-check.js?v=3.85-airplane1'"));
+assert.ok(html.includes('offline-check.js?v=3.85-trailcache1'));
+assert.ok(sw.includes("'./offline-check.js?v=3.85-trailcache1'"));
