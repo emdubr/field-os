@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
 const vendored=[
  ['leaflet@1.9.4','leaflet','dist/leaflet.js','vendor/leaflet/leaflet.js',75000],
  ['leaflet@1.9.4','leaflet','dist/leaflet.css','vendor/leaflet/leaflet.css',7500],
- ['pmtiles@4.5.0','pmtiles','dist/pmtiles.js','vendor/pmtiles/pmtiles.js',25000],
+ ['pmtiles@4.5.0','pmtiles','dist/pmtiles.js','vendor/pmtiles/pmtiles.js',15000],
  ['protomaps-leaflet@5.1.0','protomaps-leaflet','dist/protomaps-leaflet.js','vendor/protomaps-leaflet/protomaps-leaflet.js',40000]
 ];
 const licenses=[];
