@@ -1723,18 +1723,22 @@ async function activateFieldMapPack(id){
   fieldActivePackId=id;fieldActivePackRecord=rec;fieldMapMode='offline';
   storageSet(STORE_PREFIX+'map-pack',id);storageSet(STORE_PREFIX+'map-source','offline');
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('OFFLINE PACK ACTIVE',100);
+  document.dispatchEvent(new CustomEvent('fieldos:offlinemapschange',{detail:{mode:'offline',packId:id}}));
 }
 async function useOnlineFieldMap(){
   fieldMapMode='osm';storageSet(STORE_PREFIX+'map-source','osm');
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('STREET OSM ACTIVE',100);paintMapSourceButtons();
+  document.dispatchEvent(new CustomEvent('fieldos:offlinemapschange',{detail:{mode:'osm'}}));
 }
 async function useTopoFieldMap(){
   fieldMapMode='topo';storageSet(STORE_PREFIX+'map-source','topo');
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('HIKING TOPO ACTIVE',100);paintMapSourceButtons();
+  document.dispatchEvent(new CustomEvent('fieldos:offlinemapschange',{detail:{mode:'topo'}}));
 }
 async function useSatelliteFieldMap(){
   fieldMapMode='satellite';storageSet(STORE_PREFIX+'map-source','satellite');
   await refreshFieldMapPackUI();await updateFieldMaps(true);setOfflineMapStatus('SATELLITE ACTIVE',100);paintMapSourceButtons();
+  document.dispatchEvent(new CustomEvent('fieldos:offlinemapschange',{detail:{mode:'satellite'}}));
 }
 function paintMapSourceButtons(){
   const topo=fieldMapMode==='topo';
