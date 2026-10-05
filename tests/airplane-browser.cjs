@@ -80,6 +80,24 @@ function littleArchive(){
   assert.equal(check.rows.find(x=>x.name==='OFFLINE MAP RENDERER')?.ok,true);
   assert.deepEqual(external,[],'reloading offline app and verifying a stored pack must not attempt CDN requests');
   console.log('PASS offline PWA reload with no network, browser IndexedDB vector tile and complete local renderer');
+  // Raw tile reads are not enough: exercise the actual interactive Map view
+  // while Chromium is offline and assert Leaflet has attached this local pack.
+  await page.evaluate(()=>window.FIELD_OPEN_VIEW('map'));
+  await page.waitForFunction(()=>
+    window.FIELD_OFFLINE_MAPS?.displayed?.('realMap')?.kind==='offline:airplane-fixture',
+    {timeout:10000});
+  const mounted=await page.evaluate(()=>({
+    source:window.FIELD_OFFLINE_MAPS.displayed('realMap')?.kind,
+    visible:!document.getElementById('realMap').hidden,
+    leaflet:!!document.querySelector('#realMap .leaflet-pane'),
+    layers:document.querySelectorAll('#realMap .leaflet-layer').length
+  }));
+  assert.equal(mounted.visible,true,'interactive offline map must be visible, not a schematic placeholder');
+  assert.equal(mounted.source,'offline:airplane-fixture');
+  assert.ok(mounted.leaflet&&mounted.layers>0,'real offline PMTiles basemap must be mounted by Leaflet');
+  assert.deepEqual(external,[],'offline interactive Map view must not contact online raster or CDN servers');
+  console.log('PASS actual interactive offline map displays the selected IndexedDB PMTiles layer');
+
   await page.evaluate(()=>{localStorage.removeItem('fieldos-v12-map-pack')});
   await page.reload({waitUntil:'load',timeout:20000});
   const recovered=await page.evaluate(async()=>await FIELD_AIRPLANE_CHECK.run());
