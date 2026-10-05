@@ -55,6 +55,7 @@
   let lastDirectionGeometryKey='';
   const SAVED_ROUTES_KEY='fieldos-v12-saved-routes';
   const GAIA_LAYER_KEY='fieldos-v12-gaia-route-layer';
+  const plannerShouldOffline=()=>navigator.onLine===false||localStorage.getItem('fieldos-v12-map-source')==='offline';
 
   const $=id=>document.getElementById(id);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -580,7 +581,7 @@
       maxZoom:19,keepBuffer:3,updateWhenZooming:false,
       attribution:'© OpenStreetMap contributors'
     });
-    if(navigator.onLine!==false)osm.addTo(plannerMap);
+    if(!plannerShouldOffline())osm.addTo(plannerMap);
 
     const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{
       subdomains:'abc',
@@ -588,16 +589,9 @@
       opacity:.93,
       attribution:'OpenTopoMap'
     });
-    if(navigator.onLine!==false)topo.addTo(plannerMap);
+    if(!plannerShouldOffline())topo.addTo(plannerMap);
 
-    if(navigator.onLine===false&&window.FIELD_OFFLINE_MAPS){
-      Promise.resolve(window.FIELD_OFFLINE_MAPS.leafletLayer()).then(result=>{
-        if(!result?.layer||!plannerMap)return;
-        try{plannerMap.removeLayer(osm);plannerMap.removeLayer(topo);plannerMap.removeLayer(hiking)}catch{}
-        result.layer.addTo(plannerMap);
-        status('OFFLINE PMTILES // '+String(result.pack?.name||'SAVED MAP').toUpperCase(),'ready');
-      }).catch(()=>status('OFFLINE MAP PACK COULD NOT BE OPENED','error'));
-    }
+    // Offline source changes are synchronized below, after all layer variables exist.
 
     let topoErrors=0;
     topo.on('tileerror',()=>{
@@ -617,7 +611,45 @@
       attribution:'Waymarked Trails'
     });
     hiking.on('tileerror',()=>{});
-    if(navigator.onLine!==false)hiking.addTo(plannerMap);
+    if(!plannerShouldOffline())hiking.addTo(plannerMap);
+
+    // A manually activated offline map must work while a phone still reports
+    // navigator.onLine=true (Wi-Fi associated but no real mobile data).
+    let offlinePlannerLayer=null,offlinePlannerRevision=0;
+    async function syncPlannerOfflineSource(){
+      const revision=++offlinePlannerRevision;
+      if(!plannerMap)return;
+      const remove=layer=>{try{if(layer)plannerMap.removeLayer(layer)}catch{}};
+      if(!plannerShouldOffline()){
+        remove(offlinePlannerLayer);offlinePlannerLayer=null;
+        if(navigator.onLine!==false){
+          for(const layer of [osm,...(plannerBaseFallbackActive?[]:[topo]),hiking]){
+            try{if(typeof plannerMap.hasLayer!=='function'||!plannerMap.hasLayer(layer))layer.addTo(plannerMap)}catch{}
+          }
+        }
+        return;
+      }
+      // Stop online tile work immediately, even if the stored pack is missing.
+      for(const layer of [osm,topo,hiking,offlinePlannerLayer])remove(layer);
+      offlinePlannerLayer=null;
+      if(!window.FIELD_OFFLINE_MAPS){
+        status('OFFLINE MAP ENGINE UNAVAILABLE — IMPORT A PACK WHILE ONLINE','warn');return;
+      }
+      try{
+        const result=await window.FIELD_OFFLINE_MAPS.leafletLayer();
+        if(revision!==offlinePlannerRevision||!plannerMap)return;
+        if(!result?.layer){status('NO USABLE SAVED OFFLINE PMTILES — IMPORT VECTOR MAP BEFORE TRIP','warn');return;}
+        offlinePlannerLayer=result.layer;
+        offlinePlannerLayer.addTo(plannerMap);
+        status('OFFLINE PMTILES // '+String(result.pack?.name||'SAVED MAP').toUpperCase(),'ready');
+      }catch(error){
+        if(revision===offlinePlannerRevision)status('OFFLINE MAP PACK COULD NOT BE OPENED','error');
+      }
+    }
+    if(plannerShouldOffline())void syncPlannerOfflineSource();
+    document.addEventListener('fieldos:offlinemapschange',()=>{if(plannerMap)void syncPlannerOfflineSource()});
+    window.addEventListener('offline',()=>{if(plannerMap)void syncPlannerOfflineSource()});
+    window.addEventListener('online',()=>{if(plannerMap)void syncPlannerOfflineSource()});
 
     // Keep route geometry above all raster/trail tiles like Gaia GPS.
     const routePane=plannerMap.createPane('fieldRoutePane');
@@ -1240,6 +1272,13 @@
     if(!force){
       const offline=await offlineTrailGraph(a,b);
       if(offline&&!navigator.onLine){graphCache.set(key,offline);status(offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH':'OFFLINE TRAIL NETWORK // SAVED GRAPH',offline.stale?'warn':'ready');return offline.graph;}
+    }
+    // Fail fast rather than waiting on unreachable Overpass endpoints. Previously
+    // planned routes and downloaded networks still work in airplane mode.
+    if(navigator.onLine===false){
+      const saved=await offlineTrailGraph(a,b);
+      if(saved){graphCache.set(key,saved);status('OFFLINE TRAIL NETWORK // SAVED GRAPH',saved.stale?'warn':'ready');return saved.graph;}
+      throw rpError('RP-230','No saved trail graph for this area. Plan this section online before departure, or select DIRECT / OFF-TRAIL mode.');
     }
     const controllers=OVERPASS_ENDPOINTS.map(()=>new AbortController());
     const failures=[];
