@@ -544,8 +544,8 @@ vm.runInContext(fs.readFileSync(dir+'/field-tools.js','utf8'),ctx,{filename:'fie
  assert.ok(swJs.includes("field-os-v3-85"));
  assert.ok(html.includes('id="fieldBuildLabel"')&&html.includes('id="fieldReleaseStatus"'));
  assert.ok(html.includes('id="fieldReleaseDetails"'));
- assert.ok(html.includes('app.js?v=3.85-cssfix2'));
- assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-cssfix2'"));
+ assert.ok(html.includes('app.js?v=3.85-offvendor1'));
+ assert.ok(appJs.includes("const FIELD_APP_BUILD='3.85-offvendor1'"));
  assert.ok(appJs.includes("register('./sw.js?v='+FIELD_APP_BUILD"));
  assert.ok(appJs.includes('showUpdate(true)')&&appJs.includes('const replacingExisting=hadController'));
  assert.ok(swJs.includes("event.data?.type==='GET_BUILD'"));
@@ -995,13 +995,17 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
    }
   })
  };
+ const previousWorker=w.navigator.serviceWorker;
+ Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:{controller:{id:'active-offline-worker'}}});
  const verifiedCache=await w.FIELD_BROWSER_RESILIENCE.cacheHealth();
- assert.equal(verifiedCache.verified,true);
+ assert.equal(verifiedCache.verified,true,'cache audit requires a controlling service worker');
  assert.ok(verifiedCache.missing.some(u=>u.includes('track-store.js')),'missing required IndexedDB module should be reported');
  assert.ok(verifiedCache.externalMissing.some(u=>u.includes('pmtiles')),'third-party PMTiles must not be marked available offline');
  assert.match(d.getElementById('browserCacheHealth').textContent,/INCOMPLETE/);
  assert.match(d.getElementById('browserCacheDetails').textContent,/track-store/);
 
+ if(previousWorker===undefined)delete w.navigator.serviceWorker;
+ else Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:previousWorker});
  if(previousCaches===undefined)delete w.caches;else w.caches=previousCaches;
  console.log('PASS concurrent cache scans and exact offline shell/library gap reporting');
  // Track recording computes total distance incrementally even with its view hidden.
@@ -1070,7 +1074,7 @@ assert.ok(workstationCss.includes('body .module-grid{\n    display:flex!importan
 assert.ok(workstationCss.includes('#map .module-grid'));
 assert.ok(appJs.includes("packs.sort((a,b)=>String(b.created).localeCompare(String(a.created)))"));
 assert.ok(routePlannerJs.includes("offline.stale?'OFFLINE TRAIL NETWORK // STALE SAVED GRAPH'"));
-assert.ok(swJs.includes("const CACHE='field-os-v3-85-cssfix2'"));
+assert.ok(swJs.includes("const CACHE='field-os-v3-85-offvendor1'"));
 console.log('PASS current workstation compact flow, terrain stacking, offline route cache and service-worker cache contract');
 assert.ok(!appJs.includes('/* v2.3 native online map engine')); assert.ok(routePlannerJs.includes("spatial:new Map(source.spatial)"));
  assert.ok(routePlannerJs.includes("mutableSpatialBucket"));

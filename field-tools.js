@@ -196,7 +196,13 @@ async function permissions(){const names=['geolocation','notifications'];const o
  function cacheHealth(){
    if(cacheScan)return cacheScan;
    cacheScan=(async()=>{
-     let count=0,names=[],missing=[],externalMissing=[],verified=false,selected=null;
+     let count=0,names=[],missing=[],externalMissing=[],backupLibraries=[],verified=false,selected=null;
+     const controlled=!!navigator.serviceWorker?.controller;
+     const pinnedBackup=url=>{
+       const prefix='https://cdn.jsdelivr.net/npm/';
+       const allowed=['leaflet@1.9.4/dist/leaflet.css','leaflet@1.9.4/dist/leaflet.js','pmtiles@4.5.0/dist/pmtiles.js','protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'];
+       return url.startsWith(prefix)&&allowed.includes(url.slice(prefix.length))?'https://unpkg.com/'+url.slice(prefix.length):null;
+     };
      const {own,external}=offlineDependencies();
      try{
        if('caches' in window){
@@ -209,23 +215,31 @@ async function permissions(){const names=['geolocation','notifications'];const o
            if(app&&await opened[i].match(app)){selected=opened[i];break}
          }
          if(selected){
-           verified=true;
+           verified=controlled;
            for(const url of own)if(!(await selected.match(url,{ignoreSearch:false})))missing.push(url);
-           for(const url of external)if(!(await selected.match(url,{ignoreSearch:false})))externalMissing.push(url);
+           for(const url of external){
+             if(await selected.match(url,{ignoreSearch:false}))continue;
+             const backup=pinnedBackup(url);
+             if(backup&&await selected.match(backup,{ignoreSearch:false}))backupLibraries.push(url);
+             else externalMissing.push(url);
+           }
          }
        }
      }catch(err){verified=false;diag('OFFLINE AUDIT ERROR',String(err.message||err))}
      const format=u=>{try{const x=new URL(u);return x.origin===location.origin?
        x.pathname.split('/').at(-1)+(x.search||''):x.hostname+'/'+x.pathname.split('/').at(-1)}catch{return u}};
-     const status=!verified?'UNVERIFIED — OPEN INSTALLED APP ONLINE FIRST':
+     const status=!controlled?'UNVERIFIED — OFFLINE WORKER NOT CONTROLLING THIS PAGE':
+       !verified?'UNVERIFIED — CURRENT APP CACHE NOT FOUND':
        missing.length?'INCOMPLETE — '+missing.length+' REQUIRED APP FILE(S) MISSING':
-       externalMissing.length?'CORE CACHED — '+externalMissing.length+' MAP LIBRARY FILE(S) MISSING':'APP FILES CACHED — CHECK SAVED MAP AREA';
+       externalMissing.length?'CORE CACHED — '+externalMissing.length+' MAP LIBRARY FILE(S) MISSING':
+       backupLibraries.length?'APP CACHED — '+backupLibraries.length+' PINNED BACKUP MAP LIBRARIES AVAILABLE':
+       'APP FILES CACHED — CHECK SAVED MAP AREA';
      set('browserCacheHealth',status+' // '+count+' RESPONSES');
      const panel=$('browserCacheDetails');
      if(panel){
        panel.replaceChildren();
        const add=(label,urls)=>{if(!urls.length)return;const p=document.createElement('p');p.textContent=label+': '+urls.map(format).join(', ');panel.append(p)};
-       add('MISSING APP',missing);add('MISSING MAP LIBRARIES',externalMissing);
+       add('MISSING APP',missing);add('MISSING MAP LIBRARIES',externalMissing);add('PINNED BACKUP CDN',backupLibraries);
        if(!missing.length&&!externalMissing.length){
          const p=document.createElement('p');p.textContent=verified?
            'Shell cached. Basemap still requires a separately saved, verified map pack.':
@@ -233,7 +247,7 @@ async function permissions(){const names=['geolocation','notifications'];const o
          panel.append(p);
        }
      }
-     return {names,count,verified,missing,externalMissing};
+     return {names,count,verified,controlled,missing,externalMissing,backupLibraries};
    })().finally(()=>{cacheScan=null});
    return cacheScan;
  }
