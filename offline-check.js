@@ -59,8 +59,7 @@
  let inflight=null;
  function routeSignature(){
    const route=window.FIELD_ROUTE_STATE?.getPoints?.()||[];
-   const sample=route.length>=2?[route[0],route[Math.floor(route.length/2)],route.at(-1)]:route;
-   return route.length+':'+sample.map(p=>[Number(p.lat).toFixed(5),Number(p.lon).toFixed(5)].join(',')).join(';');
+   return route.length+':'+route.map(p=>[Number(p.lat).toFixed(6),Number(p.lon).toFixed(6)].join(',')).join(';');
  }
  async function inspect(){
    const rows=[],add=(name,ok,detail)=>{rows.push({name,ok,detail});return ok};
@@ -111,6 +110,12 @@
    const route=window.FIELD_ROUTE_STATE?.getPoints?.()||[];
    const samples=route.length>=2?[route[0],route[Math.floor(route.length/2)],route.at(-1)]:
      header?[{lat:header.centerLat,lon:header.centerLon}]:[];
+   if(headerOk&&route.length>=2){
+     const inside=route.every(p=>bound(p,header));
+     add('COMPLETE ROUTE EXTENT',inside,inside?
+       'Every saved route vertex lies inside the archived map bounds; three positions are sampled for tile readability.':
+       'Part of your route falls outside the saved map. Download a larger region before departure.');
+   }
    let readCount=0;
    if(headerOk){
      const probes=await Promise.all(samples.map(p=>samplePoint(archive,header,p)));
@@ -148,5 +153,19 @@
    return inflight;
  }
  document.getElementById('runOfflineFlightCheck')?.addEventListener('click',()=>{void run().catch(()=>{})});
- window.FIELD_AIRPLANE_CHECK={run,inspect,archiveHeader,mapTileXY,samplePoint,routeSignature,requiredFiles:ESSENTIAL,last:null,isCurrent(){const checked=this.last;return !!(checked?.ready&&checked.routeSignature===routeSignature()&&checked.packId)}};
+ window.FIELD_AIRPLANE_CHECK={run,inspect,archiveHeader,mapTileXY,samplePoint,routeSignature,requiredFiles:ESSENTIAL,last:null,isCurrent(){
+  const checked=this.last;let selected='';
+  try{selected=localStorage.getItem('fieldos-v12-map-pack')||''}catch{}
+  return !!(checked?.ready&&checked.routeSignature===routeSignature()&&checked.packId&&checked.packId===selected);
+ }};
+ const invalidate=()=>{
+  if(!window.FIELD_AIRPLANE_CHECK?.last)return;
+  window.FIELD_AIRPLANE_CHECK.last=null;
+  label('offlineFlightStatus','MAP OR ROUTE CHANGED — VERIFY OFFLINE AGAIN');
+ };
+ document.addEventListener('fieldos:offlinemapschange',invalidate);
+ document.addEventListener('fieldos:routechange',()=>{
+  if(window.FIELD_AIRPLANE_CHECK.last&&
+    window.FIELD_AIRPLANE_CHECK.last.routeSignature!==routeSignature())invalidate();
+ });
 })();
