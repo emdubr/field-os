@@ -25,23 +25,23 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
  assert.deepEqual(deleted,['field-os-v3-84-safety1','field-os-v3-85-fieldfix1','field-os-v3-85-wheel2','field-os-v3-85-mobile1','field-os-v3-85-horizon1','field-os-v3-85-gradeview1','field-os-v3-85-arrow1','field-os-v3-85-gcache1','field-os-v3-85-desktop1','field-os-v3-85-plwheel1'],'activation must remove only old app shells, never map packs');
  const version=(html.match(/app\.js\?v=([\d.]+)/)||[])[1];assert.ok(version,'index asset version missing');
  let activeCache=null;handlers.message({data:{type:'GET_BUILD'},ports:[{postMessage:msg=>activeCache=msg.build}]});
- assert.equal(activeCache,'field-os-v3-85-cssfix2','worker reports actual installed shell cache');
+ assert.equal(activeCache,'field-os-v3-85-offvendor1','worker reports actual installed shell cache');
  assert.match(html,/id="fieldBuildLabel"/,'page exposes loaded client build');
- assert.ok(swText.includes('app.js?v=3.85-cssfix2'),'new worker caches updated application logic');
+ assert.ok(swText.includes('app.js?v=3.85-offvendor1'),'new worker caches updated application logic');
  assert.ok(swText.includes('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'));
  assert.ok(swText.includes('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js'));
  assert.ok(swText.includes('https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js'));
  for(const asset of ['styles.css','workstation.css','route-state.js','runtime.js','app.js','workstation.js','map-engine.js','route-planner.js','field-intel.js','field-ops.js','route-guidance.js','map-readiness.js','field-tools.js'])assert.ok(swText.includes(`${asset}?v=${version}`),`service worker version drift: ${asset}`);
  const request=async(path,mode='same-origin')=>{let promise;handlers.fetch({request:{method:'GET',mode,url:new URL(path,location.href).href},respondWith:p=>promise=p,waitUntil(){}});return await promise};
 
- const fresh=await request(`./field-tools.js?v=${version}-opt3`);assert.equal(fresh.network,true);assert.equal(network,1);
+ const fresh=await request(`./field-tools.js?v=${version}-offvendor1`);assert.equal(fresh.network,true);assert.equal(network,1);
  exactShell=false;offline=true;
- assert.equal(await request(`./field-tools.js?v=${version}-opt3`),cached,'versioned shell should recover via ignoreSearch cache match');assert.equal(network,2);
+ assert.equal(await request(`./field-tools.js?v=${version}-offvendor1`),cached,'versioned shell should recover via ignoreSearch cache match');assert.equal(network,2);
  offline=false;
  const page=await request('./','navigate');assert.equal(page.network,true);assert.equal(network,3);
  offline=true;assert.equal(await request('./','navigate'),cached);
  hang=true;offline=false;const began=Date.now();
- const slow=await request(`./field-tools.js?v=${version}-opt3`);
+ const slow=await request(`./field-tools.js?v=${version}-offvendor1`);
  assert.equal(slow,cached,'slow mobile network must recover from cached app');
  assert.ok(Date.now()-began<250,'slow network must not hang startup');
  hang=false;offline=true;
