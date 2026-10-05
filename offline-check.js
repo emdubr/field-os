@@ -5,10 +5,10 @@
  */
 (() => {
  'use strict';
- const EXPECTED='field-os-v3-85-airplane1';
+ const EXPECTED='field-os-v3-85-trailcache1';
  const ESSENTIAL=[
    './index.html','./styles.css?v=3.85-cssfix2','./workstation.css?v=3.85-cssfix2',
-   './app.js?v=3.85-airplane1','./route-planner.js?v=3.85-airplane1',
+   './app.js?v=3.85-trailcache1','./route-planner.js?v=3.85-trailcache1',
    './vendor/leaflet/leaflet.css','./vendor/leaflet/leaflet.js',
    './vendor/pmtiles/pmtiles.js','./vendor/protomaps-leaflet/protomaps-leaflet.js'
  ];
