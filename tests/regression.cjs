@@ -995,13 +995,17 @@ console.log('PASS zoom lifecycle, compact workstation flow, and runtime branding
    }
   })
  };
+ const previousWorker=w.navigator.serviceWorker;
+ Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:{controller:{id:'active-offline-worker'}}});
  const verifiedCache=await w.FIELD_BROWSER_RESILIENCE.cacheHealth();
- assert.equal(verifiedCache.verified,true);
+ assert.equal(verifiedCache.verified,true,'cache audit requires a controlling service worker');
  assert.ok(verifiedCache.missing.some(u=>u.includes('track-store.js')),'missing required IndexedDB module should be reported');
  assert.ok(verifiedCache.externalMissing.some(u=>u.includes('pmtiles')),'third-party PMTiles must not be marked available offline');
  assert.match(d.getElementById('browserCacheHealth').textContent,/INCOMPLETE/);
  assert.match(d.getElementById('browserCacheDetails').textContent,/track-store/);
 
+ if(previousWorker===undefined)delete w.navigator.serviceWorker;
+ else Object.defineProperty(w.navigator,'serviceWorker',{configurable:true,value:previousWorker});
  if(previousCaches===undefined)delete w.caches;else w.caches=previousCaches;
  console.log('PASS concurrent cache scans and exact offline shell/library gap reporting');
  // Track recording computes total distance incrementally even with its view hidden.
