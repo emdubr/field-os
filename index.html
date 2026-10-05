@@ -42,7 +42,7 @@
   <title>FIELD/OS</title>
   <link rel="stylesheet" href="styles.css?v=3.85-cssfix2" />
   <link rel="stylesheet" href="workstation.css?v=3.85-cssfix2">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 </head>
 <body data-theme="green"><script>try{const t=localStorage.getItem("fieldos-v12-theme")||localStorage.getItem("fieldos-theme");if(["green","amber","mono","red"].includes(t))document.body.dataset.theme=t;}catch{}</script>
   <div class="crt-overlay" aria-hidden="true"></div>
@@ -309,6 +309,13 @@
             </div>
           </div>
           <p class="muted">Official OpenStreetMap raster tiles are used for normal interactive online viewing only. Offline packs use PMTiles sources that permit downloading; FIELD/OS does not bulk-prefetch tile.openstreetmap.org.</p>
+        </article>
+        <article class="panel offline-flight-panel" id="offlineFlightPanel">
+          <div class="panel-title"><span>IPHONE AIRPLANE-MODE READINESS</span><span class="tiny" id="offlineFlightStatus" role="status" aria-live="polite">NOT TESTED</span></div>
+          <p class="muted">Check that this exact app version, its locally installed map renderer, and an actual regional MVT map archive can be read without a map-server connection.</p>
+          <div class="button-row"><button class="action" id="runOfflineFlightCheck" type="button">VERIFY OFFLINE FILES + MAP</button><button class="action" type="button" data-open="route">REVIEW SAVED ROUTE</button></div>
+          <div id="offlineFlightDetails" class="condition-list" aria-live="polite"></div>
+          <p class="muted">A successful check samples stored map tiles only; it does not prove every part of your trail is mapped. Before departure, add FIELD/OS to your iPhone Home Screen, download and activate a regional vector PMTiles pack, turn on Airplane Mode, close and reopen the installed app, and verify your actual route and GPS. New trail snapping, forecast updates and live satellite/Meshtastic transmissions may still require connectivity or hardware. Do not depend on FIELD/OS alone for emergencies.</p>
         </article>
       </section>
 
@@ -989,16 +996,17 @@
   <script defer src="geo-hub.js?v=3.85-opt2"></script>
   <script defer src="map-readiness.js?v=3.85"></script>
   <script defer src="canvas-utils.js?v=3.85-optcanvas2"></script>
-  <script defer src="app.js?v=3.85-offvendor1"></script>
+  <script defer src="app.js?v=3.85-airplane1"></script>
   <script defer src="workstation.js?v=3.85-gradeview1"></script>
   <script defer src="map-engine.js?v=3.85-desktop1"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="vendor/leaflet/leaflet.js"></script>
   <script defer src="route-guidance.js?v=3.85"></script>
-  <script defer src="route-planner.js?v=3.85-plwheel1"></script>
-  <script defer src="field-intel.js?v=3.85-fieldfix1"></script>
+  <script defer src="route-planner.js?v=3.85-airplane1"></script>
+  <script defer src="field-intel.js?v=3.85-airplane1"></script>
   <script defer src="field-ops.js?v=3.85"></script>
-  <script defer src="field-tools.js?v=3.85-offvendor1"></script>
+  <script defer src="field-tools.js?v=3.85-airplane1"></script>
   <script defer src="safety-sync.js?v=3.85-hotfix1"></script>
+  <script defer src="offline-check.js?v=3.85-airplane1"></script>
 </body>
 </html>
 

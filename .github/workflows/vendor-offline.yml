@@ -1,0 +1,43 @@
+name: Bundle offline iPhone map libraries
+on:
+  push:
+    branches:
+      - feat/iphone-airplane-offline-20261004
+    paths:
+      - .github/workflows/vendor-offline.yml
+      - scripts/vendor-offline.cjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    if: github.ref == 'refs/heads/feat/iphone-airplane-offline-20261004'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install exact pinned map runtime versions
+        run: |
+          npm ci --no-audit --no-fund --ignore-scripts
+          npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund leaflet@1.9.4 pmtiles@4.5.0 protomaps-leaflet@5.1.0
+      - name: Build local offline bundles with source licenses
+        run: node scripts/vendor-offline.cjs
+      - name: Commit verified first-party map vendor files
+        shell: bash
+        run: |
+          git add vendor
+          if git diff --cached --quiet; then
+            echo 'Pinned offline vendor assets unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Bundle licensed, pinned map runtimes for offline iPhone use"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

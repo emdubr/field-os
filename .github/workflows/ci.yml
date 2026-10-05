@@ -32,6 +32,8 @@ jobs:
           node --check field-intel.js
           node --check field-ops.js
           node --check field-tools.js
+          node --check offline-check.js
+          node --check scripts/vendor-offline.cjs
       - run: npm test
   desktop:
     runs-on: ubuntu-latest
@@ -49,6 +51,7 @@ jobs:
           mkdir -p test-artifacts
           FIELD_SCREENSHOT=test-artifacts/desktop-failure.png npm run test:desktop
           npm run test:storage
+          npm run test:airplane
       - name: Upload desktop failure artifact
         if: failure()
         uses: actions/upload-artifact@v4

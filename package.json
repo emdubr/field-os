@@ -4,11 +4,12 @@
   "version": "3.85.0",
   "description": "FIELD/OS browser regression harness",
   "scripts": {
-    "test": "node tests/regression.cjs && node tests/service-worker.cjs && node tests/offline-vendor.cjs && node tests/offline-audit.cjs && node tests/css-stability.cjs && node tests/rendering.cjs && node tests/guidance.cjs && node tests/safety.cjs && node tests/optimizations.cjs && node tests/canvas.cjs",
+    "test": "node tests/regression.cjs && node tests/service-worker.cjs && node tests/offline-vendor.cjs && node tests/offline-audit.cjs && node tests/offline-check.cjs && node tests/vendor-assets.cjs && node tests/css-stability.cjs && node tests/rendering.cjs && node tests/guidance.cjs && node tests/safety.cjs && node tests/optimizations.cjs && node tests/canvas.cjs",
     "test:regression": "node tests/regression.cjs",
     "test:desktop": "node tests/desktop.cjs",
     "test:storage": "node tests/storage-browser.cjs",
-    "test:webkit": "node tests/webkit.cjs"
+    "test:webkit": "node tests/webkit.cjs",
+    "test:airplane": "node tests/airplane-browser.cjs"
   },
   "devDependencies": {
     "jsdom": "30.1.1",

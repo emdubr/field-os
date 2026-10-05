@@ -35,13 +35,13 @@
     const interval=Number(document.getElementById('checkinInterval')?.value??trip.checkinInterval??0)||0;
     const returnAt=String(document.getElementById('tripReturn')?.value||trip.tripReturn||'');
     const position=getPosition(),battery=parseBattery(),packId=localStorage.getItem(key('map-pack'))||'',mapSource=localStorage.getItem(key('map-source'))||text('offlineMapSource')||'UNKNOWN',offlineLabel=text('offlineMapMode');
-    const hasOffline=!!packId||(/OFFLINE|SAVED|PMTILES/i.test(offlineLabel)&&!/ONLINE/i.test(offlineLabel));
+    const hasOffline=window.FIELD_AIRPLANE_CHECK?.isCurrent?.()===true;
     const weatherText=weather?.value.trim()||String(config.weather||'').trim(),contactText=contact?.value.trim()||String(config.contact||'').trim(),emergency=String(document.getElementById('tripEmergency')?.value||trip.tripEmergency||'').trim();
     const weatherCache=read('weather-cache',null),environmentCache=read('environment-intel-cache',null),corridorStatus=text('routeOfflineCoverage');
     const distanceM=routeMeters(points),now=Date.now(),due=interval&&checkin.last?Number(checkin.last)+interval*60000:null;
     const readiness=[
       {id:'route',label:'ROUTE',ok:points.length>=2,detail:points.length>=2?`${(distanceM/1609.344).toFixed(2)} mi / ${points.length} pts`:'No route loaded'},
-      {id:'offline',label:'OFFLINE MAP',ok:hasOffline,detail:hasOffline?(text('offlineMapSource')||'Saved pack ready'):'No saved offline map pack'},
+      {id:'offline',label:'OFFLINE MAP',ok:hasOffline,detail:hasOffline?(text('offlineMapSource')||'Current route pack verified locally'):'Run iPhone airplane-mode check for this route'},
       {id:'waypoints',label:'WAYPOINTS',ok:waypoints.length>0,detail:`${waypoints.length} saved`},
       {id:'weather',label:'WEATHER',ok:!!weatherText||!!weatherCache,detail:weatherText||(weatherCache?'Downloaded forecast cached':'Snapshot not entered')},
       {id:'environment',label:'ENVIRONMENT INTEL',ok:!!environmentCache,level:environmentCache?'ok':'warn',detail:environmentCache?`AQ / earthquake cache ${environmentCache.downloadedAt||'saved'}`:'No cached air/earthquake snapshot'},
