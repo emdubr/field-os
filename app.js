@@ -1,11 +1,11 @@
-const FIELD_APP_BUILD='3.85-airplane1';
-const FIELD_EXPECTED_CACHE='field-os-v3-85-airplane1';
+const FIELD_APP_BUILD='3.85-trailcache1';
+const FIELD_EXPECTED_CACHE='field-os-v3-85-trailcache1';
 window.FIELD_OS_BUILD=FIELD_APP_BUILD;
 const fieldBuildLabel=document.getElementById('fieldBuildLabel');
 const fieldReleaseStatus=document.getElementById('fieldReleaseStatus');
 const fieldReleaseDetails=document.getElementById('fieldReleaseDetails');
-if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · AIR1';
-if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT AIRPLANE1 LOADED';
+if(fieldBuildLabel)fieldBuildLabel.textContent='v3.85 · TC1';
+if(fieldReleaseStatus)fieldReleaseStatus.textContent='CLIENT TRAILCACHE1 LOADED';
 if(fieldReleaseDetails)fieldReleaseDetails.textContent='CLIENT: '+FIELD_APP_BUILD+' · OFFLINE CACHE: CHECKING';
 const views = [...document.querySelectorAll('.view')];
 const tabButtons = [...document.querySelectorAll('.tab-btn[data-tab-for]')];
