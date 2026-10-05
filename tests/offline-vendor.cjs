@@ -46,8 +46,8 @@ function worker({saved=[],network={},failedAdds=[]}={}){
   return {run,request,store,requests,writes,deleted,adds};
 }
 (async()=>{
-  assert.match(sw,/leaflet@1\\.9\\.4/,'only pinned Leaflet may be substituted');
-  assert.match(sw,/protomaps-leaflet@5\\.1\\.0/);
+  assert.ok(sw.includes('leaflet@1.9.4'),'only pinned Leaflet may be substituted');
+  assert.ok(sw.includes('protomaps-leaflet@5.1.0'));
   {
     const w=worker({saved:[[BACKUP+pmtiles,'cached backup PMTiles']]});
     const first=await w.request(CDN+pmtiles);
