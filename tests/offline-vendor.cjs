@@ -26,7 +26,7 @@ function worker({saved=[],network={},failedAdds=[]}={}){
     },
     caches:{
       open:async()=>cache,
-      keys:async()=>['field-os-v3-85-cssfix2','field-os-map-pack-northeast'],
+      keys:async()=>['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1','field-os-map-pack-northeast'],
       delete:async name=>{deleted.push(name);return true},
       match:async()=>{throw Error('Old unrelated cache must not satisfy pinned vendor requests')}
     }
@@ -78,12 +78,13 @@ function worker({saved=[],network={},failedAdds=[]}={}){
   {
     const w=worker({failedAdds:[CDN+leaflet],network:{[BACKUP+leaflet]:'backup install Leaflet'}});
     await w.run('install');
-    assert.ok(w.adds.some(x=>x.includes('app.js')),'critical shell still installs');
-    assert.equal(w.store.get(CDN+leaflet)?.source,'backup install Leaflet',
-      'primary CDN pre-cache failure must recover using pinned alternate');
+    for(const local of ['vendor/leaflet/leaflet.js','vendor/pmtiles/pmtiles.js','vendor/protomaps-leaflet/protomaps-leaflet.js'])
+      assert.ok(w.adds.some(x=>x.includes(local)),'local map renderer must be transactional core: '+local);
+    assert.ok(!w.adds.some(x=>x.includes('https://')),'installation must not wait for unreachable external CDNs');
+    assert.deepEqual(w.requests,[],'no external network dependency during worker install');
     await w.run('activate');
-    assert.deepEqual(w.deleted,['field-os-v3-85-cssfix2'],
-      'activation prunes only obsolete shell cache and never offline map packs');
-    console.log('PASS install-time backup, intact core shell and protected saved map packs');
+    assert.deepEqual(w.deleted,['field-os-v3-85-cssfix2','field-os-v3-85-offvendor1'],
+      'activation removes only old app shells, never separately saved map packs');
+    console.log('PASS fully same-origin vendor precache and protected downloaded map packs');
   }
 })().catch(e=>{console.error(e);process.exitCode=1});
